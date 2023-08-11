@@ -1,0 +1,18 @@
+{
+  "name": "FlexHeader",
+  "version": "0.0.1",
+  "manifest_version": 3,
+  "description": "create-react-app for extensions",
+  "icons": {
+    "128": "logo192.png"
+  },
+  "permissions": ["storage", "activeTab", "declarativeNetRequest"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": "logo192.png"
+  }
+}

@@ -1,0 +1,20 @@
+.header-row {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  flex-direction: row;
+  gap: 1rem;
+}
+
+.header-row__name,
+.header-row__value {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.header-row__remove {
+  cursor: pointer;
+}
