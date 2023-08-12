@@ -2,14 +2,22 @@
   background-color: var(--primary);
   border: none;
   color: white;
-  padding: 15px 32px;
   text-align: center;
   text-decoration: none;
-  font-size: large;
   display: inline-block;
-  width: 100%;
   cursor: pointer;
 }
 
-.button:hover {
+.button.small {
+}
+
+.button.medium {
+  padding: 10px 12px;
+  font-size: small;
+}
+
+.button.large {
+  width: 100%;
+  padding: 15px 32px;
+  font-size: large;
 }

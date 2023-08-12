@@ -6,8 +6,9 @@ import useFlexHeaderSettings, {
   HeaderFilter,
   HeaderSetting,
 } from "./utils/settings";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import FilterRow from "./components/filterRow";
+import PagesTabs from "./components/pagesTabs";
 
 function App() {
   const {
@@ -18,10 +19,17 @@ function App() {
     addFilter,
     updateFilter,
     removeFilter,
+    addPage,
+    updatePage,
+    removePage,
     clear,
+    selectedPage,
+    changeSelectedPage,
   } = useFlexHeaderSettings();
-  const [selectedPage, setSelectedPage] = useState(0);
-  const currentPage = useMemo(() => pages[selectedPage], [pages, selectedPage]);
+  const currentPage = useMemo(
+    () => pages.find((x) => x.id === selectedPage) || pages[0],
+    [pages, selectedPage]
+  );
 
   const _addHeader = async () => {
     addHeader(currentPage.id, {
@@ -42,7 +50,7 @@ function App() {
   const _addFilter = async () => {
     addFilter(currentPage.id, {
       type: "include",
-      value: "new-filter",
+      value: "http*",
       enabled: true,
       valid: false,
     });
@@ -56,16 +64,56 @@ function App() {
     removeFilter(currentPage.id, id);
   };
 
+  const _addPage = async () => {
+    const newId = pages.length;
+    addPage({
+      id: newId,
+      enabled: true,
+      name: "New Page",
+      headers: [],
+      filters: [],
+    });
+  };
+
+  const _updatePage = async (name: string, id: number) => {
+    const page = pages.find((x) => x.id === id);
+
+    if (page) {
+      page.name = name;
+      updatePage(page);
+    }
+  };
+
   return (
     <div className="app">
       <div className="app__container">
         <div className="app__header">
-          <p>Header Mod</p>
-          <span onClick={clear}>Clear Settings</span>
+          <div className="app__header__logo">
+            <img
+              src="logo128.png"
+              alt="HeaderMod Logo"
+              width={50}
+              height={50}
+            />
+            <p>Header Mod</p>
+          </div>
+          {/* <span onClick={clear}>Clear Settings</span> */}
         </div>
-        <Divider />
+        <PagesTabs
+          pages={pages}
+          currentPage={currentPage.id}
+          setCurrentPage={changeSelectedPage}
+          addPage={_addPage}
+          updatePage={_updatePage}
+          removePage={removePage}
+        />
         <div className="app__body">
           <div className="app__body__headers">
+            {currentPage?.headers?.length === 0 && (
+              <p className="app__body__headers__empty">
+                <i>No headers found. Add a new header.</i>
+              </p>
+            )}
             {currentPage?.headers?.map(
               ({ id, headerName, headerValue, headerEnabled }) => (
                 <HeaderRow
@@ -92,7 +140,6 @@ function App() {
               )
             )}
           </div>
-
           {currentPage?.filters?.length > 0 && (
             <div className="app__body__filters">
               <p>Filters</p>
@@ -113,16 +160,6 @@ function App() {
         <div className="app__footer">
           <Button text="Add Row" onClick={_addHeader} />
           <Button text="Add Filter" onClick={_addFilter} />
-        </div>
-        <div>
-          {currentPage?.headers?.map((header) => {
-            return (
-              <div key={header.id}>
-                {header.id} - {header.headerName} - {header.headerValue} -{" "}
-                {header.headerEnabled ? "Enabled" : "Disabled"}
-              </div>
-            );
-          })}
         </div>
       </div>
     </div>

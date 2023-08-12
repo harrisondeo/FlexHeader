@@ -10,6 +10,17 @@ export function getAndApplyHeaderRules() {
   chrome.storage.sync.get("settings", async (result) => {
     let headers: chrome.declarativeNetRequest.Rule[] = [];
 
+    const oldRules = await chrome.declarativeNetRequest.getDynamicRules();
+    const oldRuleIds = oldRules ? oldRules.map((rule) => rule.id) : [];
+
+    function getUniqueRuleID() {
+      let id = Math.floor(Math.random() * 1000000000);
+      while (oldRuleIds.includes(id)) {
+        id = Math.floor(Math.random() * 1000000000);
+      }
+      return id;
+    }
+
     if (result.settings as Page[]) {
       result.settings.forEach((page: Page) => {
         if (page.enabled) {
@@ -41,7 +52,7 @@ export function getAndApplyHeaderRules() {
 
               // Ready to push
               headers.push({
-                id: i + 1,
+                id: getUniqueRuleID(),
                 priority: 1,
                 action: {
                   type: chrome.declarativeNetRequest.RuleActionType
@@ -65,11 +76,7 @@ export function getAndApplyHeaderRules() {
         }
       });
     }
-
-    console.log("FlexHeader: headers", headers);
-
-    const oldRules = await chrome.declarativeNetRequest.getDynamicRules();
-    const oldRuleIds = oldRules ? oldRules.map((rule) => rule.id) : [];
+    console.log(headers);
 
     chrome.declarativeNetRequest.updateDynamicRules({
       removeRuleIds: oldRuleIds,

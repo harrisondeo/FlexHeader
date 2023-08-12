@@ -15,7 +15,6 @@ const FilterRow = ({
 }) => {
   const updateType = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const type: FilterType = e.target.value as FilterType;
-    console.log(e.target.value, type);
     onUpdate({ id, enabled, type: type, value });
   };
 
