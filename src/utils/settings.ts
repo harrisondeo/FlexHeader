@@ -38,14 +38,19 @@ const defaultPage: Page = {
   ],
 };
 
-const filterIsValid = (filter: Omit<HeaderFilter, "valid">) => {
-  // check that value is valid regex
-  try {
-    new RegExp(filter.value);
-    return true;
-  } catch (e) {
-    return false;
-  }
+const filterIsValid = async (
+  filter: Omit<HeaderFilter, "valid">,
+  callback: (valid: boolean) => void
+) => {
+  chrome.declarativeNetRequest.isRegexSupported(
+    {
+      regex: filter.value,
+    },
+    (result) => {
+      console.log("isRegexSupported", result);
+      callback(result.isSupported);
+    }
+  );
 };
 
 function useFlexHeaderSettings() {
@@ -205,26 +210,28 @@ function useFlexHeaderSettings() {
     pageId: string,
     filter: Omit<HeaderFilter, "valid">
   ) => {
-    const newPages = pages.map((page) => {
-      if (page.id === pageId) {
-        return {
-          ...page,
+    filterIsValid(filter, (result) => {
+      const newPages = pages.map((page) => {
+        if (page.id === pageId) {
+          return {
+            ...page,
 
-          filters: page.filters.map((f) => {
-            if (f.id === filter.id) {
-              return {
-                ...filter,
-                valid: filterIsValid(filter),
-              };
-            }
-            return f;
-          }),
-        };
-      }
-      return page;
+            filters: page.filters.map((f) => {
+              if (f.id === filter.id) {
+                return {
+                  ...filter,
+                  valid: result,
+                };
+              }
+              return f;
+            }),
+          };
+        }
+        return page;
+      });
+      setPages(newPages);
+      save(newPages);
     });
-    setPages(newPages);
-    save(newPages);
   };
 
   useEffect(() => {

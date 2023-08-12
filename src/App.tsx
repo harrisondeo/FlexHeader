@@ -93,17 +93,19 @@ function App() {
               />
             )
           )}
-          <div className="app__body__filters">
-            <p>Filters</p>
-            {currentPage?.filters.map((filter) => (
-              <FilterRow
-                key={`filter-row__${filter.id}`}
-                {...filter}
-                onRemove={_removeFilter}
-                onUpdate={_updateFilter}
-              />
-            ))}
-          </div>
+          {currentPage?.filters.length > 0 && (
+            <div className="app__body__filters">
+              <p>Filters</p>
+              {currentPage?.filters.map((filter) => (
+                <FilterRow
+                  key={`filter-row__${filter.id}`}
+                  {...filter}
+                  onRemove={_removeFilter}
+                  onUpdate={_updateFilter}
+                />
+              ))}
+            </div>
+          )}
         </div>
         <Divider />
         <div className="app__footer">
