@@ -1,104 +1,71 @@
 console.log("FlexHeader: background.js");
 
-async function getSettings() {
-  let headers = [];
-
+function getAndApplyHeaderRules() {
   chrome.storage.sync.get("settings", async (result) => {
+    let headers = [];
+
     if (result.settings) {
-      result.settings.forEach((setting, i) => {
-        if (setting.headerEnabled) {
-          headers.push({
-            id: i + 1,
-            priority: 1,
-            action: {
-              type: "modifyHeaders",
-              requestHeaders: [
-                {
-                  header: setting.headerName,
-                  operation: "set",
-                  value: setting.headerValue,
+      // each page
+      result.settings.forEach((page, i) => {
+        if (page.enabled) {
+          // each setting
+          page.headers.forEach((header, i) => {
+            if (header.headerEnabled) {
+              headers.push({
+                id: i + 1,
+                priority: 1,
+                action: {
+                  type: "modifyHeaders",
+                  requestHeaders: [
+                    {
+                      header: header.headerName,
+                      operation: "set",
+                      value: header.headerValue,
+                    },
+                  ],
                 },
-              ],
-            },
-            condition: {
-              urlFilter: "|https*",
-              resourceTypes: [
-                "main_frame",
-                "sub_frame",
-                "stylesheet",
-                "script",
-                "image",
-                "font",
-                "object",
-                "xmlhttprequest",
-                "ping",
-                "csp_report",
-                "media",
-                "websocket",
-                "other",
-              ],
-            },
+                condition: {
+                  urlFilter: "|https*",
+                  resourceTypes: [
+                    "main_frame",
+                    "sub_frame",
+                    "stylesheet",
+                    "script",
+                    "image",
+                    "font",
+                    "object",
+                    "xmlhttprequest",
+                    "ping",
+                    "csp_report",
+                    "media",
+                    "websocket",
+                    "other",
+                  ],
+                },
+              });
+            }
           });
         }
       });
     }
 
-    return headers;
-  });
+    console.log("FlexHeader: headers", headers);
 
-  return headers;
+    const oldRules = await chrome.declarativeNetRequest.getDynamicRules();
+    console.log("FlexHeader: oldRules", oldRules);
+    const oldRuleIds = oldRules ? oldRules.map((rule) => rule.id) : [];
+
+    chrome.declarativeNetRequest.updateDynamicRules({
+      removeRuleIds: oldRuleIds,
+      addRules: headers,
+    });
+  });
 }
 
-console.log(await getSettings());
-
-let headers = [];
-chrome.storage.sync.get("settings", async (result) => {
-  if (result.settings) {
-    result.settings.forEach((setting, i) => {
-      if (setting.headerEnabled) {
-        headers.push({
-          id: i + 1,
-          priority: 1,
-          action: {
-            type: "modifyHeaders",
-            requestHeaders: [
-              {
-                header: setting.headerName,
-                operation: "set",
-                value: setting.headerValue,
-              },
-            ],
-          },
-          condition: {
-            urlFilter: "|https*",
-            resourceTypes: [
-              "main_frame",
-              "sub_frame",
-              "stylesheet",
-              "script",
-              "image",
-              "font",
-              "object",
-              "xmlhttprequest",
-              "ping",
-              "csp_report",
-              "media",
-              "websocket",
-              "other",
-            ],
-          },
-        });
-      }
-    });
+chrome.storage.onChanged.addListener(function (changes, namespace) {
+  if ("settings" in changes) {
+    getAndApplyHeaderRules();
   }
-
-  console.log("FlexHeader: headers", headers);
-
-  const oldRules = await chrome.declarativeNetRequest.getDynamicRules();
-  const oldRuleIds = oldRules.map((rule) => rule.id);
-
-  chrome.declarativeNetRequest.updateDynamicRules({
-    removeRuleIds: oldRuleIds,
-    addRules: headers,
-  });
 });
+
+getAndApplyHeaderRules();

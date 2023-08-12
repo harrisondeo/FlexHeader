@@ -1,0 +1,20 @@
+.filter-row {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  flex-direction: row;
+  gap: 1rem;
+}
+
+.filter-row__name,
+.filter-row__value {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.filter-row__remove {
+  cursor: pointer;
+}

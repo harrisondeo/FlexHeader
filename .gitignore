@@ -21,3 +21,8 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+dist/manifest.json
+dist/js/131.js
+dist/js/index.html
+dist/js/index.js
+dist/js/index.js.LICENSE.txt

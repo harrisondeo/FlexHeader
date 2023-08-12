@@ -2,41 +2,61 @@ import "./App.css";
 import Divider from "./components/divider";
 import Button from "./components/button";
 import HeaderRow from "./components/headerRow";
-import useFlexHeaderSettings from "./utils/settings";
+import useFlexHeaderSettings, {
+  HeaderFilter,
+  HeaderSetting,
+} from "./utils/settings";
+import { useEffect, useState } from "react";
+import FilterRow from "./components/filterRow";
 
 function App() {
-  const { settings, updateSettings } = useFlexHeaderSettings();
+  const {
+    pages,
+    addHeader,
+    updateHeader,
+    removeHeader,
+    addFilter,
+    updateFilter,
+    removeFilter,
+    clear,
+  } = useFlexHeaderSettings();
+  const [currentPage, setCurrentPage] = useState(pages[0]);
 
-  const addRow = async () => {
-    console.log("addRow");
-    const newSettings = [...settings];
-    newSettings.push({
+  useEffect(() => {
+    setCurrentPage(pages[0]);
+  }, [pages]);
+
+  const _addHeader = async () => {
+    addHeader(currentPage.id, {
       headerName: "",
       headerValue: "",
-      headerEnabled: false,
+      headerEnabled: true,
     });
-    await updateSettings(newSettings);
   };
 
-  const removeRow = async (index: number) => {
-    const newSettings = [...settings];
-    newSettings.splice(index, 1);
-    await updateSettings(newSettings);
+  const _removeHeader = async (id: string) => {
+    removeHeader(currentPage.id, id);
   };
 
-  const updateRow = async (
-    index: number,
-    headerName: string,
-    headerValue: string,
-    headerEnabled: boolean
-  ) => {
-    const newSettings = [...settings];
-    newSettings[index] = {
-      headerName,
-      headerValue,
-      headerEnabled,
-    };
-    await updateSettings(newSettings);
+  const _updateHeader = async (header: HeaderSetting) => {
+    updateHeader(currentPage.id, header);
+  };
+
+  const _addFilter = async () => {
+    addFilter(currentPage.id, {
+      type: "include",
+      value: "new-filter",
+      enabled: true,
+      valid: false,
+    });
+  };
+
+  const _updateFilter = async (filter: Omit<HeaderFilter, "valid">) => {
+    updateFilter(currentPage.id, filter);
+  };
+
+  const _removeFilter = async (id: string) => {
+    removeFilter(currentPage.id, id);
   };
 
   return (
@@ -44,25 +64,62 @@ function App() {
       <div className="app__container">
         <div className="app__header">
           <p>Flex Header</p>
+          <span onClick={clear}>Clear Settings</span>
         </div>
         <Divider />
         <div className="app__body">
-          {settings.map(({ headerName, headerValue, headerEnabled }, i) => (
-            <HeaderRow
-              key={`header-row__${i}`}
-              headerName={headerName}
-              headerValue={headerValue}
-              headerEnabled={headerEnabled}
-              onRemove={() => removeRow(i)}
-              onUpdate={(name: string, value: string, enabled: boolean) =>
-                updateRow(i, name, value, enabled)
-              }
-            />
-          ))}
+          {currentPage?.headers.map(
+            ({ id, headerName, headerValue, headerEnabled }) => (
+              <HeaderRow
+                key={`header-row__${id}`}
+                id={id}
+                headerName={headerName}
+                headerValue={headerValue}
+                headerEnabled={headerEnabled}
+                onRemove={(id: string) => _removeHeader(id)}
+                onUpdate={(
+                  id: string,
+                  name: string,
+                  value: string,
+                  enabled: boolean
+                ) =>
+                  _updateHeader({
+                    id: id,
+                    headerName: name,
+                    headerValue: value,
+                    headerEnabled: enabled,
+                  })
+                }
+              />
+            )
+          )}
+          <div className="app__body__filters">
+            <p>Filters</p>
+            {currentPage?.filters.map((filter) => (
+              <FilterRow
+                key={`filter-row__${filter.id}`}
+                {...filter}
+                onRemove={_removeFilter}
+                onUpdate={_updateFilter}
+              />
+            ))}
+          </div>
         </div>
         <Divider />
-        <Button text="Add Row" onClick={addRow} />
-        <div>{JSON.stringify(settings)}</div>
+        <div className="app__footer">
+          <Button text="Add Row" onClick={_addHeader} />
+          <Button text="Add Filter" onClick={_addFilter} />
+        </div>
+        <div>
+          {currentPage.headers.map((header) => {
+            return (
+              <div key={header.id}>
+                {header.id} - {header.headerName} - {header.headerValue} -{" "}
+                {header.headerEnabled ? "Enabled" : "Disabled"}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

@@ -34,3 +34,9 @@
   flex-direction: column;
   gap: 0.5rem;
 }
+
+.app__footer {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+}

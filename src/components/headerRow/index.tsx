@@ -2,25 +2,26 @@ import { HeaderSetting } from "../../utils/settings";
 import "./index.css";
 
 const HeaderRow = ({
+  id,
   headerName,
   headerValue,
   headerEnabled,
   onRemove,
   onUpdate,
 }: HeaderSetting & {
-  onRemove: () => void;
-  onUpdate: (name: string, value: string, enabled: boolean) => void;
+  onRemove: (id: string) => void;
+  onUpdate: (id: string, name: string, value: string, enabled: boolean) => void;
 }) => {
   const updateName = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onUpdate(e.target.value, headerValue, headerEnabled);
+    onUpdate(id, e.target.value, headerValue, headerEnabled);
   };
 
   const updateValue = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onUpdate(headerName, e.target.value, headerEnabled);
+    onUpdate(id, headerName, e.target.value, headerEnabled);
   };
 
   const updateEnabled = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onUpdate(headerName, headerValue, e.target.checked);
+    onUpdate(id, headerName, headerValue, e.target.checked);
   };
 
   return (
@@ -48,7 +49,7 @@ const HeaderRow = ({
           onChange={updateValue}
         />
       </div>
-      <div className="header-row__remove" onClick={onRemove}>
+      <div className="header-row__remove" onClick={() => onRemove(id)}>
         <span>Remove</span>
       </div>
     </div>
