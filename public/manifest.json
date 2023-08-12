@@ -1,5 +1,5 @@
 {
-  "name": "FlexHeader",
+  "name": "HeaderMod",
   "version": "0.0.1",
   "manifest_version": 3,
   "description": "create-react-app for extensions",
@@ -9,7 +9,7 @@
   "permissions": ["storage", "activeTab", "declarativeNetRequest"],
   "host_permissions": ["<all_urls>"],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "static/js/background.js"
   },
   "action": {
     "default_popup": "index.html",

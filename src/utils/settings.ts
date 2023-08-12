@@ -8,11 +8,13 @@ export type Page = {
   headers: HeaderSetting[];
 };
 
+export type FilterType = "include" | "exclude";
+
 export type HeaderFilter = {
   id: string;
   enabled: boolean;
   valid: boolean;
-  type: "include" | "exclude";
+  type: FilterType;
   value: string;
 };
 
@@ -58,7 +60,6 @@ function useFlexHeaderSettings() {
 
   const retrieveSettings = async () => {
     chrome.storage.sync.get("settings", (data) => {
-      console.log("retrieved settings", data.settings);
       if (data.settings === undefined) {
         chrome.storage.sync.set({
           settings: [defaultPage],

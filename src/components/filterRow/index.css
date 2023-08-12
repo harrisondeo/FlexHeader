@@ -7,7 +7,7 @@
   gap: 1rem;
 }
 
-.filter-row__name,
+.filter-row__type,
 .filter-row__value {
   display: flex;
   flex-direction: column;

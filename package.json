@@ -1,8 +1,9 @@
 {
-  "name": "flex-header",
+  "name": "header-mod",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@craco/craco": "^7.1.0",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
@@ -18,7 +19,7 @@
   },
   "scripts": {
     "start": "react-app-rewired start",
-    "build": "react-app-rewired build",
+    "build": "craco build",
     "test": "react-app-rewired test",
     "eject": "react-scripts eject"
   },
@@ -41,10 +42,6 @@
     ]
   },
   "devDependencies": {
-    "@types/chrome": "^0.0.243",
-    "copy-webpack-plugin": "^11.0.0",
-    "customize-cra": "^1.0.0",
-    "react-app-rewire-multiple-entry": "^2.2.3",
-    "react-app-rewired": "^2.2.1"
+    "@types/chrome": "^0.0.243"
   }
 }

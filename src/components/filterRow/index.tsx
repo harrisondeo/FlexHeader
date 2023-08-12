@@ -1,4 +1,4 @@
-import { HeaderFilter } from "../../utils/settings";
+import { FilterType, HeaderFilter } from "../../utils/settings";
 import "./index.css";
 
 const FilterRow = ({
@@ -13,16 +13,19 @@ const FilterRow = ({
   onRemove: (id: string) => void;
   onUpdate: (filter: Omit<HeaderFilter, "valid">) => void;
 }) => {
-  const updateType = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const type = e.target.value == "include" ? "exclude" : "include";
+  const updateType = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const type: FilterType = e.target.value as FilterType;
+    console.log(e.target.value, type);
     onUpdate({ id, enabled, type: type, value });
   };
 
   const updateValue = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
     onUpdate({ id, enabled, type, value: e.target.value });
   };
 
   const updateEnabled = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
     onUpdate({ id, enabled: e.target.checked, type, value });
   };
 
@@ -31,13 +34,11 @@ const FilterRow = ({
       <div className="filter-row__checkbox">
         <input type="checkbox" checked={enabled} onChange={updateEnabled} />
       </div>
-      <div className="filter-row__name">
-        <input
-          type="text"
-          placeholder="Type"
-          value={type}
-          onChange={updateType}
-        />
+      <div className="filter-row__type">
+        <select value={type} onChange={updateType}>
+          <option value="include">Include</option>
+          <option value="exclude">Exclude</option>
+        </select>
       </div>
       <div className="filter-row__value">
         <input
