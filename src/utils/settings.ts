@@ -4,8 +4,14 @@ export type Page = {
   id: number;
   name: string;
   enabled: boolean;
+  keepEnabled: boolean;
   filters: HeaderFilter[];
   headers: HeaderSetting[];
+};
+
+export type PageHeadersPreset = {
+  name: string;
+  pageSettings: Page;
 };
 
 export type FilterType = "include" | "exclude";
@@ -29,6 +35,7 @@ const defaultPage: Page = {
   id: 0,
   name: "Default",
   enabled: true,
+  keepEnabled: false,
   filters: [],
   headers: [
     {
@@ -54,9 +61,15 @@ const filterIsValid = async (
   );
 };
 
+export const clearStoredSettings = () => {
+  chrome.storage.sync.clear();
+};
+
 function useFlexHeaderSettings() {
   const [pages, setPages] = useState<Page[]>([defaultPage]);
   const [selectedPage, setSelectedPage] = useState<number>(0);
+
+  const [presets, setPresets] = useState<PageHeadersPreset[]>([]);
 
   const retrieveSettings = async () => {
     chrome.storage.sync.get("settings", (data) => {
@@ -87,10 +100,32 @@ function useFlexHeaderSettings() {
 
       setSelectedPage(data.selectedPage);
     });
+
+    chrome.storage.sync.get("presets", (data) => {
+      if (data.presets === undefined) {
+        chrome.storage.sync.set({
+          presets: [],
+        });
+        return;
+      }
+
+      if (!Array.isArray(data.presets)) {
+        chrome.storage.sync.set({
+          presets: [],
+        });
+        return;
+      }
+
+      setPresets(data.presets);
+    });
   };
 
   const save = (pages: Page[]) => {
     chrome.storage.sync.set({ settings: pages });
+  };
+
+  const savePresets = (presets: PageHeadersPreset[]) => {
+    chrome.storage.sync.set({ presets });
   };
 
   const clear = () => {
@@ -122,6 +157,12 @@ function useFlexHeaderSettings() {
 
   const removePage = (id: number) => {
     const newPages = pages.filter((page) => page.id !== id);
+
+    // if there are no pages left after removing the page, add the default page
+    // if (newPages.length === 0) {
+    //   newPages.push(defaultPage);
+    // }
+
     setPages(newPages);
     save(newPages);
   };
@@ -277,6 +318,19 @@ function useFlexHeaderSettings() {
     });
   };
 
+  /**
+   * Preset functions
+   */
+  const addPreset = (preset: PageHeadersPreset) => {
+    const newPresets = [...presets, preset];
+    setPresets(newPresets);
+    savePresets(newPresets);
+  };
+
+  const getPresetsJSON = () => {
+    return JSON.stringify(presets);
+  };
+
   useEffect(() => {
     retrieveSettings();
   }, []);
@@ -299,6 +353,9 @@ function useFlexHeaderSettings() {
     clear,
     selectedPage,
     changeSelectedPage,
+    presets,
+    addPreset,
+    getPresetsJSON,
   };
 }
 

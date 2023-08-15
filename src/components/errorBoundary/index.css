@@ -1,0 +1,10 @@
+.error-boundary_container {
+  width: 300px;
+  height: 150px;
+
+  padding: 1rem;
+}
+
+.error-boundary_container pre {
+  white-space: pre-wrap;
+}

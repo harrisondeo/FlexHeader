@@ -1,4 +1,6 @@
-import { Page } from "../../utils/settings";
+import { useState } from "react";
+import { Page, PageHeadersPreset } from "../../utils/settings";
+import AddPresetpopup from "../addPresetPopup";
 import Button from "../button";
 import PageTab from "../pageTab";
 import "./index.css";
@@ -9,15 +11,33 @@ const PagesTabs = ({
   setCurrentPage,
   addPage,
   removePage,
-  updatePage,
+  updatePageName,
+  updatePageKeepEnabled,
+  addNewPreset,
 }: {
-  pages: Pick<Page, "id" | "name">[];
+  pages: Page[];
   currentPage: number;
   setCurrentPage: (id: number) => void;
   addPage: () => void;
   removePage: (id: number) => void;
-  updatePage: (name: string, id: number) => void;
+  updatePageName: (name: string, id: number) => void;
+  updatePageKeepEnabled: (id: number, enabled: boolean) => void;
+  addNewPreset: (preset: PageHeadersPreset) => void;
 }) => {
+  const [showAddPresetPopup, setShowAddPresetPopup] = useState(false);
+
+  const _onKeepEnabledChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    updatePageKeepEnabled(currentPage, e.target.checked);
+  };
+
+  const _onAddPageToPreset = () => {
+    setShowAddPresetPopup(true);
+  };
+
+  const _onAddPreset = (name: string) => {
+    alert(name);
+    setShowAddPresetPopup(false);
+  };
   return (
     <>
       <div className="pages-tabs">
@@ -27,7 +47,7 @@ const PagesTabs = ({
             page={page}
             active={page.id === currentPage}
             setCurrentPage={setCurrentPage}
-            updatePage={updatePage}
+            updatePage={updatePageName}
           />
         ))}
         <div
@@ -39,12 +59,24 @@ const PagesTabs = ({
         </div>
       </div>
       <div className="pages-tabs__actions">
-        <Button
-          onClick={() => removePage(currentPage)}
-          size="medium"
-          text="Remove Page"
-        />
+        <div className="pages-tabs__actions__keepon">
+          <input type="checkbox" onChange={_onKeepEnabledChange} />
+          <label>{`Keep Enabled (in background)`}</label>
+        </div>
+        <div>
+          <Button
+            onClick={() => removePage(currentPage)}
+            size="medium"
+            text="Remove Page"
+          />
+          <Button
+            onClick={_onAddPageToPreset}
+            size="medium"
+            text="Add Preset"
+          />
+        </div>
       </div>
+      <AddPresetpopup show={showAddPresetPopup} onSubmit={_onAddPreset} />
     </>
   );
 };

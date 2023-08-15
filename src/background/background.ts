@@ -26,7 +26,7 @@ export function getAndApplyHeaderRules() {
         if (page.enabled) {
           // each setting
           page.headers.forEach((header, i) => {
-            if (header.headerEnabled) {
+            if (header.headerEnabled && header.headerName) {
               // Check for filters
               let regexFilter = "";
 
@@ -76,9 +76,8 @@ export function getAndApplyHeaderRules() {
         }
       });
     }
-    console.log(headers);
 
-    chrome.declarativeNetRequest.updateSessionRules({
+    chrome.declarativeNetRequest.updateDynamicRules({
       removeRuleIds: oldRuleIds,
       addRules: headers,
     });
