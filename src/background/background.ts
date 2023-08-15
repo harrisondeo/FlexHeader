@@ -78,7 +78,7 @@ export function getAndApplyHeaderRules() {
     }
     console.log(headers);
 
-    chrome.declarativeNetRequest.updateDynamicRules({
+    chrome.declarativeNetRequest.updateSessionRules({
       removeRuleIds: oldRuleIds,
       addRules: headers,
     });

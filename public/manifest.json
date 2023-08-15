@@ -1,12 +1,13 @@
 {
   "name": "HeaderMod",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "manifest_version": 3,
   "description": "A lightweight yet powerful extension to modify HTTP headers on the fly.",
   "icons": {
     "128": "logo128.png"
   },
-  "permissions": ["storage", "activeTab", "declarativeNetRequest"],
+  "permissions": ["storage", "declarativeNetRequest"],
+  "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "static/js/background.js"
   },
