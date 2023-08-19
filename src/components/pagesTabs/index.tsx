@@ -60,10 +60,6 @@ const PagesTabs = ({
         </div>
       </div>
       <div className="pages-tabs__actions">
-        <div className="pages-tabs__actions__keepon">
-          <input type="checkbox" onChange={_onKeepEnabledChange} />
-          <label>{`Keep Enabled (in background)`}</label>
-        </div>
         <div className="pages-tabs__actions__buttons">
           <PageOptionsDropdown
             page={currentPage}

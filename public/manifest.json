@@ -1,6 +1,6 @@
 {
-  "name": "HeaderMod",
-  "version": "0.1.2",
+  "name": "FlexHeaders",
+  "version": "0.2.0",
   "manifest_version": 3,
   "description": "A lightweight yet powerful extension to modify HTTP headers on the fly.",
   "icons": {

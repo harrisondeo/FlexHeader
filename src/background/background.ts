@@ -23,7 +23,7 @@ export function getAndApplyHeaderRules() {
 
     if (result.settings as Page[]) {
       result.settings.forEach((page: Page) => {
-        if (page.enabled) {
+        if (page.enabled || page.keepEnabled) {
           // each setting
           page.headers.forEach((header, i) => {
             if (header.headerEnabled && header.headerName) {

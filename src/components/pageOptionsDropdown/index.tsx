@@ -1,7 +1,7 @@
 import { Page, PageHeadersPreset } from "../../utils/settings";
 import { useState, useRef, useEffect } from "react";
 import "./index.css";
-import Button from "../button";
+import Button, { FeedbackButton } from "../button";
 
 const PageOptionsDropdown = ({
   page,
@@ -24,11 +24,8 @@ const PageOptionsDropdown = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    console.log(optionButtonRef.current);
     if (optionButtonRef.current) {
-      // calculate the poosition to be aligned right and below the button
       const rect = optionButtonRef.current.getBoundingClientRect();
-      console.log(rect);
       setOptionButtonLocation(rect);
     }
   }, [optionButtonRef]);
@@ -98,14 +95,15 @@ const PageOptionsDropdown = ({
           <label>Keep Enabled</label>
         </div>
         <div className="page-options-dropdown__item">
-          <Button
+          <FeedbackButton
             onClick={_addCurrentPageAsPreset}
             width="full"
             content="Save Page to Preset"
+            intermediateContent={<img src="/icons/check.svg" alt="Saved" />}
           />
         </div>
         <div className="page-options-dropdown__item">
-          <Button onClick={removePage} width="full" content="Remove Page" />
+          <Button onClick={removePage} width="full" content="Delete Page" />
         </div>
       </div>
     </>

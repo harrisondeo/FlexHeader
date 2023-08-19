@@ -105,11 +105,11 @@ function App() {
             <div className="app__header__logo">
               <img
                 src="logo128.png"
-                alt="HeaderMod Logo"
+                alt="FlexHeaders Logo"
                 width={50}
                 height={50}
               />
-              <p>Header Mod</p>
+              <p>Flex Headers</p>
             </div>
             {/* <span onClick={clear}>Clear Settings</span> */}
           </div>

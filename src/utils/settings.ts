@@ -322,6 +322,17 @@ function useFlexHeaderSettings() {
    * Preset functions
    */
   const addPreset = (preset: PageHeadersPreset) => {
+    // check if there is a preset with the same settings config
+    const existingPreset = presets.find((p) => {
+      return (
+        JSON.stringify(p.pageSettings) === JSON.stringify(preset.pageSettings)
+      );
+    });
+
+    if (existingPreset) {
+      return;
+    }
+
     const newPresets = [...presets, preset];
     setPresets(newPresets);
     savePresets(newPresets);
