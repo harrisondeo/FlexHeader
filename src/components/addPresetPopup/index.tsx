@@ -36,7 +36,7 @@ const AddPresetpopup = ({
         />
       </div>
       <div className="add-preset-popup__actions">
-        <Button text="Add" onClick={_onSubmit} />
+        <Button content="Add" onClick={_onSubmit} />
       </div>
     </div>
   );

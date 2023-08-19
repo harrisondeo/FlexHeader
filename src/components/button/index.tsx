@@ -1,15 +1,21 @@
 import "./index.css";
 
 export interface ButtonProps {
-  text: string;
+  content: string | React.ReactElement;
   size?: "small" | "medium" | "large";
+  width?: "full" | "auto";
   onClick?: () => void;
 }
 
-const Button = ({ text = "", size = "medium", onClick }: ButtonProps) => {
+const Button = ({
+  content = "",
+  size = "medium",
+  width = "auto",
+  onClick,
+}: ButtonProps) => {
   return (
-    <div className={`button ${size}`} onClick={onClick}>
-      {text}
+    <div className={`button ${size} width-${width}`} onClick={onClick}>
+      {content}
     </div>
   );
 };

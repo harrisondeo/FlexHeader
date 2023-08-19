@@ -4,6 +4,7 @@ import AddPresetpopup from "../addPresetPopup";
 import Button from "../button";
 import PageTab from "../pageTab";
 import "./index.css";
+import PageOptionsDropdown from "../pageOptionsDropdown";
 
 const PagesTabs = ({
   pages,
@@ -16,7 +17,7 @@ const PagesTabs = ({
   addNewPreset,
 }: {
   pages: Page[];
-  currentPage: number;
+  currentPage: Page;
   setCurrentPage: (id: number) => void;
   addPage: () => void;
   removePage: (id: number) => void;
@@ -27,7 +28,7 @@ const PagesTabs = ({
   const [showAddPresetPopup, setShowAddPresetPopup] = useState(false);
 
   const _onKeepEnabledChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updatePageKeepEnabled(currentPage, e.target.checked);
+    updatePageKeepEnabled(currentPage.id, e.target.checked);
   };
 
   const _onAddPageToPreset = () => {
@@ -45,7 +46,7 @@ const PagesTabs = ({
           <PageTab
             key={page.id}
             page={page}
-            active={page.id === currentPage}
+            active={page.id === currentPage.id}
             setCurrentPage={setCurrentPage}
             updatePage={updatePageName}
           />
@@ -63,16 +64,17 @@ const PagesTabs = ({
           <input type="checkbox" onChange={_onKeepEnabledChange} />
           <label>{`Keep Enabled (in background)`}</label>
         </div>
-        <div>
-          <Button
-            onClick={() => removePage(currentPage)}
-            size="medium"
-            text="Remove Page"
-          />
-          <Button
-            onClick={_onAddPageToPreset}
-            size="medium"
-            text="Add Preset"
+        <div className="pages-tabs__actions__buttons">
+          <PageOptionsDropdown
+            page={currentPage}
+            removePage={() => {}}
+            updatePageName={(name: string) =>
+              updatePageName(name, currentPage.id)
+            }
+            updatePageKeepEnabled={(enabled: boolean) =>
+              updatePageKeepEnabled(currentPage.id, enabled)
+            }
+            addNewPreset={addNewPreset}
           />
         </div>
       </div>

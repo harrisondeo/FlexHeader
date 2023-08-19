@@ -28,3 +28,10 @@
   align-items: center;
   margin-bottom: 0.5rem;
 }
+
+.pages-tabs__actions__buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  align-items: center;
+}

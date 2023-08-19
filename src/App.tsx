@@ -115,7 +115,7 @@ function App() {
           </div>
           <PagesTabs
             pages={pages}
-            currentPage={currentPage.id}
+            currentPage={currentPage}
             setCurrentPage={changeSelectedPage}
             addPage={_addPage}
             updatePageName={_updatePageName}
@@ -174,10 +174,10 @@ function App() {
           </div>
           <Divider />
           <div className="app__footer">
-            <Button text="Add Header" onClick={_addHeader} />
-            <Button text="Add Filter Rule" onClick={_addFilter} />
+            <Button content="Add Header" onClick={_addHeader} />
+            <Button content="Add Filter Rule" onClick={_addFilter} />
             <Button
-              text="Get Presets"
+              content="Get Presets"
               onClick={() => {
                 console.log(getPresetsJSON());
               }}
