@@ -8,7 +8,7 @@ const PageTab = ({
   setCurrentPage,
   updatePage,
 }: {
-  page: Pick<Page, "id" | "name">;
+  page: Page;
   active: boolean;
   setCurrentPage: (id: number) => void;
   updatePage: (name: string, id: number) => void;
@@ -46,6 +46,17 @@ const PageTab = ({
           onClick={() => setCurrentPage(page.id)}
           onDoubleClick={() => setEditing(true)}
         >
+          <img
+            className={`page-tab__enabled-image`}
+            src={`./icons/${
+              page.keepEnabled || page.enabled
+                ? "power-active"
+                : "power-inactive"
+            }.svg`}
+            alt="enabled"
+            width={16}
+            height={16}
+          />
           {page.name}
         </div>
       )}

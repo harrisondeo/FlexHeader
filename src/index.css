@@ -53,10 +53,14 @@ code {
 
 :root {
   --primary: #00a82e;
+  --primary-dark: #008c26;
 
   --text-color: #e8eaed;
 
   --background-primary: #191919;
   --background-secondary: #282828;
   --background-tertiary: #3b3b3b;
+  --background-quaternary: #4f4f4f;
+  --background-quinary: #626262;
+  --background-senary: #767676;
 }
