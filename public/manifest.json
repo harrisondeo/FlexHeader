@@ -1,5 +1,5 @@
 {
-  "name": "FlexHeaders",
+  "name": "FlexHeaders - Modify HTTP Headers",
   "version": "0.2.0",
   "manifest_version": 3,
   "description": "A lightweight yet powerful extension to modify HTTP headers on the fly.",
