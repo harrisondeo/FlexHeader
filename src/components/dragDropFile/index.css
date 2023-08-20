@@ -1,0 +1,48 @@
+.drag-drop-file {
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
+  text-align: center;
+  position: relative;
+}
+
+#input-file-upload {
+  display: none;
+}
+
+#label-file-upload {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  justify-content: center;
+  border-width: 2px;
+  border-radius: 1rem;
+  border-style: dashed;
+  border-color: var(--background-quaternary);
+  background-color: var(--background-senary);
+}
+
+.upload-button {
+  cursor: pointer;
+  padding: 0.25rem;
+  font-size: 1rem;
+  border: none;
+  background-color: transparent;
+  color: var(--text-color);
+}
+
+.upload-button:hover {
+  text-decoration-line: underline;
+}
+
+#drag-file-element {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 1rem;
+  top: 0px;
+  right: 0px;
+  bottom: 0px;
+  left: 0px;
+}

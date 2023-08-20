@@ -63,4 +63,9 @@ code {
   --background-quaternary: #4f4f4f;
   --background-quinary: #626262;
   --background-senary: #767676;
+
+  --color-success: #00a82e;
+  --color-warning: #ff9800;
+  --color-info: #2196f3;
+  --color-error: #f44336;
 }

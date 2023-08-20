@@ -60,10 +60,17 @@
   display: flex;
   flex-direction: row;
   gap: 0.5rem;
+  justify-content: space-between;
 }
 
 .app__body__filters__container {
   display: flex;
   flex-direction: column;
+  gap: 0.5rem;
+}
+
+.app__footer__action_block {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
 }

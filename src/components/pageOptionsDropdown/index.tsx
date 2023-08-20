@@ -1,20 +1,18 @@
-import { Page, PageHeadersPreset } from "../../utils/settings";
+import { Page } from "../../utils/settings";
 import { useState, useRef, useEffect } from "react";
 import "./index.css";
-import Button, { FeedbackButton } from "../button";
+import Button from "../button";
 
 const PageOptionsDropdown = ({
   page,
   removePage,
   updatePageName,
   updatePageKeepEnabled,
-  addNewPreset,
 }: {
   page: Page;
   removePage: () => void;
   updatePageName: (name: string, id: number) => void;
   updatePageKeepEnabled: (enabled: boolean) => void;
-  addNewPreset: (preset: PageHeadersPreset) => void;
 }) => {
   const [show, setShow] = useState(false);
   const optionButtonRef = useRef<HTMLDivElement>(null);
@@ -30,22 +28,11 @@ const PageOptionsDropdown = ({
     }
   }, [optionButtonRef]);
 
-  const _addCurrentPageAsPreset = () => {
-    const preset: PageHeadersPreset = {
-      name: page.name,
-      pageSettings: {
-        id: page.id,
-        name: page.name,
-        enabled: page.enabled,
-        keepEnabled: page.keepEnabled,
-        filters: page.filters,
-        headers: page.headers,
-      },
-    };
-    addNewPreset(preset);
+  const _removePage = () => {
+    removePage();
+    setShow(false);
   };
 
-  // if user clicks outside of the dropdown when it is open, close it
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -95,15 +82,15 @@ const PageOptionsDropdown = ({
           <label>Keep Enabled</label>
         </div>
         <div className="page-options-dropdown__item">
-          <FeedbackButton
+          {/* <FeedbackButton
             onClick={_addCurrentPageAsPreset}
             width="full"
             content="Save Page to Preset"
             intermediateContent={<img src="/icons/check.svg" alt="Saved" />}
-          />
+          /> */}
         </div>
         <div className="page-options-dropdown__item">
-          <Button onClick={removePage} width="full" content="Delete Page" />
+          <Button onClick={_removePage} width="full" content="Delete Page" />
         </div>
       </div>
     </>

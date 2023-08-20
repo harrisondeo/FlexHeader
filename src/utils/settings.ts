@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAlert } from "../context/alertContext";
 
 export type Page = {
   id: number;
@@ -7,11 +8,6 @@ export type Page = {
   keepEnabled: boolean;
   filters: HeaderFilter[];
   headers: HeaderSetting[];
-};
-
-export type PageHeadersPreset = {
-  name: string;
-  pageSettings: Page;
 };
 
 export type FilterType = "include" | "exclude";
@@ -69,7 +65,7 @@ function useFlexHeaderSettings() {
   const [pages, setPages] = useState<Page[]>([defaultPage]);
   const [selectedPage, setSelectedPage] = useState<number>(0);
 
-  const [presets, setPresets] = useState<PageHeadersPreset[]>([]);
+  const alertContext = useAlert();
 
   const retrieveSettings = async () => {
     chrome.storage.sync.get("settings", (data) => {
@@ -86,7 +82,7 @@ function useFlexHeaderSettings() {
         });
         return;
       }
-
+      console.log("found settings", data.settings);
       setPages(data.settings);
     });
 
@@ -100,32 +96,10 @@ function useFlexHeaderSettings() {
 
       setSelectedPage(data.selectedPage);
     });
-
-    chrome.storage.sync.get("presets", (data) => {
-      if (data.presets === undefined) {
-        chrome.storage.sync.set({
-          presets: [],
-        });
-        return;
-      }
-
-      if (!Array.isArray(data.presets)) {
-        chrome.storage.sync.set({
-          presets: [],
-        });
-        return;
-      }
-
-      setPresets(data.presets);
-    });
   };
 
   const save = (pages: Page[]) => {
     chrome.storage.sync.set({ settings: pages });
-  };
-
-  const savePresets = (presets: PageHeadersPreset[]) => {
-    chrome.storage.sync.set({ presets });
   };
 
   const clear = () => {
@@ -159,12 +133,17 @@ function useFlexHeaderSettings() {
     const newPages = pages.filter((page) => page.id !== id);
 
     // if there are no pages left after removing the page, add the default page
-    // if (newPages.length === 0) {
-    //   newPages.push(defaultPage);
-    // }
+    if (newPages.length === 0) {
+      newPages.push(defaultPage);
+    }
 
     setPages(newPages);
     save(newPages);
+    alertContext.setAlert({
+      alertType: "info",
+      alertText: "Page removed.",
+      location: "bottom",
+    });
   };
 
   const updatePage = (page: Page) => {
@@ -319,27 +298,36 @@ function useFlexHeaderSettings() {
   };
 
   /**
-   * Preset functions
+   * Import json file
    */
-  const addPreset = (preset: PageHeadersPreset) => {
-    // check if there is a preset with the same settings config
-    const existingPreset = presets.find((p) => {
-      return (
-        JSON.stringify(p.pageSettings) === JSON.stringify(preset.pageSettings)
-      );
-    });
+  const importSettings = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result;
+      console.log("Result", result);
+      if (typeof result === "string") {
+        const parsed = JSON.parse(result);
+        if (Array.isArray(parsed)) {
+          // remap the ids to avoid conflicts
+          const combinedPages = [...pages, ...parsed];
+          const newPages = combinedPages.map((page, index) => {
+            return {
+              ...page,
+              id: index,
+            };
+          });
 
-    if (existingPreset) {
-      return;
-    }
-
-    const newPresets = [...presets, preset];
-    setPresets(newPresets);
-    savePresets(newPresets);
-  };
-
-  const getPresetsJSON = () => {
-    return JSON.stringify(presets);
+          setPages(newPages);
+          save(newPages);
+          alertContext.setAlert({
+            alertType: "info",
+            alertText: "Settings imported.",
+            location: "bottom",
+          });
+        }
+      }
+    };
+    reader.readAsText(file);
   };
 
   useEffect(() => {
@@ -364,9 +352,7 @@ function useFlexHeaderSettings() {
     clear,
     selectedPage,
     changeSelectedPage,
-    presets,
-    addPreset,
-    getPresetsJSON,
+    importSettings,
   };
 }
 

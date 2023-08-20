@@ -6,6 +6,7 @@ export interface ButtonProps {
   intermediateContent?: string | React.ReactElement;
   size?: "small" | "medium" | "large";
   width?: "full" | "auto";
+  color?: "primary" | "warning" | "danger" | "info" | "secondary";
   onClick?: () => void;
 }
 
@@ -13,10 +14,14 @@ const Button = ({
   content = "",
   size = "medium",
   width = "auto",
+  color = "primary",
   onClick,
 }: ButtonProps) => {
   return (
-    <div className={`button ${size} width-${width}`} onClick={onClick}>
+    <div
+      className={`button ${size} width-${width} color-${color}`}
+      onClick={onClick}
+    >
       {content}
     </div>
   );

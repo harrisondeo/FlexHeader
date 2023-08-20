@@ -7,6 +7,7 @@ import reportWebVitals from "./reportWebVitals";
 import { ErrorBoundary } from "react-error-boundary";
 import ErrorBoundaryFallback from "./components/errorBoundary";
 import { clearStoredSettings } from "./utils/settings";
+import AlertProvider from "./context/alertContext";
 
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement
@@ -17,7 +18,9 @@ root.render(
       FallbackComponent={ErrorBoundaryFallback}
       onReset={() => clearStoredSettings()}
     >
-      <App />
+      <AlertProvider>
+        <App />
+      </AlertProvider>
     </ErrorBoundary>
   </React.StrictMode>
 );

@@ -9,7 +9,10 @@ import useFlexHeaderSettings, {
 import { useMemo } from "react";
 import FilterRow from "./components/filterRow";
 import PagesTabs from "./components/pagesTabs";
-import { ErrorBoundary } from "react-error-boundary";
+import Alert from "./components/alert";
+import { useAlert } from "./context/alertContext";
+import ExportPopup from "./components/exportPopup";
+import ImportPopup from "./components/importPopup";
 
 function App() {
   const {
@@ -26,9 +29,9 @@ function App() {
     clear,
     selectedPage,
     changeSelectedPage,
-    addPreset,
-    getPresetsJSON,
+    importSettings,
   } = useFlexHeaderSettings();
+  const alertContext = useAlert();
   const currentPage = useMemo(
     () => pages.find((x) => x.id === selectedPage) || pages[0],
     [pages, selectedPage]
@@ -85,6 +88,11 @@ function App() {
     if (page) {
       page.name = name;
       updatePage(page);
+      alertContext.setAlert({
+        alertText: `Page name updated to ${name}`,
+        alertType: "success",
+        location: "bottom",
+      });
     }
   };
 
@@ -98,94 +106,92 @@ function App() {
   };
 
   return (
-    <ErrorBoundary fallback={<div>Something went wrong</div>}>
-      <div className="app">
-        <div className="app__container">
-          <div className="app__header">
-            <div className="app__header__logo">
-              <img
-                src="logo128.png"
-                alt="FlexHeaders Logo"
-                width={50}
-                height={50}
-              />
-              <p>Flex Headers</p>
-            </div>
-            {/* <span onClick={clear}>Clear Settings</span> */}
+    <div className="app">
+      <div className="app__container">
+        <div className="app__header">
+          <div className="app__header__logo">
+            <img
+              src="logo128.png"
+              alt="FlexHeaders Logo"
+              width={50}
+              height={50}
+            />
+            <p>Flex Headers</p>
           </div>
-          <PagesTabs
-            pages={pages}
-            currentPage={currentPage}
-            setCurrentPage={changeSelectedPage}
-            addPage={_addPage}
-            updatePageName={_updatePageName}
-            updatePageKeepEnabled={_changePageKeepEnabled}
-            removePage={removePage}
-            addNewPreset={addPreset}
-          />
-          <div className="app__body">
-            <div className="app__body__headers">
-              {currentPage?.headers?.length === 0 && (
-                <p className="app__body__headers__empty">
-                  <i>No headers found. Add a new header.</i>
-                </p>
-              )}
-              {currentPage?.headers?.map(
-                ({ id, headerName, headerValue, headerEnabled }) => (
-                  <HeaderRow
-                    key={`header-row__${id}`}
-                    id={id}
-                    headerName={headerName}
-                    headerValue={headerValue}
-                    headerEnabled={headerEnabled}
-                    onRemove={(id: string) => _removeHeader(id)}
-                    onUpdate={(
-                      id: string,
-                      name: string,
-                      value: string,
-                      enabled: boolean
-                    ) =>
-                      _updateHeader({
-                        id: id,
-                        headerName: name,
-                        headerValue: value,
-                        headerEnabled: enabled,
-                      })
-                    }
-                  />
-                )
-              )}
-            </div>
-            {currentPage?.filters?.length > 0 && (
-              <div className="app__body__filters">
-                <p>Filters</p>
-                <div className="app__body__filters__container">
-                  {currentPage?.filters.map((filter) => (
-                    <FilterRow
-                      key={`filter-row__${filter.id}`}
-                      {...filter}
-                      onRemove={_removeFilter}
-                      onUpdate={_updateFilter}
-                    />
-                  ))}
-                </div>
-              </div>
+          {/* <span onClick={clear}>Clear Settings</span> */}
+        </div>
+        <PagesTabs
+          pages={pages}
+          currentPage={currentPage}
+          setCurrentPage={changeSelectedPage}
+          addPage={_addPage}
+          updatePageName={_updatePageName}
+          updatePageKeepEnabled={_changePageKeepEnabled}
+          removePage={removePage}
+        />
+        <div className="app__body">
+          <div className="app__body__headers">
+            {currentPage?.headers?.length === 0 && (
+              <p className="app__body__headers__empty">
+                <i>No headers found. Add a new header.</i>
+              </p>
+            )}
+            {currentPage?.headers?.map(
+              ({ id, headerName, headerValue, headerEnabled }) => (
+                <HeaderRow
+                  key={`header-row__${id}`}
+                  id={id}
+                  headerName={headerName}
+                  headerValue={headerValue}
+                  headerEnabled={headerEnabled}
+                  onRemove={(id: string) => _removeHeader(id)}
+                  onUpdate={(
+                    id: string,
+                    name: string,
+                    value: string,
+                    enabled: boolean
+                  ) =>
+                    _updateHeader({
+                      id: id,
+                      headerName: name,
+                      headerValue: value,
+                      headerEnabled: enabled,
+                    })
+                  }
+                />
+              )
             )}
           </div>
-          <Divider />
-          <div className="app__footer">
+          {currentPage?.filters?.length > 0 && (
+            <div className="app__body__filters">
+              <p>Filters</p>
+              <div className="app__body__filters__container">
+                {currentPage?.filters.map((filter) => (
+                  <FilterRow
+                    key={`filter-row__${filter.id}`}
+                    {...filter}
+                    onRemove={_removeFilter}
+                    onUpdate={_updateFilter}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <Divider />
+        <div className="app__footer">
+          <div className="app__footer__action_block">
             <Button content="Add Header" onClick={_addHeader} />
             <Button content="Add Filter Rule" onClick={_addFilter} />
-            <Button
-              content="Get Presets"
-              onClick={() => {
-                console.log(getPresetsJSON());
-              }}
-            />
+          </div>
+          <div className="app__footer__action_block">
+            <ImportPopup importSettings={importSettings} />
+            <ExportPopup pages={pages} />
           </div>
         </div>
+        <Alert />
       </div>
-    </ErrorBoundary>
+    </div>
   );
 }
 

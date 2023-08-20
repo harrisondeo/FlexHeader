@@ -49,3 +49,35 @@
 .button.width-full {
   width: 100%;
 }
+
+.button.color-warning {
+  background-color: var(--color-warning);
+}
+
+.button.color-warning:hover {
+  background-color: #ff9800;
+}
+
+.button.color-danger {
+  background-color: var(--color-error);
+}
+
+.button.color-danger:hover {
+  background-color: #f44336;
+}
+
+.button.color-info {
+  background-color: var(--color-info);
+}
+
+.button.color-info:hover {
+  background-color: #2196f3;
+}
+
+.button.color-secondary {
+  background-color: grey;
+}
+
+.button.color-secondary:hover {
+  background-color: #4f4f4f;
+}
