@@ -20,7 +20,8 @@
 .app__header {
   text-align: left;
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
   gap: 1rem;
   margin-bottom: 1rem;
 }

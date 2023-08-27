@@ -27,3 +27,40 @@
   gap: 0.5rem;
   align-items: center;
 }
+.page-tabs__show-all {
+  width: 2rem;
+  cursor: pointer;
+}
+
+.expanded-pages-dropdown {
+  position: absolute;
+  top: 116px;
+  right: 16px;
+  min-width: 60px;
+  padding: 10px 0;
+  background-color: var(--background-quaternary);
+  border: 1px solid var(--background-quinary);
+  border-radius: 5px;
+  box-shadow: 0 0 5px var(--background-quaternary);
+  z-index: 1;
+}
+
+.expanded-pages-dropdown__contents {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.expanded-pages-dropdown__contents span {
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+}
+
+.expanded-pages-dropdown__contents span:hover {
+  background-color: var(--background-tertiary);
+}

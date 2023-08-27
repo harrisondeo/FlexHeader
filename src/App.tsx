@@ -30,6 +30,7 @@ function App() {
     selectedPage,
     changeSelectedPage,
     importSettings,
+    changePageIndex,
   } = useFlexHeaderSettings();
   const alertContext = useAlert();
   const currentPage = useMemo(
@@ -118,6 +119,7 @@ function App() {
             />
             <p>Flex Headers</p>
           </div>
+          <Button content="New Page" onClick={_addPage} />
           {/* <span onClick={clear}>Clear Settings</span> */}
         </div>
         <PagesTabs
@@ -128,6 +130,7 @@ function App() {
           updatePageName={_updatePageName}
           updatePageKeepEnabled={_changePageKeepEnabled}
           removePage={removePage}
+          changePageIndex={changePageIndex}
         />
         <div className="app__body">
           <div className="app__body__headers">

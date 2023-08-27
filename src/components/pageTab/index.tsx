@@ -31,6 +31,7 @@ const PageTab = ({
           key={page.id}
           className={`page-tab ${active ? "active" : ""}`}
           onClick={() => setCurrentPage(page.id)}
+          data-page-id={page.id}
         >
           <input
             type="text"
@@ -57,7 +58,7 @@ const PageTab = ({
             width={16}
             height={16}
           />
-          {page.name}
+          <span>{page.name}</span>
         </div>
       )}
     </>

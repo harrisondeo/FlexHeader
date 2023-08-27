@@ -83,6 +83,11 @@ function useFlexHeaderSettings() {
         return;
       }
       console.log("found settings", data.settings);
+
+      data.settings.sort((a: Page, b: Page) => {
+        return a.id - b.id;
+      });
+
       setPages(data.settings);
     });
 
@@ -121,6 +126,7 @@ function useFlexHeaderSettings() {
       ...currentPages,
       {
         ...page,
+        id: currentPages.length,
         enabled: true,
       },
     ];
@@ -136,6 +142,10 @@ function useFlexHeaderSettings() {
     if (newPages.length === 0) {
       newPages.push(defaultPage);
     }
+
+    newPages.forEach((page, index) => {
+      page.id = index;
+    });
 
     setPages(newPages);
     save(newPages);
@@ -174,6 +184,23 @@ function useFlexHeaderSettings() {
     setPages(newPages);
     save(newPages);
     setSelectedPage(id);
+  };
+
+  const changePageIndex = (oldIndex: number, newIndex: number) => {
+    const newPages = [...pages];
+    const [removed] = newPages.splice(oldIndex, 1);
+
+    if (newIndex < 0) newIndex = 0;
+
+    newPages.splice(newIndex, 0, removed);
+
+    newPages.forEach((page, index) => {
+      page.id = index;
+    });
+
+    setSelectedPage(newIndex);
+    setPages(newPages);
+    save(newPages);
   };
 
   /**
@@ -352,6 +379,7 @@ function useFlexHeaderSettings() {
     clear,
     selectedPage,
     changeSelectedPage,
+    changePageIndex,
     importSettings,
   };
 }
