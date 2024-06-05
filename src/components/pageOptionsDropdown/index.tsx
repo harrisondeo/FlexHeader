@@ -7,12 +7,10 @@ const PageOptionsDropdown = ({
   page,
   removePage,
   updatePageName,
-  updatePageKeepEnabled,
 }: {
   page: Page;
   removePage: () => void;
   updatePageName: (name: string, id: number) => void;
-  updatePageKeepEnabled: (enabled: boolean) => void;
 }) => {
   const [show, setShow] = useState(false);
   const optionButtonRef = useRef<HTMLDivElement>(null);
@@ -72,14 +70,6 @@ const PageOptionsDropdown = ({
             value={page.name}
             onChange={(e) => updatePageName(e.target.value, page.id)}
           />
-        </div>
-        <div className="page-options-dropdown__item">
-          <input
-            type="checkbox"
-            checked={page.keepEnabled}
-            onChange={(e) => updatePageKeepEnabled(e.target.checked)}
-          />
-          <label>Keep Enabled</label>
         </div>
         <div className="page-options-dropdown__item">
           {/* <FeedbackButton

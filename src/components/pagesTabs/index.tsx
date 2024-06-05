@@ -142,6 +142,16 @@ const PagesTabs = ({
       />
       <div className="pages-tabs__actions">
         <div className="pages-tabs__actions__buttons">
+          <input
+            type="checkbox"
+            checked={currentPage.keepEnabled}
+            onChange={(e) =>
+              updatePageKeepEnabled(currentPage.id, e.target.checked)
+            }
+          />
+          <label>Enabled in background</label>
+        </div>
+        <div className="pages-tabs__actions__buttons">
           <Button
             onClick={() => changePageIndex(currentPage.id, currentPage.id - 1)}
             content={"<"}
@@ -155,9 +165,6 @@ const PagesTabs = ({
             removePage={() => removePage(currentPage.id, true)}
             updatePageName={(name: string) =>
               updatePageName(name, currentPage.id)
-            }
-            updatePageKeepEnabled={(enabled: boolean) =>
-              updatePageKeepEnabled(currentPage.id, enabled)
             }
           />
         </div>

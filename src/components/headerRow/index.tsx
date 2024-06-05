@@ -39,7 +39,7 @@ const HeaderRow = ({
           placeholder="Header"
           value={headerName}
           onChange={updateName}
-          onSelect={(e) => e.currentTarget.select()}
+          onClick={(e) => e.currentTarget.select()}
         />
       </div>
       <div className="header-row__value">
@@ -48,7 +48,7 @@ const HeaderRow = ({
           placeholder="Value"
           value={headerValue}
           onChange={updateValue}
-          onSelect={(e) => e.currentTarget.select()}
+          onClick={(e) => e.currentTarget.select()}
         />
       </div>
       <div className="header-row__remove" onClick={() => onRemove(id)}>
