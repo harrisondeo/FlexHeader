@@ -60,7 +60,7 @@ const PagesTabs = ({
   currentPage: Page;
   setCurrentPage: (id: number) => void;
   addPage: () => void;
-  removePage: (id: number) => void;
+  removePage: (id: number, autoSelectPage: boolean) => void;
   updatePageName: (name: string, id: number) => void;
   updatePageKeepEnabled: (id: number, enabled: boolean) => void;
   changePageIndex: (id: number, newIndex: number) => void;
@@ -152,7 +152,7 @@ const PagesTabs = ({
           />
           <PageOptionsDropdown
             page={currentPage}
-            removePage={() => removePage(currentPage.id)}
+            removePage={() => removePage(currentPage.id, true)}
             updatePageName={(name: string) =>
               updatePageName(name, currentPage.id)
             }
