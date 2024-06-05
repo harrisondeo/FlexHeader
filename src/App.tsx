@@ -6,7 +6,7 @@ import useFlexHeaderSettings, {
   HeaderFilter,
   HeaderSetting,
 } from "./utils/settings";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import FilterRow from "./components/filterRow";
 import PagesTabs from "./components/pagesTabs";
 import Alert from "./components/alert";
@@ -106,6 +106,8 @@ function App() {
     }
   };
 
+  const manifest = chrome.runtime.getManifest();
+
   return (
     <div className="app">
       <div className="app__container">
@@ -117,7 +119,10 @@ function App() {
               width={50}
               height={50}
             />
-            <p>Flex Headers</p>
+            <div>
+              <p>Flex Headers</p>
+              <span>v{manifest?.version}</span>
+            </div>
           </div>
           <Button content="New Page" onClick={_addPage} />
           {/* <span onClick={clear}>Clear Settings</span> */}
