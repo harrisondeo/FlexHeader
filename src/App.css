@@ -5,16 +5,19 @@
 
   width: 600px;
   height: 600px;
+  max-height: 600px;
+  overflow: hidden;
 
-  padding: 1rem;
+  padding: 1rem 1rem 0 1rem;
 }
 
 .app__container {
   display: flex;
   flex-direction: column;
-
+  position: relative;
   width: 100%;
   height: 100%;
+  padding-bottom: 44px;
 }
 
 .app__header {
@@ -41,6 +44,8 @@
   flex-direction: column;
   height: 100%;
   justify-content: space-between;
+  overflow: auto;
+  padding-right: 6px;
 }
 
 .app__body__headers {
@@ -58,9 +63,13 @@
 }
 
 .app__footer {
+  position: absolute;
+  bottom: 8px;
   display: flex;
   flex-direction: row;
   gap: 0.5rem;
+  height: 38px;
+  width: 100%;
   justify-content: space-between;
 }
 
