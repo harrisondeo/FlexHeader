@@ -5,6 +5,7 @@ import HeaderRow from "./components/headerRow";
 import useFlexHeaderSettings, {
   HeaderFilter,
   HeaderSetting,
+  Page,
 } from "./utils/settings";
 import { useEffect, useMemo } from "react";
 import FilterRow from "./components/filterRow";
@@ -71,16 +72,28 @@ function App() {
     removeFilter(currentPage.id, id);
   };
 
-  const _addPage = async () => {
+  const _addPage = async (page?: Page) => {
+    console.log(pages);
     const newId = pages.length;
-    addPage({
+
+    let newPage: Page = {
       id: newId,
       enabled: true,
       keepEnabled: false,
       name: "New Page",
       headers: [],
       filters: [],
-    });
+    };
+
+    if (page) {
+      newPage = {
+        ...page,
+        id: newId,
+        name: `New Page ${newId}`,
+      };
+    }
+    console.log("adding page", newPage);
+    addPage(newPage);
   };
 
   const _updatePageName = async (name: string, id: number) => {
@@ -124,7 +137,7 @@ function App() {
               <span>v{manifest?.version}</span>
             </div>
           </div>
-          <Button content="New Page" onClick={_addPage} />
+          <Button content="New Page" onClick={() => _addPage()} />
           {/* <span onClick={clear}>Clear Settings</span> */}
         </div>
         <PagesTabs

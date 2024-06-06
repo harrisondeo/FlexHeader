@@ -1,5 +1,5 @@
 .export-popup {
-  position: absolute;
+  position: fixed;
   left: 0;
   right: 0;
   top: calc(50vh - 200px);
@@ -23,7 +23,7 @@
 }
 
 .export-popup__backdrop {
-  position: absolute;
+  position: fixed;
   left: 0;
   right: 0;
   top: 0;

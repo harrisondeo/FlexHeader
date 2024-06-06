@@ -59,7 +59,7 @@ const PagesTabs = ({
   pages: Page[];
   currentPage: Page;
   setCurrentPage: (id: number) => void;
-  addPage: () => void;
+  addPage: (page?: Page) => void;
   removePage: (id: number, autoSelectPage: boolean) => void;
   updatePageName: (name: string, id: number) => void;
   updatePageKeepEnabled: (id: number, enabled: boolean) => void;
@@ -159,6 +159,10 @@ const PagesTabs = ({
           <Button
             onClick={() => changePageIndex(currentPage.id, currentPage.id + 1)}
             content={">"}
+          />
+          <Button
+            onClick={() => addPage(currentPage)}
+            content={<img src="/icons/duplicate.svg" alt="Duplicate" />}
           />
           <PageOptionsDropdown
             page={currentPage}

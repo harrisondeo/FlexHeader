@@ -43,7 +43,7 @@ const ImportPopup = ({ importSettings }: ImportPopupProps) => {
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <img
               src="/icons/import.svg"
-              alt="Add Page"
+              alt="Import Settings"
               width={16}
               height={16}
             />
