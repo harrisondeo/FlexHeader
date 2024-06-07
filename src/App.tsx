@@ -18,6 +18,8 @@ import ImportPopup from "./components/importPopup";
 function App() {
   const {
     pages,
+    selectedPage,
+    darkModeEnabled,
     addHeader,
     updateHeader,
     removeHeader,
@@ -28,10 +30,10 @@ function App() {
     updatePage,
     removePage,
     clear,
-    selectedPage,
     changeSelectedPage,
     importSettings,
     changePageIndex,
+    toggleDarkMode,
   } = useFlexHeaderSettings();
   const alertContext = useAlert();
   const currentPage = useMemo(
@@ -92,7 +94,7 @@ function App() {
         name: `New Page ${newId}`,
       };
     }
-    console.log("adding page", newPage);
+
     addPage(newPage);
   };
 
@@ -122,7 +124,7 @@ function App() {
   const manifest = chrome.runtime.getManifest();
 
   return (
-    <div className="app">
+    <div className={`app ${darkModeEnabled ? "darkmode" : ""}`}>
       <div className="app__container">
         <div className="app__header">
           <div className="app__header__logo">
@@ -143,12 +145,14 @@ function App() {
         <PagesTabs
           pages={pages}
           currentPage={currentPage}
+          darkModeEnabled={darkModeEnabled}
           setCurrentPage={changeSelectedPage}
           addPage={_addPage}
           updatePageName={_updatePageName}
           updatePageKeepEnabled={_changePageKeepEnabled}
           removePage={removePage}
           changePageIndex={changePageIndex}
+          toggleDarkMode={toggleDarkMode}
         />
         <div className="app__body">
           <div className="app__body__headers">

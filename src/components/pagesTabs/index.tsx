@@ -49,21 +49,25 @@ const ExpandedPagesDropdown = ({
 const PagesTabs = ({
   pages,
   currentPage,
+  darkModeEnabled,
   setCurrentPage,
   addPage,
   removePage,
   updatePageName,
   updatePageKeepEnabled,
   changePageIndex,
+  toggleDarkMode,
 }: {
   pages: Page[];
   currentPage: Page;
+  darkModeEnabled: boolean;
   setCurrentPage: (id: number) => void;
   addPage: (page?: Page) => void;
   removePage: (id: number, autoSelectPage: boolean) => void;
   updatePageName: (name: string, id: number) => void;
   updatePageKeepEnabled: (id: number, enabled: boolean) => void;
   changePageIndex: (id: number, newIndex: number) => void;
+  toggleDarkMode: () => void;
 }) => {
   const [pagesToShow, setPagesToShow] = useState(pages);
   const [expandedPages, setExpandedPages] = useState<Page[]>([]);
@@ -166,10 +170,12 @@ const PagesTabs = ({
           />
           <PageOptionsDropdown
             page={currentPage}
+            darkModeEnabled={darkModeEnabled}
             removePage={() => removePage(currentPage.id, true)}
             updatePageName={(name: string) =>
               updatePageName(name, currentPage.id)
             }
+            toggleDarkMode={toggleDarkMode}
           />
         </div>
       </div>

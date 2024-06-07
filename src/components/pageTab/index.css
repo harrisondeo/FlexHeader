@@ -15,12 +15,12 @@
 }
 
 .page-tab:hover {
-  background-color: #f5f5f5;
+  background-color: var(--tab-color-hover);
   color: #000;
 }
 
 .page-tab.active {
-  background-color: #e5e5e5;
+  background-color: var(--tab-color-active);
   color: #000;
 }
 

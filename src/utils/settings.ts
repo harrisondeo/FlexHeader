@@ -69,6 +69,7 @@ function useFlexHeaderSettings() {
     pages: [defaultPage],
     selectedPage: defaultPage.id,
   });
+  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
 
   const alertContext = useAlert();
 
@@ -116,6 +117,17 @@ function useFlexHeaderSettings() {
           selectedPage: data.selectedPage,
         };
       });
+    });
+
+    chrome.storage.sync.get("darkMode", (data) => {
+      if (data.darkMode === undefined) {
+        chrome.storage.sync.set({
+          darkMode: false,
+        });
+        return;
+      }
+
+      setDarkModeEnabled(data.darkMode);
     });
   };
 
@@ -439,6 +451,17 @@ function useFlexHeaderSettings() {
   };
 
   /**
+   * Dark Mode
+   */
+  const toggleDarkMode = () => {
+    chrome.storage.sync.get("darkMode", (data) => {
+      const darkMode = data.darkMode === undefined ? false : !data.darkMode;
+      chrome.storage.sync.set({ darkMode });
+      setDarkModeEnabled(darkMode);
+    });
+  };
+
+  /**
    * Import json file
    */
   const importSettings = (file: File) => {
@@ -484,6 +507,8 @@ function useFlexHeaderSettings() {
 
   return {
     pages: pagesData.pages,
+    selectedPage: pagesData.selectedPage,
+    darkModeEnabled,
     addPage,
     removePage,
     updatePage,
@@ -494,10 +519,10 @@ function useFlexHeaderSettings() {
     removeFilter,
     updateFilter,
     clear,
-    selectedPage: pagesData.selectedPage,
     changeSelectedPage,
     changePageIndex,
     importSettings,
+    toggleDarkMode,
   };
 }
 

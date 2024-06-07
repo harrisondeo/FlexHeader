@@ -5,12 +5,16 @@ import Button from "../button";
 
 const PageOptionsDropdown = ({
   page,
+  darkModeEnabled,
   removePage,
   updatePageName,
+  toggleDarkMode,
 }: {
   page: Page;
+  darkModeEnabled: boolean;
   removePage: () => void;
   updatePageName: (name: string, id: number) => void;
+  toggleDarkMode: () => void;
 }) => {
   const [show, setShow] = useState(false);
   const optionButtonRef = useRef<HTMLDivElement>(null);
@@ -72,6 +76,23 @@ const PageOptionsDropdown = ({
           />
         </div>
         <div className="page-options-dropdown__item">
+          <Button
+            onClick={toggleDarkMode}
+            width="full"
+            content={
+              <span
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <img src="/icons/dark-mode.svg" alt="Dark Mode" />
+                {darkModeEnabled ? "Disable Dark Mode" : "Enable Dark Mode"}
+              </span>
+            }
+          />
           {/* <FeedbackButton
             onClick={_addCurrentPageAsPreset}
             width="full"
