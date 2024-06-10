@@ -4,6 +4,7 @@
 /node_modules
 /.pnp
 .pnp.js
+/FlexHeaders - Modify HTTP Headers
 
 # testing
 /coverage

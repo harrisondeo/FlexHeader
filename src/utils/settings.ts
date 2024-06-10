@@ -73,6 +73,22 @@ function useFlexHeaderSettings() {
 
   const alertContext = useAlert();
 
+  useEffect(() => {
+    const selectedPage = pagesData.pages.find((page) => page.enabled);
+    if (selectedPage) {
+      const activeHeaders = selectedPage.headers.filter(
+        (header) => header.headerEnabled
+      );
+      chrome.action.setBadgeText({
+        text: activeHeaders.length.toString(),
+      });
+    } else {
+      chrome.action.setBadgeText({
+        text: "",
+      });
+    }
+  }, [pagesData]);
+
   /**
    * Loads the settings from storage and sets the state
    */
