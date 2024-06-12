@@ -137,6 +137,16 @@ function App() {
             <div>
               <p>Flex Headers</p>
               <span>v{manifest?.version}</span>
+              <div>
+                A passion project by{" "}
+                <a
+                  href="https://harrisondeo.me.uk"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Harrison Deo
+                </a>
+              </div>
             </div>
           </div>
           <Button content="New Page" onClick={() => _addPage()} />

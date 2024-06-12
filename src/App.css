@@ -35,6 +35,13 @@
   gap: 0.5rem;
 }
 
+.app__header__logo a,
+.app__header__logo a:visited,
+.app__header__logo a:hover,
+.app__header__logo a:active {
+  color: var(--text-color);
+}
+
 .app__header p {
   font-size: 2rem;
 }
