@@ -7,7 +7,7 @@ import useFlexHeaderSettings, {
   HeaderSetting,
   Page,
 } from "./utils/settings";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import FilterRow from "./components/filterRow";
 import PagesTabs from "./components/pagesTabs";
 import Alert from "./components/alert";
@@ -164,7 +164,7 @@ function App() {
           changePageIndex={changePageIndex}
           toggleDarkMode={toggleDarkMode}
         />
-        <div className="app__body">
+        <div className="app__body" key={selectedPage}>
           <div className="app__body__headers">
             {currentPage?.headers?.length === 0 && (
               <p className="app__body__headers__empty">

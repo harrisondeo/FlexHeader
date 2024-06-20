@@ -316,6 +316,20 @@ function useFlexHeaderSettings() {
    */
 
   /**
+   * INTERNAL ONLY - Re-indexes the headers after one is removed or added
+   * @param headers
+   * @returns reindexed headers
+   */
+  const _reIndexHeaders = (headers: HeaderSetting[]) => {
+    return headers.map((header, index) => {
+      return {
+        ...header,
+        id: `${header.id.split("-")[0]}-${index + 1}`,
+      };
+    });
+  };
+
+  /**
    * Adds a new header to a given page
    * @param pageId The page that the header will be added to
    * @param header The header object to add
@@ -351,9 +365,14 @@ function useFlexHeaderSettings() {
   const removeHeader = (pageId: number, id: string) => {
     const newPages = pagesData.pages.map((page) => {
       if (page.id === pageId) {
+        const filteredHeaders = page.headers.filter(
+          (header) => header.id !== id
+        );
+        const reIndexedHeaders = _reIndexHeaders(filteredHeaders);
+
         return {
           ...page,
-          headers: page.headers.filter((header) => header.id !== id),
+          headers: reIndexedHeaders,
         };
       }
       return page;
