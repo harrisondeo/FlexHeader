@@ -47,14 +47,18 @@ const filterIsValid = async (
   filter: Omit<HeaderFilter, "valid">,
   callback: (valid: boolean) => void
 ) => {
-  chrome.declarativeNetRequest.isRegexSupported(
-    {
-      regex: filter.value,
-    },
-    (result) => {
-      callback(result.isSupported);
-    }
-  );
+  try {
+    chrome.declarativeNetRequest.isRegexSupported(
+      {
+        regex: filter.value,
+      },
+      (result) => {
+        callback(result.isSupported);
+      }
+    );
+  } catch (error) {
+    callback(false);
+  }
 };
 
 export const clearStoredSettings = () => {
@@ -385,6 +389,33 @@ function useFlexHeaderSettings() {
   };
 
   /**
+   * Allows you to save the headers data after a change.
+   * The function WILL re-index the headers to avoid conflicts
+   * @param newHeaders | The new headers array to save
+   * @param pageId | The page that the headers belong to
+   */
+  const saveHeaders = (newHeaders: HeaderSetting[], pageId: number) => {
+    const reIndexedHeaders = _reIndexHeaders(newHeaders);
+
+    const newPages = pagesData.pages.map((page) => {
+      if (page.id === pageId) {
+        return {
+          ...page,
+          headers: reIndexedHeaders,
+        };
+      }
+      return page;
+    });
+
+    setPagesData((prev) => ({
+      pages: newPages,
+      selectedPage: prev.selectedPage,
+    }));
+
+    save(newPages);
+  };
+
+  /**
    * Updates the values of a header
    * @param pageId The page that the header belongs to
    * @param header The new header object, the id should match the header to update
@@ -459,6 +490,7 @@ function useFlexHeaderSettings() {
     filter: Omit<HeaderFilter, "valid">
   ) => {
     filterIsValid(filter, (result) => {
+      console.log("Filter is valid", result);
       const newPages = pagesData.pages.map((page) => {
         if (page.id === pageId) {
           return {
@@ -550,6 +582,7 @@ function useFlexHeaderSettings() {
     addHeader,
     removeHeader,
     updateHeader,
+    saveHeaders,
     addFilter,
     removeFilter,
     updateFilter,

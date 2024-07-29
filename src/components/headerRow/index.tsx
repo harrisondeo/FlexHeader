@@ -24,9 +24,18 @@ const HeaderRow = ({
     onUpdate(id, headerName, headerValue, e.target.checked);
   };
 
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
+  };
+
   return (
     <div className="header-row">
       <div className="header-row__checkbox">
+        <img
+          src="/icons/draggable.svg"
+          alt="Draggable"
+          className="draggable-icon"
+        />
         <input
           type="checkbox"
           checked={headerEnabled}
@@ -39,7 +48,7 @@ const HeaderRow = ({
           placeholder="Header"
           value={headerName}
           onChange={updateName}
-          onClick={(e) => e.currentTarget.select()}
+          onFocus={handleFocus}
         />
       </div>
       <div className="header-row__value">
@@ -48,7 +57,7 @@ const HeaderRow = ({
           placeholder="Value"
           value={headerValue}
           onChange={updateValue}
-          onClick={(e) => e.currentTarget.select()}
+          onFocus={handleFocus}
         />
       </div>
       <div className="header-row__remove" onClick={() => onRemove(id)}>
