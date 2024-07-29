@@ -58,7 +58,6 @@
 .app__body__headers {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
 }
 
 .app__body__headers__empty {

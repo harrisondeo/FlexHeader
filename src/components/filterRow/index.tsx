@@ -19,13 +19,16 @@ const FilterRow = ({
   };
 
   const updateValue = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.preventDefault();
     onUpdate({ id, enabled, type, value: e.target.value });
   };
 
   const updateEnabled = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
     onUpdate({ id, enabled: e.target.checked, type, value });
+  };
+
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
   };
 
   return (
@@ -45,6 +48,7 @@ const FilterRow = ({
           placeholder="Value"
           value={value}
           onChange={updateValue}
+          onFocus={handleFocus}
           style={{ backgroundColor: valid ? "white" : "red" }}
         />
       </div>

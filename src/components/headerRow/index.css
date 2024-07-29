@@ -5,6 +5,7 @@
   align-items: center;
   flex-direction: row;
   gap: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .header-row__name,
@@ -17,4 +18,14 @@
 
 .header-row__remove {
   cursor: pointer;
+}
+
+.header-row__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.draggable-icon {
+  width: 20px;
 }

@@ -14,6 +14,19 @@ import Alert from "./components/alert";
 import { useAlert } from "./context/alertContext";
 import ExportPopup from "./components/exportPopup";
 import ImportPopup from "./components/importPopup";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+
+const reorder = (
+  headers: HeaderSetting[],
+  startIndex: number,
+  endIndex: number
+) => {
+  const result = Array.from(headers);
+  const [removed] = result.splice(startIndex, 1);
+  result.splice(endIndex, 0, removed);
+
+  return result;
+};
 
 function App() {
   const {
@@ -21,6 +34,7 @@ function App() {
     selectedPage,
     darkModeEnabled,
     addHeader,
+    saveHeaders,
     updateHeader,
     removeHeader,
     addFilter,
@@ -121,6 +135,20 @@ function App() {
     }
   };
 
+  const _onDragEnd = (result: any) => {
+    if (!result.destination) {
+      return;
+    }
+
+    const reorderedHeaders = reorder(
+      currentPage.headers,
+      result.source.index,
+      result.destination.index
+    );
+
+    saveHeaders(reorderedHeaders, currentPage.id);
+  };
+
   const manifest = chrome.runtime.getManifest();
 
   return (
@@ -165,37 +193,63 @@ function App() {
           toggleDarkMode={toggleDarkMode}
         />
         <div className="app__body" key={selectedPage}>
-          <div className="app__body__headers">
+          <div>
             {currentPage?.headers?.length === 0 && (
               <p className="app__body__headers__empty">
                 <i>No headers found. Add a new header.</i>
               </p>
             )}
-            {currentPage?.headers?.map(
-              ({ id, headerName, headerValue, headerEnabled }) => (
-                <HeaderRow
-                  key={`header-row__${id}`}
-                  id={id}
-                  headerName={headerName}
-                  headerValue={headerValue}
-                  headerEnabled={headerEnabled}
-                  onRemove={(id: string) => _removeHeader(id)}
-                  onUpdate={(
-                    id: string,
-                    name: string,
-                    value: string,
-                    enabled: boolean
-                  ) =>
-                    _updateHeader({
-                      id: id,
-                      headerName: name,
-                      headerValue: value,
-                      headerEnabled: enabled,
-                    })
-                  }
-                />
-              )
-            )}
+            <DragDropContext onDragEnd={_onDragEnd}>
+              <Droppable droppableId="droppable-headers">
+                {(provided, snapshot) => (
+                  <div
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className="app__body__headers"
+                  >
+                    {currentPage?.headers?.map(
+                      (
+                        { id, headerName, headerValue, headerEnabled },
+                        index
+                      ) => (
+                        <Draggable key={id} draggableId={id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                            >
+                              <HeaderRow
+                                key={`header-row__${id}`}
+                                id={id}
+                                headerName={headerName}
+                                headerValue={headerValue}
+                                headerEnabled={headerEnabled}
+                                onRemove={(id: string) => _removeHeader(id)}
+                                onUpdate={(
+                                  id: string,
+                                  name: string,
+                                  value: string,
+                                  enabled: boolean
+                                ) =>
+                                  _updateHeader({
+                                    id: id,
+                                    headerName: name,
+                                    headerValue: value,
+                                    headerEnabled: enabled,
+                                  })
+                                }
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      )
+                    )}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
           </div>
           {currentPage?.filters?.length > 0 && (
             <div className="app__body__filters">
