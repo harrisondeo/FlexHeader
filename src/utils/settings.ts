@@ -199,11 +199,9 @@ function useFlexHeaderSettings() {
     ];
 
     save(newPages);
-    setPagesData((prev) => {
-      return {
-        pages: newPages,
-        selectedPage: newPages[newPages.length - 1].id,
-      };
+    setPagesData({
+      pages: newPages,
+      selectedPage: newPages[newPages.length - 1].id,
     });
   };
 
@@ -253,10 +251,12 @@ function useFlexHeaderSettings() {
       }
       return p;
     });
+
     setPagesData((prev) => ({
+      ...prev,
       pages: newPages,
-      selectedPage: prev.selectedPage,
     }));
+
     save(newPages);
   };
 
@@ -289,10 +289,12 @@ function useFlexHeaderSettings() {
   const changeSelectedPage = (id: number) => {
     let pagesToEdit = [...pagesData.pages];
     pagesToEdit = _changeSelectedPage(id, pagesToEdit);
+
     setPagesData({
       pages: pagesToEdit,
       selectedPage: id,
     });
+
     save(pagesToEdit);
   };
 
@@ -312,6 +314,7 @@ function useFlexHeaderSettings() {
       pages: newPages,
       selectedPage: newIndex,
     });
+
     save(newPages);
   };
 
@@ -354,10 +357,12 @@ function useFlexHeaderSettings() {
       }
       return page;
     });
+
     setPagesData((prev) => ({
+      ...prev,
       pages: newPages,
-      selectedPage: prev.selectedPage,
     }));
+
     save(newPages);
   };
 
@@ -381,10 +386,12 @@ function useFlexHeaderSettings() {
       }
       return page;
     });
+
     setPagesData((prev) => ({
+      ...prev,
       pages: newPages,
-      selectedPage: prev.selectedPage,
     }));
+
     save(newPages);
   };
 
@@ -408,8 +415,8 @@ function useFlexHeaderSettings() {
     });
 
     setPagesData((prev) => ({
+      ...prev,
       pages: newPages,
-      selectedPage: prev.selectedPage,
     }));
 
     save(newPages);
@@ -435,15 +442,23 @@ function useFlexHeaderSettings() {
       }
       return page;
     });
+
     setPagesData((prev) => ({
+      ...prev,
       pages: newPages,
-      selectedPage: prev.selectedPage,
     }));
+
     save(newPages);
   };
 
   /**
    * Filter functions
+   */
+
+  /**
+   * Adds a new filter to a given page
+   * @param pageId | The page that the filter will be added to
+   * @param filter | The filter object to add
    */
   const addFilter = (pageId: number, filter: Omit<HeaderFilter, "id">) => {
     const newPages = pagesData.pages.map((page) => {
@@ -461,13 +476,20 @@ function useFlexHeaderSettings() {
       }
       return page;
     });
+
     setPagesData((prev) => ({
+      ...prev,
       pages: newPages,
-      selectedPage: prev.selectedPage,
     }));
+
     save(newPages);
   };
 
+  /**
+   * Removes a filter from a page
+   * @param pageId | The page that the filter belongs to
+   * @param filterId | The id of the filter to remove
+   */
   const removeFilter = (pageId: number, filterId: string) => {
     const newPages = pagesData.pages.map((page) => {
       if (page.id === pageId) {
@@ -478,41 +500,40 @@ function useFlexHeaderSettings() {
       }
       return page;
     });
+
     setPagesData((prev) => ({
+      ...prev,
       pages: newPages,
-      selectedPage: prev.selectedPage,
     }));
+
     save(newPages);
   };
 
+  /**
+   * Updates the values of a filter
+   * @param pageId | The page that the filter belongs to
+   * @param filter | The new filter object, the id should match the filter to update
+   */
   const updateFilter = (
     pageId: number,
     filter: Omit<HeaderFilter, "valid">
   ) => {
     filterIsValid(filter, (result) => {
-      console.log("Filter is valid", result);
       const newPages = pagesData.pages.map((page) => {
-        if (page.id === pageId) {
-          return {
-            ...page,
+        if (page.id !== pageId) return page;
 
-            filters: page.filters.map((f) => {
-              if (f.id === filter.id) {
-                return {
-                  ...filter,
-                  valid: result,
-                };
-              }
-              return f;
-            }),
-          };
-        }
-        return page;
+        const updatedFilters = page.filters.map((f) =>
+          f.id === filter.id ? { ...filter, valid: result } : f
+        );
+
+        return { ...page, filters: updatedFilters };
       });
+
       setPagesData((prev) => ({
+        ...prev,
         pages: newPages,
-        selectedPage: prev.selectedPage,
       }));
+
       save(newPages);
     });
   };
@@ -535,7 +556,7 @@ function useFlexHeaderSettings() {
     const reader = new FileReader();
     reader.onload = (e) => {
       const result = e.target?.result;
-      console.log("Result", result);
+
       if (typeof result === "string") {
         const parsed = JSON.parse(result);
         if (Array.isArray(parsed)) {
@@ -549,10 +570,12 @@ function useFlexHeaderSettings() {
           });
 
           setPagesData((prev) => ({
+            ...prev,
             pages: newPages,
-            selectedPage: prev.selectedPage,
           }));
+
           save(newPages);
+
           alertContext.setAlert({
             alertType: "info",
             alertText: "Settings imported.",

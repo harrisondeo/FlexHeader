@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FilterType, HeaderFilter } from "../../utils/settings";
 import "./index.css";
 
@@ -13,12 +14,15 @@ const FilterRow = ({
   onRemove: (id: string) => void;
   onUpdate: (filter: Omit<HeaderFilter, "valid">) => void;
 }) => {
+  const [cachedFilterValue, setCachedFilterValue] = useState(value);
+
   const updateType = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const type: FilterType = e.target.value as FilterType;
     onUpdate({ id, enabled, type: type, value });
   };
 
   const updateValue = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCachedFilterValue(e.target.value);
     onUpdate({ id, enabled, type, value: e.target.value });
   };
 
@@ -46,7 +50,7 @@ const FilterRow = ({
         <input
           type="text"
           placeholder="Value"
-          value={value}
+          value={cachedFilterValue}
           onChange={updateValue}
           onFocus={handleFocus}
           style={{ backgroundColor: valid ? "white" : "red" }}

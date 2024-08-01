@@ -1,3 +1,4 @@
+import { DraggableProvidedDragHandleProps } from "react-beautiful-dnd";
 import { HeaderSetting } from "../../utils/settings";
 import "./index.css";
 
@@ -8,9 +9,11 @@ const HeaderRow = ({
   headerEnabled,
   onRemove,
   onUpdate,
+  dragHandleProps,
 }: HeaderSetting & {
   onRemove: (id: string) => void;
   onUpdate: (id: string, name: string, value: string, enabled: boolean) => void;
+  dragHandleProps?: DraggableProvidedDragHandleProps | null | undefined;
 }) => {
   const updateName = (e: React.ChangeEvent<HTMLInputElement>) => {
     onUpdate(id, e.target.value, headerValue, headerEnabled);
@@ -31,11 +34,14 @@ const HeaderRow = ({
   return (
     <div className="header-row">
       <div className="header-row__checkbox">
-        <img
-          src="/icons/draggable.svg"
-          alt="Draggable"
-          className="draggable-icon"
-        />
+        {dragHandleProps && (
+          <img
+            src="/icons/draggable.svg"
+            alt="Draggable"
+            className="draggable-icon"
+            {...dragHandleProps}
+          />
+        )}
         <input
           type="checkbox"
           checked={headerEnabled}

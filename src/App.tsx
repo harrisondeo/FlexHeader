@@ -213,11 +213,10 @@ function App() {
                         index
                       ) => (
                         <Draggable key={id} draggableId={id} index={index}>
-                          {(provided, snapshot) => (
+                          {(provided) => (
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
-                              {...provided.dragHandleProps}
                             >
                               <HeaderRow
                                 key={`header-row__${id}`}
@@ -239,6 +238,7 @@ function App() {
                                     headerEnabled: enabled,
                                   })
                                 }
+                                dragHandleProps={provided.dragHandleProps}
                               />
                             </div>
                           )}
