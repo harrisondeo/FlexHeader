@@ -32,7 +32,7 @@ const HeaderRow = ({
   };
 
   return (
-    <div className="header-row">
+    <div className="header-row" data-headerId={id}>
       <div className="header-row__checkbox">
         {dragHandleProps && (
           <img

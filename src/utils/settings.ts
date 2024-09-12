@@ -364,6 +364,7 @@ function useFlexHeaderSettings() {
     }));
 
     save(newPages);
+    return newPages[pageId].headers[newPages[pageId].headers.length - 1];
   };
 
   /**

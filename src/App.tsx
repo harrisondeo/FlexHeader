@@ -7,7 +7,7 @@ import useFlexHeaderSettings, {
   HeaderSetting,
   Page,
 } from "./utils/settings";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import FilterRow from "./components/filterRow";
 import PagesTabs from "./components/pagesTabs";
 import Alert from "./components/alert";
@@ -54,86 +54,123 @@ function App() {
     () => pages.find((x) => x.id === selectedPage) || pages[0],
     [pages, selectedPage]
   );
+  const [headerToFocus, setHeaderToFocus] = useState<string | null>(null);
 
-  const _addHeader = async () => {
-    addHeader(currentPage.id, {
+  useEffect(() => {
+    if (headerToFocus !== null) {
+      const headerElement = document.querySelector(
+        `[data-headerid="${headerToFocus}"] .header-row__name input`
+      ) as HTMLInputElement;
+
+      if (headerElement) {
+        headerElement.focus();
+      }
+
+      setHeaderToFocus(null);
+    }
+  }, [headerToFocus]);
+
+  const _addHeader = useCallback(async () => {
+    const newHeader = addHeader(currentPage.id, {
       headerName: "",
       headerValue: "",
       headerEnabled: true,
     });
-  };
 
-  const _removeHeader = async (id: string) => {
-    removeHeader(currentPage.id, id);
-  };
+    setHeaderToFocus(newHeader.id);
+  }, [currentPage.id, addHeader]);
 
-  const _updateHeader = async (header: HeaderSetting) => {
-    updateHeader(currentPage.id, header);
-  };
+  const _removeHeader = useCallback(
+    async (id: string) => {
+      removeHeader(currentPage.id, id);
+    },
+    [currentPage.id, removeHeader]
+  );
 
-  const _addFilter = async () => {
+  const _updateHeader = useCallback(
+    async (header: HeaderSetting) => {
+      updateHeader(currentPage.id, header);
+    },
+    [currentPage.id, updateHeader]
+  );
+
+  const _addFilter = useCallback(async () => {
     addFilter(currentPage.id, {
       type: "include",
       value: "http*",
       enabled: true,
       valid: false,
     });
-  };
+  }, [currentPage.id, addFilter]);
 
-  const _updateFilter = async (filter: Omit<HeaderFilter, "valid">) => {
-    updateFilter(currentPage.id, filter);
-  };
+  const _updateFilter = useCallback(
+    async (filter: Omit<HeaderFilter, "valid">) => {
+      updateFilter(currentPage.id, filter);
+    },
+    [currentPage.id, updateFilter]
+  );
 
-  const _removeFilter = async (id: string) => {
-    removeFilter(currentPage.id, id);
-  };
+  const _removeFilter = useCallback(
+    async (id: string) => {
+      removeFilter(currentPage.id, id);
+    },
+    [currentPage.id, removeFilter]
+  );
 
-  const _addPage = async (page?: Page) => {
-    console.log(pages);
-    const newId = pages.length;
+  const _addPage = useCallback(
+    async (page?: Page) => {
+      const newId = pages.length;
 
-    let newPage: Page = {
-      id: newId,
-      enabled: true,
-      keepEnabled: false,
-      name: "New Page",
-      headers: [],
-      filters: [],
-    };
-
-    if (page) {
-      newPage = {
-        ...page,
+      let newPage: Page = {
         id: newId,
-        name: `New Page ${newId}`,
+        enabled: true,
+        keepEnabled: false,
+        name: "New Page",
+        headers: [],
+        filters: [],
       };
-    }
 
-    addPage(newPage);
-  };
+      if (page) {
+        newPage = {
+          ...page,
+          id: newId,
+          name: `New Page ${newId}`,
+        };
+      }
 
-  const _updatePageName = async (name: string, id: number) => {
-    const page = pages.find((x) => x.id === id);
+      addPage(newPage);
+    },
+    [pages.length, addPage]
+  );
 
-    if (page) {
-      page.name = name;
-      updatePage(page);
-      alertContext.setAlert({
-        alertText: `Page name updated to ${name}`,
-        alertType: "success",
-        location: "bottom",
-      });
-    }
-  };
+  const _updatePageName = useCallback(
+    async (name: string, id: number) => {
+      const page = pages.find((x) => x.id === id);
 
-  const _changePageKeepEnabled = async (id: number, enabled: boolean) => {
-    const page = pages.find((x) => x.id === id);
+      if (page) {
+        page.name = name;
+        updatePage(page);
+        alertContext.setAlert({
+          alertText: `Page name updated to ${name}`,
+          alertType: "success",
+          location: "bottom",
+        });
+      }
+    },
+    [pages, updatePage, alertContext]
+  );
 
-    if (page) {
-      page.keepEnabled = enabled;
-      updatePage(page);
-    }
-  };
+  const _changePageKeepEnabled = useCallback(
+    async (id: number, enabled: boolean) => {
+      const page = pages.find((x) => x.id === id);
+
+      if (page) {
+        page.keepEnabled = enabled;
+        updatePage(page);
+      }
+    },
+    [pages, updatePage]
+  );
 
   const _onDragEnd = (result: any) => {
     if (!result.destination) {
