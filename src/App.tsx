@@ -77,7 +77,7 @@ function App() {
       headerEnabled: true,
     });
 
-    setHeaderToFocus(newHeader.id);
+    setHeaderToFocus(newHeader?.id ?? null);
   }, [currentPage.id, addHeader]);
 
   const _removeHeader = useCallback(

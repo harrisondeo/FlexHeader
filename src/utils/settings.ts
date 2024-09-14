@@ -27,6 +27,11 @@ export type HeaderSetting = {
   headerEnabled: boolean;
 };
 
+export type PagesData = {
+  pages: Page[];
+  selectedPage: number;
+};
+
 const defaultPage: Page = {
   id: 0,
   name: "Default",
@@ -66,14 +71,12 @@ export const clearStoredSettings = () => {
 };
 
 function useFlexHeaderSettings() {
-  const [pagesData, setPagesData] = useState<{
-    pages: Page[];
-    selectedPage: number;
-  }>({
+  const [pagesData, setPagesData] = useState<PagesData>({
     pages: [defaultPage],
     selectedPage: defaultPage.id,
   });
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   const alertContext = useAlert();
 
@@ -93,50 +96,55 @@ function useFlexHeaderSettings() {
     }
   }, [pagesData]);
 
+  useEffect(() => {
+    if (!hasInitialized) return;
+
+    save(pagesData);
+  }, [pagesData, hasInitialized]);
+
   /**
    * Loads the settings from storage and sets the state
    */
   const retrieveSettings = async () => {
-    chrome.storage.sync.get("settings", (data) => {
-      if (data.settings === undefined) {
-        chrome.storage.sync.set({
-          settings: [defaultPage],
-        });
-        return;
-      }
-
-      if (!Array.isArray(data.settings)) {
-        chrome.storage.sync.set({
-          settings: [defaultPage],
-        });
-        return;
-      }
-      console.log("found settings", data.settings);
-
-      data.settings.sort((a: Page, b: Page) => {
-        return a.id - b.id;
-      });
-
-      setPagesData({
-        pages: data.settings,
-        selectedPage: data.settings.findIndex((page: Page) => page.enabled),
-      });
-    });
-
-    chrome.storage.sync.get("selectedPage", (data) => {
-      if (data.selectedPage === undefined) {
-        chrome.storage.sync.set({
+    // if storage does not have "settings_v2" then we need to migrate the old settings
+    chrome.storage.sync.get("settings_v2", (data) => {
+      // Migration
+      if (data.settings_v2 === undefined) {
+        let oldSettings: PagesData = {
+          pages: [],
           selectedPage: 0,
-        });
-        return;
-      }
-
-      setPagesData((prev) => {
-        return {
-          ...prev,
-          selectedPage: data.selectedPage,
         };
-      });
+
+        chrome.storage.sync.get("settings", (data) => {
+          if (data.settings === undefined || !Array.isArray(data.settings)) {
+            oldSettings.pages = [defaultPage];
+            return;
+          }
+
+          oldSettings.pages = data.settings.sort((a: Page, b: Page) => {
+            return a.id - b.id;
+          });
+
+          chrome.storage.sync.get("selectedPage", (data) => {
+            if (data.selectedPage === undefined) {
+              oldSettings.selectedPage = 0;
+              return;
+            }
+
+            oldSettings.selectedPage = data.selectedPage;
+
+            chrome.storage.sync.set({ settings_v2: oldSettings }).then(() => {
+              console.log("Migrated old settings to new format");
+              chrome.storage.sync.remove(["settings", "selectedPage"]);
+              setPagesData(oldSettings);
+              setHasInitialized(true);
+            });
+          });
+        });
+      } else {
+        setPagesData(data.settings_v2);
+        setHasInitialized(true);
+      }
     });
 
     chrome.storage.sync.get("darkMode", (data) => {
@@ -155,8 +163,8 @@ function useFlexHeaderSettings() {
    * Saves pages array to storage
    * @param pages The pages to save to storage
    */
-  const save = (pages: Page[], callback?: () => void) => {
-    chrome.storage.sync.set({ settings: pages }).then(() => {
+  const save = (settings: PagesData, callback?: () => void) => {
+    chrome.storage.sync.set({ settings_v2: settings }).then(() => {
       if (callback) {
         callback();
       }
@@ -183,25 +191,14 @@ function useFlexHeaderSettings() {
    * @param page The page object to add
    */
   const addPage = (page: Page) => {
-    const currentPages = pagesData.pages.map((p) => {
-      return {
-        ...p,
-        enabled: false,
-      };
-    });
     const newPages = [
-      ...currentPages,
-      {
-        ...page,
-        id: currentPages.length,
-        enabled: true,
-      },
+      ...pagesData.pages.map((p) => ({ ...p, enabled: false })),
+      { ...page, id: pagesData.pages.length, enabled: true },
     ];
 
-    save(newPages);
     setPagesData({
       pages: newPages,
-      selectedPage: newPages[newPages.length - 1].id,
+      selectedPage: newPages.length - 1,
     });
   };
 
@@ -218,16 +215,14 @@ function useFlexHeaderSettings() {
       newPages.push(defaultPage);
     }
 
-    newPages.forEach((page, index) => {
-      page.id = index;
-    });
+    newPages = newPages.map((page, index) => ({ ...page, id: index }));
 
     const newPageId = autoSelectPage
       ? newPages[newPages.length - 1].id
       : pagesData.selectedPage;
 
     newPages = _changeSelectedPage(newPageId, newPages);
-    save(newPages);
+
     setPagesData({
       pages: newPages,
       selectedPage: newPageId,
@@ -245,19 +240,12 @@ function useFlexHeaderSettings() {
    * @param page The page object to update
    */
   const updatePage = (page: Page) => {
-    const newPages = pagesData.pages.map((p) => {
-      if (p.id === page.id) {
-        return page;
-      }
-      return p;
-    });
+    const newPages = pagesData.pages.map((p) => (p.id === page.id ? page : p));
 
     setPagesData((prev) => ({
       ...prev,
       pages: newPages,
     }));
-
-    save(newPages);
   };
 
   /**
@@ -266,56 +254,40 @@ function useFlexHeaderSettings() {
    * @param pages
    * @param save
    */
-  const _changeSelectedPage = (id: number, pages: Page[]): Page[] => {
-    // set all pages except the selected one to disabled
-    return pages.map((page) => {
-      if (page.id === id) {
-        return {
-          ...page,
-          enabled: true,
-        };
-      }
-      return {
-        ...page,
-        enabled: false,
-      };
-    });
-  };
+  const _changeSelectedPage = (id: number, pages: Page[]): Page[] =>
+    pages.map((page) => ({
+      ...page,
+      enabled: page.id === id,
+    }));
 
   /**
    * EXTERNAL - Used for external components to change the selected page
    * @param id The ID of the page to select
    */
   const changeSelectedPage = (id: number) => {
-    let pagesToEdit = [...pagesData.pages];
-    pagesToEdit = _changeSelectedPage(id, pagesToEdit);
+    const pagesToEdit = _changeSelectedPage(id, [...pagesData.pages]);
 
     setPagesData({
       pages: pagesToEdit,
       selectedPage: id,
     });
-
-    save(pagesToEdit);
   };
 
   const changePageIndex = (oldIndex: number, newIndex: number) => {
     const newPages = [...pagesData.pages];
     const [removed] = newPages.splice(oldIndex, 1);
 
-    if (newIndex < 0) newIndex = 0;
+    newPages.splice(Math.max(newIndex, 0), 0, removed);
 
-    newPages.splice(newIndex, 0, removed);
-
-    newPages.forEach((page, index) => {
-      page.id = index;
-    });
+    const updatedPages = newPages.map((page, index) => ({
+      ...page,
+      id: index,
+    }));
 
     setPagesData({
-      pages: newPages,
+      pages: updatedPages,
       selectedPage: newIndex,
     });
-
-    save(newPages);
   };
 
   /**
@@ -327,14 +299,11 @@ function useFlexHeaderSettings() {
    * @param headers
    * @returns reindexed headers
    */
-  const _reIndexHeaders = (headers: HeaderSetting[]) => {
-    return headers.map((header, index) => {
-      return {
-        ...header,
-        id: `${header.id.split("-")[0]}-${index + 1}`,
-      };
-    });
-  };
+  const _reIndexHeaders = (headers: HeaderSetting[]): HeaderSetting[] =>
+    headers.map((header, index) => ({
+      ...header,
+      id: `${header.id.split("-")[0]}-${index + 1}`,
+    }));
 
   /**
    * Adds a new header to a given page
@@ -342,29 +311,27 @@ function useFlexHeaderSettings() {
    * @param header The header object to add
    */
   const addHeader = (pageId: number, header: Omit<HeaderSetting, "id">) => {
-    const newPages = pagesData.pages.map((page) => {
-      if (page.id === pageId) {
-        return {
-          ...page,
-          headers: [
-            ...page.headers,
-            {
-              ...header,
-              id: `${pageId}-${page.headers.length + 1}`,
-            },
-          ],
-        };
-      }
-      return page;
-    });
+    const newPages = pagesData.pages.map((page) =>
+      page.id === pageId
+        ? {
+            ...page,
+            headers: [
+              ...page.headers,
+              {
+                ...header,
+                id: `${pageId}-${page.headers.length + 1}`,
+              },
+            ],
+          }
+        : page
+    );
 
     setPagesData((prev) => ({
       ...prev,
       pages: newPages,
     }));
 
-    save(newPages);
-    return newPages[pageId].headers[newPages[pageId].headers.length - 1];
+    return newPages.find((page) => page.id === pageId)?.headers.slice(-1)[0];
   };
 
   /**
@@ -373,27 +340,21 @@ function useFlexHeaderSettings() {
    * @param id The id of the header to remove
    */
   const removeHeader = (pageId: number, id: string) => {
-    const newPages = pagesData.pages.map((page) => {
-      if (page.id === pageId) {
-        const filteredHeaders = page.headers.filter(
-          (header) => header.id !== id
-        );
-        const reIndexedHeaders = _reIndexHeaders(filteredHeaders);
-
-        return {
-          ...page,
-          headers: reIndexedHeaders,
-        };
-      }
-      return page;
-    });
+    const newPages = pagesData.pages.map((page) =>
+      page.id === pageId
+        ? {
+            ...page,
+            headers: _reIndexHeaders(
+              page.headers.filter((header) => header.id !== id)
+            ),
+          }
+        : page
+    );
 
     setPagesData((prev) => ({
       ...prev,
       pages: newPages,
     }));
-
-    save(newPages);
   };
 
   /**
@@ -405,22 +366,14 @@ function useFlexHeaderSettings() {
   const saveHeaders = (newHeaders: HeaderSetting[], pageId: number) => {
     const reIndexedHeaders = _reIndexHeaders(newHeaders);
 
-    const newPages = pagesData.pages.map((page) => {
-      if (page.id === pageId) {
-        return {
-          ...page,
-          headers: reIndexedHeaders,
-        };
-      }
-      return page;
-    });
+    const newPages = pagesData.pages.map((page) =>
+      page.id === pageId ? { ...page, headers: reIndexedHeaders } : page
+    );
 
     setPagesData((prev) => ({
       ...prev,
       pages: newPages,
     }));
-
-    save(newPages);
   };
 
   /**
@@ -429,27 +382,19 @@ function useFlexHeaderSettings() {
    * @param header The new header object, the id should match the header to update
    */
   const updateHeader = (pageId: number, header: HeaderSetting) => {
-    const newPages = pagesData.pages.map((page) => {
-      if (page.id === pageId) {
-        return {
-          ...page,
-          headers: page.headers.map((h) => {
-            if (h.id === header.id) {
-              return header;
-            }
-            return h;
-          }),
-        };
-      }
-      return page;
-    });
+    const newPages = pagesData.pages.map((page) =>
+      page.id === pageId
+        ? {
+            ...page,
+            headers: page.headers.map((h) => (h.id === header.id ? header : h)),
+          }
+        : page
+    );
 
     setPagesData((prev) => ({
       ...prev,
       pages: newPages,
     }));
-
-    save(newPages);
   };
 
   /**
@@ -462,28 +407,22 @@ function useFlexHeaderSettings() {
    * @param filter | The filter object to add
    */
   const addFilter = (pageId: number, filter: Omit<HeaderFilter, "id">) => {
-    const newPages = pagesData.pages.map((page) => {
-      if (page.id === pageId) {
-        return {
-          ...page,
-          filters: [
-            ...page.filters,
-            {
-              ...filter,
-              id: `${pageId}-${page.filters.length + 1}`,
-            },
-          ],
-        };
-      }
-      return page;
-    });
+    const newPages = pagesData.pages.map((page) =>
+      page.id === pageId
+        ? {
+            ...page,
+            filters: [
+              ...page.filters,
+              { ...filter, id: `${pageId}-${page.filters.length + 1}` },
+            ],
+          }
+        : page
+    );
 
     setPagesData((prev) => ({
       ...prev,
       pages: newPages,
     }));
-
-    save(newPages);
   };
 
   /**
@@ -492,22 +431,19 @@ function useFlexHeaderSettings() {
    * @param filterId | The id of the filter to remove
    */
   const removeFilter = (pageId: number, filterId: string) => {
-    const newPages = pagesData.pages.map((page) => {
-      if (page.id === pageId) {
-        return {
-          ...page,
-          filters: page.filters.filter((filter) => filter.id !== filterId),
-        };
-      }
-      return page;
-    });
+    const newPages = pagesData.pages.map((page) =>
+      page.id === pageId
+        ? {
+            ...page,
+            filters: page.filters.filter((filter) => filter.id !== filterId),
+          }
+        : page
+    );
 
     setPagesData((prev) => ({
       ...prev,
       pages: newPages,
     }));
-
-    save(newPages);
   };
 
   /**
@@ -520,22 +456,21 @@ function useFlexHeaderSettings() {
     filter: Omit<HeaderFilter, "valid">
   ) => {
     filterIsValid(filter, (result) => {
-      const newPages = pagesData.pages.map((page) => {
-        if (page.id !== pageId) return page;
-
-        const updatedFilters = page.filters.map((f) =>
-          f.id === filter.id ? { ...filter, valid: result } : f
-        );
-
-        return { ...page, filters: updatedFilters };
-      });
+      const newPages = pagesData.pages.map((page) =>
+        page.id === pageId
+          ? {
+              ...page,
+              filters: page.filters.map((f) =>
+                f.id === filter.id ? { ...filter, valid: result } : f
+              ),
+            }
+          : page
+      );
 
       setPagesData((prev) => ({
         ...prev,
         pages: newPages,
       }));
-
-      save(newPages);
     });
   };
 
@@ -574,8 +509,6 @@ function useFlexHeaderSettings() {
             ...prev,
             pages: newPages,
           }));
-
-          save(newPages);
 
           alertContext.setAlert({
             alertType: "info",
