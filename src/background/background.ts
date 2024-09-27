@@ -1,4 +1,6 @@
-import { Page } from "../utils/settings";
+import { SETTINGS_KEY } from "../constants";
+import { Page, PagesData } from "../utils/settings";
+import browser from "webextension-polyfill";
 
 console.log("FlexHeader: background.js");
 
@@ -7,85 +9,90 @@ const allResourceTypes = Object.values(
 );
 
 export function getAndApplyHeaderRules() {
-  chrome.storage.sync.get("settings", async (result) => {
-    let headers: chrome.declarativeNetRequest.Rule[] = [];
+  browser.storage.sync
+    .get(SETTINGS_KEY)
+    .then(async (result) => {
+      let headers: browser.DeclarativeNetRequest.Rule[] = [];
 
-    const oldRules = await chrome.declarativeNetRequest.getDynamicRules();
-    const oldRuleIds = oldRules ? oldRules.map((rule) => rule.id) : [];
+      const oldRules = await browser.declarativeNetRequest.getDynamicRules();
+      const oldRuleIds = oldRules ? oldRules.map((rule) => rule.id) : [];
 
-    function getUniqueRuleID() {
-      let id = Math.floor(Math.random() * 1000000000);
-      while (oldRuleIds.includes(id)) {
-        id = Math.floor(Math.random() * 1000000000);
+      function getUniqueRuleID() {
+        let id = Math.floor(Math.random() * 1000000000);
+        while (oldRuleIds.includes(id)) {
+          id = Math.floor(Math.random() * 1000000000);
+        }
+        return id;
       }
-      return id;
-    }
 
-    if (result.settings as Page[]) {
-      result.settings.forEach((page: Page) => {
-        if (page.enabled || page.keepEnabled) {
-          // each setting
-          page.headers.forEach((header, i) => {
-            if (header.headerEnabled && header.headerName) {
-              // Check for filters
-              let regexFilter = "";
+      if (result[SETTINGS_KEY]) {
+        ((result[SETTINGS_KEY] as PagesData).pages as Page[]).forEach(
+          (page: Page) => {
+            if (page.enabled || page.keepEnabled) {
+              // each setting
+              page.headers.forEach((header) => {
+                if (header.headerEnabled && header.headerName) {
+                  // Check for filters
+                  let regexFilter = "";
 
-              if (page.filters) {
-                page.filters.forEach((filter) => {
-                  if (filter.enabled && filter.valid) {
-                    if (filter.type === "include") {
-                      if (regexFilter === "") {
-                        regexFilter += filter.value;
-                      } else {
-                        regexFilter += `|${filter.value}`;
+                  if (page.filters) {
+                    page.filters.forEach((filter) => {
+                      if (filter.enabled && filter.valid) {
+                        if (filter.type === "include") {
+                          if (regexFilter === "") {
+                            regexFilter += filter.value;
+                          } else {
+                            regexFilter += `|${filter.value}`;
+                          }
+                        } else {
+                          if (regexFilter === "") {
+                            regexFilter += `~${filter.value}`;
+                          } else {
+                            regexFilter += `|~${filter.value}`;
+                          }
+                        }
                       }
-                    } else {
-                      if (regexFilter === "") {
-                        regexFilter += `~${filter.value}`;
-                      } else {
-                        regexFilter += `|~${filter.value}`;
-                      }
-                    }
+                    });
                   }
-                });
-              }
 
-              // Ready to push
-              headers.push({
-                id: getUniqueRuleID(),
-                priority: 1,
-                action: {
-                  type: chrome.declarativeNetRequest.RuleActionType
-                    .MODIFY_HEADERS,
-                  requestHeaders: [
-                    {
-                      header: header.headerName,
-                      operation:
-                        chrome.declarativeNetRequest.HeaderOperation.SET,
-                      value: header.headerValue,
+                  // Ready to push
+                  headers.push({
+                    id: getUniqueRuleID(),
+                    priority: 1,
+                    action: {
+                      type: "modifyHeaders",
+                      requestHeaders: [
+                        {
+                          header: header.headerName,
+                          operation: "set",
+                          value: header.headerValue,
+                        },
+                      ],
                     },
-                  ],
-                },
-                condition: {
-                  regexFilter: regexFilter || "|http*",
-                  resourceTypes: allResourceTypes,
-                },
+                    condition: {
+                      regexFilter: regexFilter || "|http*",
+                      resourceTypes: allResourceTypes,
+                    },
+                  });
+                }
               });
             }
-          });
-        }
-      });
-    }
+          }
+        );
+      }
 
-    chrome.declarativeNetRequest.updateDynamicRules({
-      removeRuleIds: oldRuleIds,
-      addRules: headers,
+      browser.declarativeNetRequest.updateDynamicRules({
+        removeRuleIds: oldRuleIds,
+        addRules: headers,
+      });
+    })
+    .catch((error) => {
+      console.error("Error in getAndApplyHeaderRules", error);
     });
-  });
 }
 
-chrome.storage.onChanged.addListener(function (changes, namespace) {
-  if ("settings" in changes) {
+browser.storage.onChanged.addListener(function (changes) {
+  if (SETTINGS_KEY in changes) {
     getAndApplyHeaderRules();
   }
 });

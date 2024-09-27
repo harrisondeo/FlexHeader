@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAlert } from "../context/alertContext";
+import browser from "webextension-polyfill";
+import { SELECTED_PAGE_KEY, SETTINGS_KEY } from "../constants";
 
 export type Page = {
   id: number;
@@ -53,21 +55,20 @@ const filterIsValid = async (
   callback: (valid: boolean) => void
 ) => {
   try {
-    chrome.declarativeNetRequest.isRegexSupported(
-      {
+    browser.declarativeNetRequest
+      .isRegexSupported({
         regex: filter.value,
-      },
-      (result) => {
+      })
+      .then((result) => {
         callback(result.isSupported);
-      }
-    );
+      });
   } catch (error) {
     callback(false);
   }
 };
 
 export const clearStoredSettings = () => {
-  chrome.storage.sync.clear();
+  browser.storage.sync.clear();
 };
 
 function useFlexHeaderSettings() {
@@ -86,11 +87,11 @@ function useFlexHeaderSettings() {
       const activeHeaders = selectedPage.headers.filter(
         (header) => header.headerEnabled
       );
-      chrome.action.setBadgeText({
+      browser.action.setBadgeText({
         text: activeHeaders.length.toString(),
       });
     } else {
-      chrome.action.setBadgeText({
+      browser.action.setBadgeText({
         text: "",
       });
     }
@@ -107,17 +108,22 @@ function useFlexHeaderSettings() {
    */
   const retrieveSettings = async () => {
     // if storage does not have "settings_v2" then we need to migrate the old settings
-    chrome.storage.sync.get("settings_v2", (data) => {
+    browser.storage.sync.get(SETTINGS_KEY).then((data) => {
       // Migration
-      if (data.settings_v2 === undefined) {
+      if (data[SETTINGS_KEY] === undefined) {
         let oldSettings: PagesData = {
           pages: [],
           selectedPage: 0,
         };
 
-        chrome.storage.sync.get("settings", (data) => {
+        browser.storage.sync.get("settings").then((data) => {
           if (data.settings === undefined || !Array.isArray(data.settings)) {
+            // no new settings, no old settings, set to default
             oldSettings.pages = [defaultPage];
+
+            setPagesData(oldSettings);
+            setHasInitialized(true);
+
             return;
           }
 
@@ -125,37 +131,39 @@ function useFlexHeaderSettings() {
             return a.id - b.id;
           });
 
-          chrome.storage.sync.get("selectedPage", (data) => {
-            if (data.selectedPage === undefined) {
+          browser.storage.sync.get(SELECTED_PAGE_KEY).then((data) => {
+            if (data[SELECTED_PAGE_KEY] === undefined) {
               oldSettings.selectedPage = 0;
               return;
             }
 
-            oldSettings.selectedPage = data.selectedPage;
+            oldSettings.selectedPage = data[SELECTED_PAGE_KEY] as number;
 
-            chrome.storage.sync.set({ settings_v2: oldSettings }).then(() => {
-              console.log("Migrated old settings to new format");
-              chrome.storage.sync.remove(["settings", "selectedPage"]);
-              setPagesData(oldSettings);
-              setHasInitialized(true);
-            });
+            browser.storage.sync
+              .set({ [SETTINGS_KEY]: oldSettings })
+              .then(() => {
+                console.log("Migrated old settings to new format");
+                browser.storage.sync.remove([SETTINGS_KEY, SELECTED_PAGE_KEY]);
+                setPagesData(oldSettings);
+                setHasInitialized(true);
+              });
           });
         });
       } else {
-        setPagesData(data.settings_v2);
+        setPagesData(data[SETTINGS_KEY] as PagesData);
         setHasInitialized(true);
       }
     });
 
-    chrome.storage.sync.get("darkMode", (data) => {
+    browser.storage.sync.get("darkMode").then((data) => {
       if (data.darkMode === undefined) {
-        chrome.storage.sync.set({
+        browser.storage.sync.set({
           darkMode: false,
         });
         return;
       }
 
-      setDarkModeEnabled(data.darkMode);
+      setDarkModeEnabled(data.darkMode === true);
     });
   };
 
@@ -164,7 +172,7 @@ function useFlexHeaderSettings() {
    * @param pages The pages to save to storage
    */
   const save = (settings: PagesData, callback?: () => void) => {
-    chrome.storage.sync.set({ settings_v2: settings }).then(() => {
+    browser.storage.sync.set({ [SETTINGS_KEY]: settings }).then(() => {
       if (callback) {
         callback();
       }
@@ -175,7 +183,7 @@ function useFlexHeaderSettings() {
    * Clears the storage and sets the state to the default page
    */
   const clear = () => {
-    chrome.storage.sync.clear();
+    browser.storage.sync.clear();
     setPagesData({
       pages: [defaultPage],
       selectedPage: defaultPage.id,
@@ -478,9 +486,9 @@ function useFlexHeaderSettings() {
    * Dark Mode
    */
   const toggleDarkMode = () => {
-    chrome.storage.sync.get("darkMode", (data) => {
+    browser.storage.sync.get("darkMode").then((data) => {
       const darkMode = data.darkMode === undefined ? false : !data.darkMode;
-      chrome.storage.sync.set({ darkMode });
+      browser.storage.sync.set({ darkMode });
       setDarkModeEnabled(darkMode);
     });
   };
@@ -526,7 +534,7 @@ function useFlexHeaderSettings() {
   }, []);
 
   useEffect(() => {
-    chrome.storage.sync.set({ selectedPage: pagesData.selectedPage });
+    browser.storage.sync.set({ [SELECTED_PAGE_KEY]: pagesData.selectedPage });
   }, [pagesData.selectedPage]);
 
   return {

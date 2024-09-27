@@ -15,6 +15,7 @@ import { useAlert } from "./context/alertContext";
 import ExportPopup from "./components/exportPopup";
 import ImportPopup from "./components/importPopup";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import browser from "webextension-polyfill";
 
 const reorder = (
   headers: HeaderSetting[],
@@ -186,7 +187,7 @@ function App() {
     saveHeaders(reorderedHeaders, currentPage.id);
   };
 
-  const manifest = chrome.runtime.getManifest();
+  const manifest = browser.runtime.getManifest();
 
   return (
     <div className={`app ${darkModeEnabled ? "darkmode" : ""}`}>

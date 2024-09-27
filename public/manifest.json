@@ -9,7 +9,14 @@
   "permissions": ["storage", "declarativeNetRequest"],
   "host_permissions": ["<all_urls>"],
   "background": {
-    "service_worker": "static/js/background.js"
+    "service_worker": "static/js/background.js",
+    "scripts": ["static/js/background.js"]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "flexheaders@harrisondeo.me.uk",
+      "strict_min_version": "58.0"
+    }
   },
   "action": {
     "default_popup": "index.html",
