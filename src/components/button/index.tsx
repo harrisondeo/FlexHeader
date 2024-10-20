@@ -8,6 +8,7 @@ export interface ButtonProps {
   width?: "full" | "auto";
   color?: "primary" | "warning" | "danger" | "info" | "secondary";
   onClick?: () => void;
+  style?: React.CSSProperties;
 }
 
 const Button = ({
@@ -16,10 +17,12 @@ const Button = ({
   width = "auto",
   color = "primary",
   onClick,
+  style,
 }: ButtonProps) => {
   return (
     <div
       className={`button ${size} width-${width} color-${color}`}
+      style={style}
       onClick={onClick}
     >
       {content}

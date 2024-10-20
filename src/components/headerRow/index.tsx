@@ -1,6 +1,7 @@
 import { DraggableProvidedDragHandleProps } from "react-beautiful-dnd";
 import { HeaderSetting } from "../../utils/settings";
 import "./index.css";
+import Button from "../button";
 
 const HeaderRow = ({
   id,
@@ -67,7 +68,10 @@ const HeaderRow = ({
         />
       </div>
       <div className="header-row__remove" onClick={() => onRemove(id)}>
-        <span>Remove</span>
+        <Button
+          content={<img src="/icons/basket.svg" alt="Remove Header" />}
+          style={{ height: "32px", padding: "8px 10px" }}
+        />
       </div>
     </div>
   );

@@ -1,17 +1,7 @@
 body {
   margin: 0;
-  font-family:
-    "Inter",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    "Roboto",
-    "Oxygen",
-    "Ubuntu",
-    "Cantarell",
-    "Fira Sans",
-    "Droid Sans",
-    "Helvetica Neue",
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -79,6 +69,7 @@ code {
   --color-success: #00a82e;
   --color-warning: #ff9800;
   --color-info: #2196f3;
+  --color-info-rgb: 33, 150, 243;
   --color-error: #f44336;
 
   --tab-color-active: #b3b3b3;
@@ -103,6 +94,7 @@ code {
   --color-success: #00a82e;
   --color-warning: #ff9800;
   --color-info: #2196f3;
+  --color-info-rgb: 33, 150, 243;
   --color-error: #f44336;
 
   --tab-color-active: #e5e5e5;

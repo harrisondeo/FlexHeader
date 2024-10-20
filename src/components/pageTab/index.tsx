@@ -46,6 +46,7 @@ const PageTab = ({
           className={`page-tab ${active ? "active" : ""}`}
           onClick={() => setCurrentPage(page.id)}
           onDoubleClick={() => setEditing(true)}
+          style={{ display: "none" }}
         >
           <img
             className={`page-tab__enabled-image`}

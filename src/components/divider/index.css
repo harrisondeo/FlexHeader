@@ -1,4 +1,4 @@
-.divider {
+.divider.horizontal {
   border-top: 1px solid #e8e8e8;
   margin: 1rem 0;
   width: 100%;
@@ -8,4 +8,10 @@
   border-top: 1px solid #e8e8e8;
   margin: 0.2rem 0;
   width: 100%;
+}
+
+.divider.vertical {
+  border-left: 1px solid #e8e8e8;
+  margin: 0 1rem;
+  height: 100%;
 }

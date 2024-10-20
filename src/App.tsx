@@ -16,6 +16,7 @@ import ExportPopup from "./components/exportPopup";
 import ImportPopup from "./components/importPopup";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import browser from "webextension-polyfill";
+import { PagesList } from "./components/pagesList";
 
 const reorder = (
   headers: HeaderSetting[],
@@ -218,92 +219,101 @@ function App() {
           <Button content="New Page" onClick={() => _addPage()} />
           {/* <span onClick={clear}>Clear Settings</span> */}
         </div>
-        <PagesTabs
-          pages={pages}
-          currentPage={currentPage}
-          darkModeEnabled={darkModeEnabled}
-          setCurrentPage={changeSelectedPage}
-          addPage={_addPage}
-          updatePageName={_updatePageName}
-          updatePageKeepEnabled={_changePageKeepEnabled}
-          removePage={removePage}
-          changePageIndex={changePageIndex}
-          toggleDarkMode={toggleDarkMode}
-        />
-        <div className="app__body" key={selectedPage}>
-          <div>
-            {currentPage?.headers?.length === 0 && (
-              <p className="app__body__headers__empty">
-                <i>No headers found. Add a new header.</i>
-              </p>
-            )}
-            <DragDropContext onDragEnd={_onDragEnd}>
-              <Droppable droppableId="droppable-headers">
-                {(provided, snapshot) => (
-                  <div
-                    {...provided.droppableProps}
-                    ref={provided.innerRef}
-                    className="app__body__headers"
-                  >
-                    {currentPage?.headers?.map(
-                      (
-                        { id, headerName, headerValue, headerEnabled },
-                        index
-                      ) => (
-                        <Draggable key={id} draggableId={id} index={index}>
-                          {(provided) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                            >
-                              <HeaderRow
-                                key={`header-row__${id}`}
-                                id={id}
-                                headerName={headerName}
-                                headerValue={headerValue}
-                                headerEnabled={headerEnabled}
-                                onRemove={(id: string) => _removeHeader(id)}
-                                onUpdate={(
-                                  id: string,
-                                  name: string,
-                                  value: string,
-                                  enabled: boolean
-                                ) =>
-                                  _updateHeader({
-                                    id: id,
-                                    headerName: name,
-                                    headerValue: value,
-                                    headerEnabled: enabled,
-                                  })
-                                }
-                                dragHandleProps={provided.dragHandleProps}
-                              />
-                            </div>
-                          )}
-                        </Draggable>
-                      )
-                    )}
-                    {provided.placeholder}
-                  </div>
+        <Divider />
+        <div className="app__body">
+          <PagesList
+            pages={pages}
+            currentPage={currentPage}
+            setCurrentPage={changeSelectedPage}
+          />
+          <Divider vertical />
+          <div style={{ width: "100%" }}>
+            <PagesTabs
+              currentPage={currentPage}
+              darkModeEnabled={darkModeEnabled}
+              addPage={_addPage}
+              updatePageName={_updatePageName}
+              updatePageKeepEnabled={_changePageKeepEnabled}
+              removePage={removePage}
+              changePageIndex={changePageIndex}
+              toggleDarkMode={toggleDarkMode}
+            />
+            <div key={selectedPage} className="app__body__contents">
+              <div>
+                {currentPage?.headers?.length === 0 && (
+                  <p className="app__body__headers__empty">
+                    <i>No headers found. Add a new header.</i>
+                  </p>
                 )}
-              </Droppable>
-            </DragDropContext>
-          </div>
-          {currentPage?.filters?.length > 0 && (
-            <div className="app__body__filters">
-              <p>Filters</p>
-              <div className="app__body__filters__container">
-                {currentPage?.filters.map((filter) => (
-                  <FilterRow
-                    key={`filter-row__${filter.id}`}
-                    {...filter}
-                    onRemove={_removeFilter}
-                    onUpdate={_updateFilter}
-                  />
-                ))}
+                <DragDropContext onDragEnd={_onDragEnd}>
+                  <Droppable droppableId="droppable-headers">
+                    {(provided, snapshot) => (
+                      <div
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                        className="app__body__headers"
+                      >
+                        {currentPage?.headers?.map(
+                          (
+                            { id, headerName, headerValue, headerEnabled },
+                            index
+                          ) => (
+                            <Draggable key={id} draggableId={id} index={index}>
+                              {(provided) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                >
+                                  <HeaderRow
+                                    key={`header-row__${id}`}
+                                    id={id}
+                                    headerName={headerName}
+                                    headerValue={headerValue}
+                                    headerEnabled={headerEnabled}
+                                    onRemove={(id: string) => _removeHeader(id)}
+                                    onUpdate={(
+                                      id: string,
+                                      name: string,
+                                      value: string,
+                                      enabled: boolean
+                                    ) =>
+                                      _updateHeader({
+                                        id: id,
+                                        headerName: name,
+                                        headerValue: value,
+                                        headerEnabled: enabled,
+                                      })
+                                    }
+                                    dragHandleProps={provided.dragHandleProps}
+                                  />
+                                </div>
+                              )}
+                            </Draggable>
+                          )
+                        )}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
               </div>
+              {currentPage?.filters?.length > 0 && (
+                <div className="app__body__filters">
+                  <p>Filters</p>
+                  <div className="app__body__filters__container">
+                    {currentPage?.filters.map((filter) => (
+                      <FilterRow
+                        key={`filter-row__${filter.id}`}
+                        {...filter}
+                        onRemove={_removeFilter}
+                        onUpdate={_updateFilter}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
         <Divider />
         <div className="app__footer">
