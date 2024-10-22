@@ -111,4 +111,7 @@
   overflow-y: auto;
   padding-right: 8px;
   height: calc(100% - 38px - 1rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
