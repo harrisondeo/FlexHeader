@@ -29,3 +29,7 @@ You will need to point it to your `/build` folder location as mentioned above
   - `public/manifest.json`
 
 And the new version should appear within the app when you open it
+
+##### Resetting settings
+
+Use the options menu to select **Reset All Settings** if you want to clear all stored headers and filters.

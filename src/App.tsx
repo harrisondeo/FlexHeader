@@ -237,6 +237,7 @@ function App() {
               removePage={removePage}
               changePageIndex={changePageIndex}
               toggleDarkMode={toggleDarkMode}
+              clearSettings={clear}
             />
             <div key={selectedPage} className="app__body__contents">
               <div>

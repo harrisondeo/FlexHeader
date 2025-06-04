@@ -9,12 +9,14 @@ const PageOptionsDropdown = ({
   removePage,
   updatePageName,
   toggleDarkMode,
+  clearSettings,
 }: {
   page: Page;
   darkModeEnabled: boolean;
   removePage: () => void;
   updatePageName: (name: string, id: number) => void;
   toggleDarkMode: () => void;
+  clearSettings: () => void;
 }) => {
   const [show, setShow] = useState(false);
   const optionButtonRef = useRef<HTMLDivElement>(null);
@@ -102,6 +104,16 @@ const PageOptionsDropdown = ({
         </div>
         <div className="page-options-dropdown__item">
           <Button onClick={_removePage} width="full" content="Delete Page" />
+        </div>
+        <div className="page-options-dropdown__item">
+          <Button
+            onClick={() => {
+              clearSettings();
+              setShow(false);
+            }}
+            width="full"
+            content="Reset All Settings"
+          />
         </div>
       </div>
     </>

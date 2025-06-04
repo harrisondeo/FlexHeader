@@ -12,6 +12,7 @@ const PagesTabs = ({
   updatePageKeepEnabled,
   changePageIndex,
   toggleDarkMode,
+  clearSettings,
 }: {
   currentPage: Page;
   darkModeEnabled: boolean;
@@ -21,6 +22,7 @@ const PagesTabs = ({
   updatePageKeepEnabled: (id: number, enabled: boolean) => void;
   changePageIndex: (id: number, newIndex: number) => void;
   toggleDarkMode: () => void;
+  clearSettings: () => void;
 }) => {
   return (
     <div className="pages-tabs__actions">
@@ -55,6 +57,7 @@ const PagesTabs = ({
             updatePageName(name, currentPage.id)
           }
           toggleDarkMode={toggleDarkMode}
+          clearSettings={clearSettings}
         />
       </div>
     </div>
