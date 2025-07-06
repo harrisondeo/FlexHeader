@@ -7,8 +7,8 @@
   margin-right: auto;
   width: 400px;
   min-height: 200px;
-  background-color: var(--background-quaternary);
-  border: 1px solid var(--background-quinary);
+  background-color: var(--background-tertiary);
+  border: 1px solid var(--background-tertiary);
   border-radius: 5px;
   z-index: 100;
   display: flex;
