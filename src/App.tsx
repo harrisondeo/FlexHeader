@@ -17,6 +17,8 @@ import ImportPopup from "./components/importPopup";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import browser from "webextension-polyfill";
 import { PagesList } from "./components/pagesList";
+import ReviewPrompt from "./components/reviewPrompt";
+import { LAST_REVIEW_PROMPT_KEY } from "./constants";
 
 const reorder = (
   headers: HeaderSetting[],
@@ -57,6 +59,7 @@ function App() {
     [pages, selectedPage]
   );
   const [headerToFocus, setHeaderToFocus] = useState<string | null>(null);
+  const [showReviewPrompt, setShowReviewPrompt] = useState(false);
 
   useEffect(() => {
     if (headerToFocus !== null) {
@@ -71,6 +74,19 @@ function App() {
       setHeaderToFocus(null);
     }
   }, [headerToFocus]);
+
+  useEffect(() => {
+    browser.storage.sync.get(LAST_REVIEW_PROMPT_KEY).then((data) => {
+      const lastPrompt = data[LAST_REVIEW_PROMPT_KEY] as number | undefined;
+      const now = Date.now();
+      const monthMs = 1000 * 60 * 60 * 24 * 30;
+
+      if (!lastPrompt || now - lastPrompt > monthMs) {
+        setShowReviewPrompt(true);
+        browser.storage.sync.set({ [LAST_REVIEW_PROMPT_KEY]: now });
+      }
+    });
+  }, []);
 
   const _addHeader = useCallback(async () => {
     const newHeader = addHeader(currentPage.id, {
@@ -326,6 +342,10 @@ function App() {
             <ExportPopup pages={pages} />
           </div>
         </div>
+        <ReviewPrompt
+          show={showReviewPrompt}
+          onClose={() => setShowReviewPrompt(false)}
+        />
         <Alert />
       </div>
     </div>
