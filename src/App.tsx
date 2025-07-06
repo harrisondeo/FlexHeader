@@ -79,6 +79,7 @@ function App() {
       headerName: "",
       headerValue: "",
       headerEnabled: true,
+      headerType: "request",
     });
 
     setHeaderToFocus(newHeader?.id ?? null);
@@ -265,7 +266,7 @@ function App() {
                       >
                         {currentPage?.headers?.map(
                           (
-                            { id, headerName, headerValue, headerEnabled },
+                            { id, headerName, headerValue, headerEnabled, headerType },
                             index
                           ) => (
                             <Draggable key={id} draggableId={id} index={index}>
@@ -280,18 +281,21 @@ function App() {
                                     headerName={headerName}
                                     headerValue={headerValue}
                                     headerEnabled={headerEnabled}
+                                    headerType={headerType}
                                     onRemove={(id: string) => _removeHeader(id)}
                                     onUpdate={(
                                       id: string,
                                       name: string,
                                       value: string,
-                                      enabled: boolean
+                                      enabled: boolean,
+                                      type: "request" | "response"
                                     ) =>
                                       _updateHeader({
                                         id: id,
                                         headerName: name,
                                         headerValue: value,
                                         headerEnabled: enabled,
+                                        headerType: type,
                                       })
                                     }
                                     dragHandleProps={provided.dragHandleProps}

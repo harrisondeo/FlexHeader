@@ -8,24 +8,35 @@ const HeaderRow = ({
   headerName,
   headerValue,
   headerEnabled,
+  headerType,
   onRemove,
   onUpdate,
   dragHandleProps,
 }: HeaderSetting & {
   onRemove: (id: string) => void;
-  onUpdate: (id: string, name: string, value: string, enabled: boolean) => void;
+  onUpdate: (
+    id: string,
+    name: string,
+    value: string,
+    enabled: boolean,
+    type: "request" | "response"
+  ) => void;
   dragHandleProps?: DraggableProvidedDragHandleProps | null | undefined;
 }) => {
   const updateName = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onUpdate(id, e.target.value, headerValue, headerEnabled);
+    onUpdate(id, e.target.value, headerValue, headerEnabled, headerType);
   };
 
   const updateValue = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onUpdate(id, headerName, e.target.value, headerEnabled);
+    onUpdate(id, headerName, e.target.value, headerEnabled, headerType);
   };
 
   const updateEnabled = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onUpdate(id, headerName, headerValue, e.target.checked);
+    onUpdate(id, headerName, headerValue, e.target.checked, headerType);
+  };
+
+  const updateType = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    onUpdate(id, headerName, headerValue, headerEnabled, e.target.value as "request" | "response");
   };
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -66,6 +77,12 @@ const HeaderRow = ({
           onChange={updateValue}
           onFocus={handleFocus}
         />
+      </div>
+      <div className="header-row__type">
+        <select value={headerType} onChange={updateType}>
+          <option value="request">Request</option>
+          <option value="response">Response</option>
+        </select>
       </div>
       <div className="header-row__remove" onClick={() => onRemove(id)}>
         <Button

@@ -30,7 +30,7 @@ export function getAndApplyHeaderRules() {
           (page: Page) => {
             if (page.enabled || page.keepEnabled) {
               // each setting
-              page.headers.forEach((header) => {
+              page.headers.forEach((header: any) => {
                 if (header.headerEnabled && header.headerName) {
                   // Check for filters
                   let regexFilter = "";
@@ -56,18 +56,31 @@ export function getAndApplyHeaderRules() {
                   }
 
                   // Ready to push
+                  const hType = header.headerType || "request";
                   headers.push({
                     id: getUniqueRuleID(),
                     priority: 1,
                     action: {
                       type: "modifyHeaders",
-                      requestHeaders: [
-                        {
-                          header: header.headerName,
-                          operation: "set",
-                          value: header.headerValue,
-                        },
-                      ],
+                      ...(hType === "request"
+                        ? {
+                            requestHeaders: [
+                              {
+                                header: header.headerName,
+                                operation: "set",
+                                value: header.headerValue,
+                              },
+                            ],
+                          }
+                        : {
+                            responseHeaders: [
+                              {
+                                header: header.headerName,
+                                operation: "set",
+                                value: header.headerValue,
+                              },
+                            ],
+                          }),
                     },
                     condition: {
                       regexFilter: regexFilter || "|http*",
