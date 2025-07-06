@@ -79,7 +79,7 @@ const HeaderRow = ({
         />
       </div>
       <div className="header-row__type">
-        <select value={headerType} onChange={updateType}>
+        <select value={headerType} onChange={updateType} aria-label="Header type">
           <option value="request">Request</option>
           <option value="response">Response</option>
         </select>
