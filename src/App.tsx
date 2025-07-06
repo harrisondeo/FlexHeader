@@ -231,13 +231,14 @@ function App() {
         </div>
         <Divider />
         <div className="app__body">
-          <PagesList
-            pages={pages}
-            currentPage={currentPage}
-            setCurrentPage={changeSelectedPage}
-          />
-          <Divider vertical />
-          <div style={{ width: "100%" }}>
+          <aside className="app__sidebar">
+            <PagesList
+              pages={pages}
+              currentPage={currentPage}
+              setCurrentPage={changeSelectedPage}
+            />
+          </aside>
+          <main className="app__main">
             <PagesTabs
               currentPage={currentPage}
               darkModeEnabled={darkModeEnabled}
@@ -323,7 +324,7 @@ function App() {
                 </div>
               )}
             </div>
-          </div>
+          </main>
         </div>
         <Divider />
         <div className="app__footer">
