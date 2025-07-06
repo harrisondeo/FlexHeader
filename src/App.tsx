@@ -17,6 +17,8 @@ import ImportPopup from "./components/importPopup";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import browser from "webextension-polyfill";
 import { PagesList } from "./components/pagesList";
+import ReviewPrompt from "./components/reviewPrompt";
+import useReviewPrompt from "./utils/useReviewPrompt";
 
 const reorder = (
   headers: HeaderSetting[],
@@ -51,6 +53,7 @@ function App() {
     toggleDarkMode,
   } = useFlexHeaderSettings();
   const alertContext = useAlert();
+  const { shouldShow: shouldShowReviewPrompt, loading: reviewPromptLoading, hidePrompt } = useReviewPrompt();
   const currentPage = useMemo(
     () => pages.find((x) => x.id === selectedPage) || pages[0],
     [pages, selectedPage]
@@ -189,6 +192,14 @@ function App() {
 
   const manifest = browser.runtime.getManifest();
 
+  const handleReviewPromptDismiss = () => {
+    hidePrompt();
+  };
+
+  const handleReviewPromptReview = () => {
+    hidePrompt();
+  };
+
   return (
     <div className={`app ${darkModeEnabled ? "darkmode" : ""}`}>
       <div className="app__container">
@@ -326,6 +337,12 @@ function App() {
           </div>
         </div>
         <Alert />
+        {!reviewPromptLoading && shouldShowReviewPrompt && (
+          <ReviewPrompt
+            onDismiss={handleReviewPromptDismiss}
+            onReview={handleReviewPromptReview}
+          />
+        )}
       </div>
     </div>
   );
