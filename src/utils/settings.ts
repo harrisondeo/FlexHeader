@@ -135,7 +135,7 @@ function useFlexHeaderSettings() {
             })
             .map((p: any) => ({
               ...p,
-              headers: p.headers.map((h: any) => ({
+              headers: p.headers.map((h: HeaderSetting) => ({
                 ...h,
                 headerType: h.headerType ? h.headerType : "request",
               })),
