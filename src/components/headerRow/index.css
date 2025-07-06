@@ -9,7 +9,8 @@
 }
 
 .header-row__name,
-.header-row__value {
+.header-row__value,
+.header-row__type {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;

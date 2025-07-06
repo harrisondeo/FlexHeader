@@ -27,6 +27,7 @@ export type HeaderSetting = {
   headerName: string;
   headerValue: string;
   headerEnabled: boolean;
+  headerType: "request" | "response";
 };
 
 export type PagesData = {
@@ -46,6 +47,7 @@ const defaultPage: Page = {
       headerName: "X-Frame-Options",
       headerValue: "ALLOW-FROM https://www.youtube.com/",
       headerEnabled: true,
+      headerType: "request",
     },
   ],
 };
@@ -127,9 +129,17 @@ function useFlexHeaderSettings() {
             return;
           }
 
-          oldSettings.pages = data.settings.sort((a: Page, b: Page) => {
-            return a.id - b.id;
-          });
+          oldSettings.pages = data.settings
+            .sort((a: Page, b: Page) => {
+              return a.id - b.id;
+            })
+            .map((p: any) => ({
+              ...p,
+              headers: p.headers.map((h: HeaderSetting) => ({
+                ...h,
+                headerType: h.headerType ? h.headerType : "request",
+              })),
+            }));
 
           browser.storage.sync.get(SELECTED_PAGE_KEY).then((data) => {
             if (data[SELECTED_PAGE_KEY] === undefined) {
@@ -150,7 +160,15 @@ function useFlexHeaderSettings() {
           });
         });
       } else {
-        setPagesData(data[SETTINGS_KEY] as PagesData);
+        const loaded = data[SETTINGS_KEY] as PagesData;
+        const mappedPages = loaded.pages.map((p) => ({
+          ...p,
+          headers: p.headers.map((h: any) => ({
+            ...h,
+            headerType: h.headerType ? h.headerType : "request",
+          })),
+        }));
+        setPagesData({ ...loaded, pages: mappedPages });
         setHasInitialized(true);
       }
     });
@@ -327,6 +345,7 @@ function useFlexHeaderSettings() {
               ...page.headers,
               {
                 ...header,
+                headerType: header.headerType || "request",
                 id: `${pageId}-${page.headers.length + 1}`,
               },
             ],
@@ -506,10 +525,14 @@ function useFlexHeaderSettings() {
         if (Array.isArray(parsed)) {
           // remap the ids to avoid conflicts
           const combinedPages = [...pagesData.pages, ...parsed];
-          const newPages = combinedPages.map((page, index) => {
+          const newPages = combinedPages.map((page: any, index) => {
             return {
               ...page,
               id: index,
+              headers: page.headers.map((h: any) => ({
+                ...h,
+                headerType: h.headerType ? h.headerType : "request",
+              })),
             };
           });
 
