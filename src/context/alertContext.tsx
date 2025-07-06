@@ -1,4 +1,4 @@
-import React, { Children, createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState } from "react";
 
 export type Alert = {
   alertText: string;
@@ -16,7 +16,7 @@ export const AlertContext = createContext<AlertContextType>({
   alertType: "success",
   location: "bottom",
   show: false,
-  setAlert: () => {},
+  setAlert: () => { },
 });
 
 export const AlertProvider = ({ children }: { children: React.ReactNode }) => {
