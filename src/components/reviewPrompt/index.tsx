@@ -1,5 +1,5 @@
 import Button from "../button";
-import { REVIEW_PROMPT_KEY } from "../../constants";
+import { REVIEW_PROMPT_KEY, REVIEWS_URL } from "../../constants";
 import browser from "webextension-polyfill";
 import "./index.css";
 
@@ -26,15 +26,15 @@ const ReviewPrompt = ({ onDismiss, onReview }: ReviewPromptProps) => {
         userReviewed: false,
         dismissed: false,
       };
-      
+
       const reviewData: ReviewPromptData = (data[REVIEW_PROMPT_KEY] as ReviewPromptData) || defaultData;
-      
+
       reviewData.lastShownDate = now;
       reviewData.dismissed = true;
-      
+
       browser.storage.sync.set({ [REVIEW_PROMPT_KEY]: reviewData });
     });
-    
+
     onDismiss();
   };
 
@@ -48,28 +48,19 @@ const ReviewPrompt = ({ onDismiss, onReview }: ReviewPromptProps) => {
         userReviewed: false,
         dismissed: false,
       };
-      
+
       const reviewData: ReviewPromptData = (data[REVIEW_PROMPT_KEY] as ReviewPromptData) || defaultData;
-      
+
       reviewData.userReviewed = true;
       reviewData.lastShownDate = now;
-      
+
       browser.storage.sync.set({ [REVIEW_PROMPT_KEY]: reviewData });
     });
-    
-    // Open review page - try to determine the appropriate store
-    const userAgent = navigator.userAgent;
-    let reviewUrl = "https://chrome.google.com/webstore/detail/flexheaders-modify-http-h/pmhkbgcdokhagggnoddopjgbkojlbfbo/reviews";
-    
-    // Check if Firefox
-    if (userAgent.includes("Firefox")) {
-      reviewUrl = "https://addons.mozilla.org/en-US/firefox/addon/flexheaders/reviews/";
-    }
-    
+
     browser.tabs.create({
-      url: reviewUrl,
+      url: REVIEWS_URL,
     });
-    
+
     onReview();
   };
 
@@ -78,7 +69,7 @@ const ReviewPrompt = ({ onDismiss, onReview }: ReviewPromptProps) => {
       <div className="review-prompt__content">
         <h3>Enjoying FlexHeaders?</h3>
         <p>
-          If you're finding FlexHeaders useful, would you mind taking a moment to leave a review? 
+          If you're finding FlexHeaders useful, would you mind taking a moment to leave a review?
           It helps other users discover the extension and motivates us to keep improving it.
         </p>
         <div className="review-prompt__buttons">
