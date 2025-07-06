@@ -1,0 +1,58 @@
+.review-prompt {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: var(--z-index-100);
+}
+
+.review-prompt__content {
+  background: var(--background-primary);
+  border-radius: var(--input-radius);
+  padding: 2rem;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.review-prompt__content h3 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  font-size: 1.3rem;
+}
+
+.review-prompt__content p {
+  margin: 0 0 1.5rem 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.review-prompt__buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.review-prompt__buttons .button {
+  flex: 1;
+}
+
+/* Dark mode support */
+.darkmode .review-prompt__content {
+  background: var(--background-primary);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.darkmode .review-prompt__content h3 {
+  color: var(--text-primary);
+}
+
+.darkmode .review-prompt__content p {
+  color: var(--text-secondary);
+}
