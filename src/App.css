@@ -64,11 +64,22 @@
 }
 
 .app__body {
-  display: flex;
+  display: grid;
+  grid-template-columns: 220px 1fr;
   height: 100%;
-  justify-content: space-between;
   overflow: hidden;
+  gap: 1rem;
   padding-right: 6px;
+}
+
+.app__sidebar {
+  overflow-y: auto;
+}
+
+.app__main {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }
 
 .app__body__headers {
