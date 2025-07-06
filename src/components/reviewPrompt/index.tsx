@@ -47,7 +47,7 @@ const ReviewPrompt = ({ show, onClose }: ReviewPromptProps) => {
           </p>
         </div>
         <div className="review-prompt__actions">
-          <Button content="Later" onClick={onClose} />
+          <Button content="Later" onClick={onClose} color="secondary" />
           <Button content="Leave a Review" onClick={openReviewPage} />
         </div>
       </div>
