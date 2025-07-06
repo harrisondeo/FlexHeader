@@ -45,7 +45,6 @@ function App() {
     addPage,
     updatePage,
     removePage,
-    clear,
     changeSelectedPage,
     importSettings,
     changePageIndex,

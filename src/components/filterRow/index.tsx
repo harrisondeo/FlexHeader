@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { FilterType, HeaderFilter } from "../../utils/settings";
 import "./index.css";
 

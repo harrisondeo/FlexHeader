@@ -2,8 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import Button from "../button";
 import "./index.css";
 import Divider from "../divider";
-import { downloadJSONFile } from "../../utils/download";
-import { useAlert } from "../../context/alertContext";
 import DragDropFile from "../dragDropFile";
 
 interface ImportPopupProps {
@@ -13,13 +11,12 @@ interface ImportPopupProps {
 const ImportPopup = ({ importSettings }: ImportPopupProps) => {
   const [show, setShow] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
-  const alertContext = useAlert();
 
   const _handleClick = () => {
     setShow(!show);
   };
 
-  const _handleExport = () => {};
+  const _handleExport = () => { };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
