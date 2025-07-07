@@ -79,15 +79,21 @@ const HeaderRow = ({
         />
       </div>
       <div className="header-row__type">
-        <select value={headerType} onChange={updateType} aria-label="Header type">
-          <option value="request">Request</option>
-          <option value="response">Response</option>
+        <select
+          value={headerType}
+          onChange={updateType}
+          className="compact-select"
+          title={headerType === "request" ? "Request Header" : "Response Header"}
+          aria-label="Header type"
+        >
+          <option value="request">Req</option>
+          <option value="response">Res</option>
         </select>
       </div>
       <div className="header-row__remove" onClick={() => onRemove(id)}>
         <Button
           content={<img src="/icons/basket.svg" alt="Remove Header" />}
-          style={{ height: "32px", padding: "8px 10px" }}
+          style={{ height: "28px", padding: "6px 8px" }}
         />
       </div>
     </div>
