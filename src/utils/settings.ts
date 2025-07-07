@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
 import { SELECTED_PAGE_KEY, SETTINGS_KEY } from "../constants";
@@ -83,6 +83,63 @@ function useFlexHeaderSettings() {
 
   const alertContext = useAlert();
 
+  /**
+   * Checks if adding new data would exceed storage limits
+   * @param currentData Current pages data
+   * @param additionalData Additional data to be added (for estimation)
+   * @returns true if operation would exceed limit
+   */
+  const wouldExceedStorageLimit = useCallback((currentData: PagesData, additionalData?: any): boolean => {
+    const testData = additionalData ? { ...currentData, ...additionalData } : currentData;
+    const serializedData = JSON.stringify(testData);
+    const sizeInBytes = new TextEncoder().encode(serializedData).length;
+    const STORAGE_LIMIT = 8192; // Chrome sync storage limit per item (8KB)
+    const WARNING_THRESHOLD = STORAGE_LIMIT * 0.9; // Warn at 90% capacity
+    
+    if (sizeInBytes > WARNING_THRESHOLD && sizeInBytes <= STORAGE_LIMIT) {
+      alertContext.setAlert({
+        alertType: "warning",
+        alertText: `Approaching storage limit (${(sizeInBytes / 1024).toFixed(1)}KB / 8KB). Consider reducing pages or headers.`,
+        location: "bottom",
+      });
+    }
+    
+    return sizeInBytes > STORAGE_LIMIT;
+  }, [alertContext]);
+
+  /**
+   * Saves pages array to storage
+   * @param pages The pages to save to storage
+   */
+  const save = useCallback((settings: PagesData, callback?: () => void) => {
+    const serializedData = JSON.stringify(settings);
+    const sizeInBytes = new TextEncoder().encode(serializedData).length;
+    const STORAGE_LIMIT = 8192; // Chrome sync storage limit per item (8KB)
+    
+    if (sizeInBytes > STORAGE_LIMIT) {
+      alertContext.setAlert({
+        alertType: "error",
+        alertText: `Storage limit exceeded (${(sizeInBytes / 1024).toFixed(1)}KB > 8KB). Some data may be lost. Consider reducing the number of pages or headers.`,
+        location: "bottom",
+      });
+      console.error(`Storage limit exceeded: ${sizeInBytes} bytes > ${STORAGE_LIMIT} bytes`);
+      return;
+    }
+    
+    browser.storage.sync.set({ [SETTINGS_KEY]: settings }).then(() => {
+      if (callback) {
+        callback();
+      }
+    }).catch((error) => {
+      console.error("Failed to save settings:", error);
+      alertContext.setAlert({
+        alertType: "error",
+        alertText: "Failed to save settings. Please try again.",
+        location: "bottom",
+      });
+    });
+  }, [alertContext]);
+
   useEffect(() => {
     const selectedPage = pagesData.pages.find((page) => page.enabled);
     if (selectedPage) {
@@ -103,7 +160,7 @@ function useFlexHeaderSettings() {
     if (!hasInitialized) return;
 
     save(pagesData);
-  }, [pagesData, hasInitialized]);
+  }, [pagesData, hasInitialized, save]);
 
   /**
    * Loads the settings from storage and sets the state
@@ -186,18 +243,6 @@ function useFlexHeaderSettings() {
   };
 
   /**
-   * Saves pages array to storage
-   * @param pages The pages to save to storage
-   */
-  const save = (settings: PagesData, callback?: () => void) => {
-    browser.storage.sync.set({ [SETTINGS_KEY]: settings }).then(() => {
-      if (callback) {
-        callback();
-      }
-    });
-  };
-
-  /**
    * Clears the storage and sets the state to the default page
    */
   const clear = () => {
@@ -222,10 +267,21 @@ function useFlexHeaderSettings() {
       { ...page, id: pagesData.pages.length, enabled: true },
     ];
 
-    setPagesData({
+    const testData = {
       pages: newPages,
       selectedPage: newPages.length - 1,
-    });
+    };
+
+    if (wouldExceedStorageLimit(testData)) {
+      alertContext.setAlert({
+        alertType: "error",
+        alertText: "Cannot add page: would exceed storage limit. Please remove some pages or headers first.",
+        location: "bottom",
+      });
+      return;
+    }
+
+    setPagesData(testData);
   };
 
   /**
@@ -352,6 +408,17 @@ function useFlexHeaderSettings() {
           }
         : page
     );
+
+    const testData = { ...pagesData, pages: newPages };
+
+    if (wouldExceedStorageLimit(testData)) {
+      alertContext.setAlert({
+        alertType: "error",
+        alertText: "Cannot add header: would exceed storage limit. Please remove some headers or pages first.",
+        location: "bottom",
+      });
+      return undefined;
+    }
 
     setPagesData((prev) => ({
       ...prev,
@@ -535,6 +602,20 @@ function useFlexHeaderSettings() {
               })),
             };
           });
+
+          const testData = {
+            ...pagesData,
+            pages: newPages,
+          };
+
+          if (wouldExceedStorageLimit(testData)) {
+            alertContext.setAlert({
+              alertType: "error",
+              alertText: "Cannot import: would exceed storage limit. Please remove some existing pages or headers first.",
+              location: "bottom",
+            });
+            return;
+          }
 
           setPagesData((prev) => ({
             ...prev,
