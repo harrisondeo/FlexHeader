@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
-import { SELECTED_PAGE_KEY, SETTINGS_KEY } from "../constants";
+import { SELECTED_PAGE_KEY, SETTINGS_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX } from "../constants";
 
 export type Page = {
   id: number;
@@ -33,6 +33,12 @@ export type HeaderSetting = {
 export type PagesData = {
   pages: Page[];
   selectedPage: number;
+};
+
+export type SettingsV3Meta = {
+  version: 3;
+  selectedPage: number;
+  pageCount: number;
 };
 
 const defaultPage: Page = {
@@ -83,6 +89,91 @@ function useFlexHeaderSettings() {
 
   const alertContext = useAlert();
 
+  /**
+   * Clears extra page storage items that are no longer needed
+   * @param currentPageCount The current number of pages
+   */
+  const clearExtraPages = useCallback(async (currentPageCount: number) => {
+    // Get all storage keys to find orphaned page entries
+    const allData = await browser.storage.sync.get(null);
+    const pageKeys = Object.keys(allData).filter(key => key.startsWith(PAGE_KEY_PREFIX));
+    
+    // Remove any page keys that exceed the current page count
+    const keysToRemove = pageKeys.filter(key => {
+      const pageIndex = parseInt(key.replace(PAGE_KEY_PREFIX, ''));
+      return pageIndex >= currentPageCount;
+    });
+    
+    if (keysToRemove.length > 0) {
+      await browser.storage.sync.remove(keysToRemove);
+    }
+  }, []);
+
+  /**
+   * Saves a single page to storage
+   * @param page The page to save
+   * @param pageIndex The index of the page
+   */
+  const savePage = useCallback(async (page: Page, pageIndex: number) => {
+    const pageKey = `${PAGE_KEY_PREFIX}${pageIndex}`;
+    const serializedPage = JSON.stringify(page);
+    const sizeInBytes = new TextEncoder().encode(serializedPage).length;
+    const STORAGE_LIMIT = 8192; // Chrome sync storage limit per item (8KB)
+    
+    if (sizeInBytes > STORAGE_LIMIT) {
+      alertContext.setAlert({
+        alertType: "error",
+        alertText: `Page too large (${(sizeInBytes / 1024).toFixed(1)}KB > 8KB). Please reduce the number of headers on this page.`,
+        location: "bottom",
+      });
+      throw new Error(`Page ${pageIndex} exceeds storage limit: ${sizeInBytes} bytes > ${STORAGE_LIMIT} bytes`);
+    }
+    
+    await browser.storage.sync.set({ [pageKey]: page });
+  }, [alertContext]);
+
+  /**
+   * Saves metadata to storage
+   * @param meta The metadata to save
+   */
+  const saveMetadata = useCallback(async (meta: SettingsV3Meta) => {
+    await browser.storage.sync.set({ [SETTINGS_V3_META_KEY]: meta });
+  }, []);
+
+  /**
+   * Saves all pages and metadata to storage
+   * @param settings The complete settings data
+   */
+  const save = useCallback(async (settings: PagesData, callback?: () => void) => {
+    try {
+      // Save each page individually
+      const savePromises = settings.pages.map((page, index) => savePage(page, index));
+      await Promise.all(savePromises);
+      
+      // Save metadata
+      const metadata: SettingsV3Meta = {
+        version: 3,
+        selectedPage: settings.selectedPage,
+        pageCount: settings.pages.length,
+      };
+      await saveMetadata(metadata);
+      
+      // Clear any extra pages that might exist from a previous state
+      await clearExtraPages(settings.pages.length);
+      
+      if (callback) {
+        callback();
+      }
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+      alertContext.setAlert({
+        alertType: "error",
+        alertText: "Failed to save settings. Please try again.",
+        location: "bottom",
+      });
+    }
+  }, [savePage, saveMetadata, clearExtraPages, alertContext]);
+
   useEffect(() => {
     const selectedPage = pagesData.pages.find((page) => page.enabled);
     if (selectedPage) {
@@ -103,99 +194,144 @@ function useFlexHeaderSettings() {
     if (!hasInitialized) return;
 
     save(pagesData);
-  }, [pagesData, hasInitialized]);
+  }, [pagesData, hasInitialized, save]);
 
   /**
    * Loads the settings from storage and sets the state
    */
-  const retrieveSettings = async () => {
-    // if storage does not have "settings_v2" then we need to migrate the old settings
-    browser.storage.sync.get(SETTINGS_KEY).then((data) => {
-      // Migration
-      if (data[SETTINGS_KEY] === undefined) {
-        let oldSettings: PagesData = {
-          pages: [],
-          selectedPage: 0,
-        };
-
-        browser.storage.sync.get("settings").then((data) => {
-          if (data.settings === undefined || !Array.isArray(data.settings)) {
-            // no new settings, no old settings, set to default
-            oldSettings.pages = [defaultPage];
-
-            setPagesData(oldSettings);
-            setHasInitialized(true);
-
-            return;
+  const retrieveSettings = useCallback(async () => {
+    try {
+      // Check if we have the new v3 format
+      const metaData = await browser.storage.sync.get(SETTINGS_V3_META_KEY);
+      
+      if (metaData[SETTINGS_V3_META_KEY]) {
+        // Load from new distributed storage format
+        const meta = metaData[SETTINGS_V3_META_KEY] as SettingsV3Meta;
+        
+        // Load all pages
+        const pagePromises = [];
+        for (let i = 0; i < meta.pageCount; i++) {
+          pagePromises.push(browser.storage.sync.get(`${PAGE_KEY_PREFIX}${i}`));
+        }
+        
+        const pageResults = await Promise.all(pagePromises);
+        const pages: Page[] = pageResults.map((result, index) => {
+          const pageKey = `${PAGE_KEY_PREFIX}${index}`;
+          const page = result[pageKey] as Page;
+          
+          // Ensure backwards compatibility for headerType
+          if (page && page.headers) {
+            page.headers = page.headers.map((h: any) => ({
+              ...h,
+              headerType: h.headerType || "request",
+            }));
           }
-
-          oldSettings.pages = data.settings
-            .sort((a: Page, b: Page) => {
-              return a.id - b.id;
-            })
+          
+          return page;
+        }).filter(Boolean); // Remove any null/undefined pages
+        
+        if (pages.length === 0) {
+          // No pages found, use default
+          setPagesData({
+            pages: [defaultPage],
+            selectedPage: defaultPage.id,
+          });
+        } else {
+          setPagesData({
+            pages,
+            selectedPage: meta.selectedPage,
+          });
+        }
+        
+        setHasInitialized(true);
+        return;
+      }
+      
+      // Check for legacy v2 format and migrate
+      const v2Data = await browser.storage.sync.get(SETTINGS_KEY);
+      
+      if (v2Data[SETTINGS_KEY]) {
+        console.log("Migrating from v2 to v3 storage format");
+        const oldData = v2Data[SETTINGS_KEY] as PagesData;
+        
+        // Migrate to new format
+        await save(oldData);
+        
+        // Remove old storage format
+        await browser.storage.sync.remove(SETTINGS_KEY);
+        
+        // Set the migrated data
+        setPagesData(oldData);
+        setHasInitialized(true);
+        return;
+      }
+      
+      // Check for very old format (pre-v2) and migrate
+      const oldSettings = await browser.storage.sync.get("settings");
+      
+      if (oldSettings.settings && Array.isArray(oldSettings.settings)) {
+        console.log("Migrating from v1 to v3 storage format");
+        
+        const selectedPageData = await browser.storage.sync.get(SELECTED_PAGE_KEY);
+        
+        const migratedData: PagesData = {
+          pages: oldSettings.settings
+            .sort((a: Page, b: Page) => a.id - b.id)
             .map((p: any) => ({
               ...p,
               headers: p.headers.map((h: HeaderSetting) => ({
                 ...h,
-                headerType: h.headerType ? h.headerType : "request",
+                headerType: h.headerType || "request",
               })),
-            }));
-
-          browser.storage.sync.get(SELECTED_PAGE_KEY).then((data) => {
-            if (data[SELECTED_PAGE_KEY] === undefined) {
-              oldSettings.selectedPage = 0;
-              return;
-            }
-
-            oldSettings.selectedPage = data[SELECTED_PAGE_KEY] as number;
-
-            browser.storage.sync
-              .set({ [SETTINGS_KEY]: oldSettings })
-              .then(() => {
-                console.log("Migrated old settings to new format");
-                browser.storage.sync.remove([SETTINGS_KEY, SELECTED_PAGE_KEY]);
-                setPagesData(oldSettings);
-                setHasInitialized(true);
-              });
-          });
-        });
-      } else {
-        const loaded = data[SETTINGS_KEY] as PagesData;
-        const mappedPages = loaded.pages.map((p) => ({
-          ...p,
-          headers: p.headers.map((h: any) => ({
-            ...h,
-            headerType: h.headerType ? h.headerType : "request",
-          })),
-        }));
-        setPagesData({ ...loaded, pages: mappedPages });
+            })),
+          selectedPage: (selectedPageData[SELECTED_PAGE_KEY] as number) || 0,
+        };
+        
+        // Save in new format
+        await save(migratedData);
+        
+        // Remove old storage
+        await browser.storage.sync.remove(["settings", SELECTED_PAGE_KEY]);
+        
+        setPagesData(migratedData);
         setHasInitialized(true);
-      }
-    });
-
-    browser.storage.sync.get("darkMode").then((data) => {
-      if (data.darkMode === undefined) {
-        browser.storage.sync.set({
-          darkMode: false,
-        });
         return;
       }
-
-      setDarkModeEnabled(data.darkMode === true);
-    });
-  };
-
-  /**
-   * Saves pages array to storage
-   * @param pages The pages to save to storage
-   */
-  const save = (settings: PagesData, callback?: () => void) => {
-    browser.storage.sync.set({ [SETTINGS_KEY]: settings }).then(() => {
-      if (callback) {
-        callback();
+      
+      // No existing settings found, use default
+      setPagesData({
+        pages: [defaultPage],
+        selectedPage: defaultPage.id,
+      });
+      setHasInitialized(true);
+      
+    } catch (error) {
+      console.error("Failed to retrieve settings:", error);
+      alertContext.setAlert({
+        alertType: "error",
+        alertText: "Failed to load settings. Using default configuration.",
+        location: "bottom",
+      });
+      
+      setPagesData({
+        pages: [defaultPage],
+        selectedPage: defaultPage.id,
+      });
+      setHasInitialized(true);
+    }
+    
+    // Load dark mode setting
+    try {
+      const darkModeData = await browser.storage.sync.get("darkMode");
+      if (darkModeData.darkMode === undefined) {
+        await browser.storage.sync.set({ darkMode: false });
+      } else {
+        setDarkModeEnabled(darkModeData.darkMode === true);
       }
-    });
-  };
+    } catch (error) {
+      console.error("Failed to load dark mode setting:", error);
+    }
+  }, [save, alertContext]);
 
   /**
    * Clears the storage and sets the state to the default page
@@ -222,10 +358,12 @@ function useFlexHeaderSettings() {
       { ...page, id: pagesData.pages.length, enabled: true },
     ];
 
-    setPagesData({
+    const testData = {
       pages: newPages,
       selectedPage: newPages.length - 1,
-    });
+    };
+
+    setPagesData(testData);
   };
 
   /**
@@ -554,7 +692,7 @@ function useFlexHeaderSettings() {
 
   useEffect(() => {
     retrieveSettings();
-  }, []);
+  }, [retrieveSettings]);
 
   useEffect(() => {
     browser.storage.sync.set({ [SELECTED_PAGE_KEY]: pagesData.selectedPage });
