@@ -97,13 +97,13 @@ function useFlexHeaderSettings() {
     // Get all storage keys to find orphaned page entries
     const allData = await browser.storage.sync.get(null);
     const pageKeys = Object.keys(allData).filter(key => key.startsWith(PAGE_KEY_PREFIX));
-    
+
     // Remove any page keys that exceed the current page count
     const keysToRemove = pageKeys.filter(key => {
       const pageIndex = parseInt(key.replace(PAGE_KEY_PREFIX, ''));
       return pageIndex >= currentPageCount;
     });
-    
+
     if (keysToRemove.length > 0) {
       await browser.storage.sync.remove(keysToRemove);
     }
@@ -119,7 +119,7 @@ function useFlexHeaderSettings() {
     const serializedPage = JSON.stringify(page);
     const sizeInBytes = new TextEncoder().encode(serializedPage).length;
     const STORAGE_LIMIT = 8192; // Chrome sync storage limit per item (8KB)
-    
+
     if (sizeInBytes > STORAGE_LIMIT) {
       alertContext.setAlert({
         alertType: "error",
@@ -128,7 +128,7 @@ function useFlexHeaderSettings() {
       });
       throw new Error(`Page ${pageIndex} exceeds storage limit: ${sizeInBytes} bytes > ${STORAGE_LIMIT} bytes`);
     }
-    
+
     await browser.storage.sync.set({ [pageKey]: page });
   }, [alertContext]);
 
@@ -149,7 +149,7 @@ function useFlexHeaderSettings() {
       // Save each page individually
       const savePromises = settings.pages.map((page, index) => savePage(page, index));
       await Promise.all(savePromises);
-      
+
       // Save metadata
       const metadata: SettingsV3Meta = {
         version: 3,
@@ -157,10 +157,10 @@ function useFlexHeaderSettings() {
         pageCount: settings.pages.length,
       };
       await saveMetadata(metadata);
-      
+
       // Clear any extra pages that might exist from a previous state
       await clearExtraPages(settings.pages.length);
-      
+
       if (callback) {
         callback();
       }
@@ -200,25 +200,38 @@ function useFlexHeaderSettings() {
    * Loads the settings from storage and sets the state
    */
   const retrieveSettings = useCallback(async () => {
+    // Load dark mode setting
+    try {
+      const darkModeData = await browser.storage.sync.get("darkMode");
+      console.log("Dark mode data:", darkModeData);
+      if (darkModeData.darkMode === undefined) {
+        await browser.storage.sync.set({ darkMode: false });
+      } else {
+        setDarkModeEnabled(darkModeData.darkMode === true);
+      }
+    } catch (error) {
+      console.error("Failed to load dark mode setting:", error);
+    }
+
     try {
       // Check if we have the new v3 format
       const metaData = await browser.storage.sync.get(SETTINGS_V3_META_KEY);
-      
+
       if (metaData[SETTINGS_V3_META_KEY]) {
         // Load from new distributed storage format
         const meta = metaData[SETTINGS_V3_META_KEY] as SettingsV3Meta;
-        
+
         // Load all pages
         const pagePromises = [];
         for (let i = 0; i < meta.pageCount; i++) {
           pagePromises.push(browser.storage.sync.get(`${PAGE_KEY_PREFIX}${i}`));
         }
-        
+
         const pageResults = await Promise.all(pagePromises);
         const pages: Page[] = pageResults.map((result, index) => {
           const pageKey = `${PAGE_KEY_PREFIX}${index}`;
           const page = result[pageKey] as Page;
-          
+
           // Ensure backwards compatibility for headerType
           if (page && page.headers) {
             page.headers = page.headers.map((h: any) => ({
@@ -226,10 +239,10 @@ function useFlexHeaderSettings() {
               headerType: h.headerType || "request",
             }));
           }
-          
+
           return page;
         }).filter(Boolean); // Remove any null/undefined pages
-        
+
         if (pages.length === 0) {
           // No pages found, use default
           setPagesData({
@@ -242,38 +255,38 @@ function useFlexHeaderSettings() {
             selectedPage: meta.selectedPage,
           });
         }
-        
+
         setHasInitialized(true);
         return;
       }
-      
+
       // Check for legacy v2 format and migrate
       const v2Data = await browser.storage.sync.get(SETTINGS_KEY);
-      
+
       if (v2Data[SETTINGS_KEY]) {
         console.log("Migrating from v2 to v3 storage format");
         const oldData = v2Data[SETTINGS_KEY] as PagesData;
-        
+
         // Migrate to new format
         await save(oldData);
-        
+
         // Remove old storage format
         await browser.storage.sync.remove(SETTINGS_KEY);
-        
+
         // Set the migrated data
         setPagesData(oldData);
         setHasInitialized(true);
         return;
       }
-      
+
       // Check for very old format (pre-v2) and migrate
       const oldSettings = await browser.storage.sync.get("settings");
-      
+
       if (oldSettings.settings && Array.isArray(oldSettings.settings)) {
         console.log("Migrating from v1 to v3 storage format");
-        
+
         const selectedPageData = await browser.storage.sync.get(SELECTED_PAGE_KEY);
-        
+
         const migratedData: PagesData = {
           pages: oldSettings.settings
             .sort((a: Page, b: Page) => a.id - b.id)
@@ -286,25 +299,25 @@ function useFlexHeaderSettings() {
             })),
           selectedPage: (selectedPageData[SELECTED_PAGE_KEY] as number) || 0,
         };
-        
+
         // Save in new format
         await save(migratedData);
-        
+
         // Remove old storage
         await browser.storage.sync.remove(["settings", SELECTED_PAGE_KEY]);
-        
+
         setPagesData(migratedData);
         setHasInitialized(true);
         return;
       }
-      
+
       // No existing settings found, use default
       setPagesData({
         pages: [defaultPage],
         selectedPage: defaultPage.id,
       });
       setHasInitialized(true);
-      
+
     } catch (error) {
       console.error("Failed to retrieve settings:", error);
       alertContext.setAlert({
@@ -312,24 +325,12 @@ function useFlexHeaderSettings() {
         alertText: "Failed to load settings. Using default configuration.",
         location: "bottom",
       });
-      
+
       setPagesData({
         pages: [defaultPage],
         selectedPage: defaultPage.id,
       });
       setHasInitialized(true);
-    }
-    
-    // Load dark mode setting
-    try {
-      const darkModeData = await browser.storage.sync.get("darkMode");
-      if (darkModeData.darkMode === undefined) {
-        await browser.storage.sync.set({ darkMode: false });
-      } else {
-        setDarkModeEnabled(darkModeData.darkMode === true);
-      }
-    } catch (error) {
-      console.error("Failed to load dark mode setting:", error);
     }
   }, [save, alertContext]);
 
@@ -478,16 +479,16 @@ function useFlexHeaderSettings() {
     const newPages = pagesData.pages.map((page) =>
       page.id === pageId
         ? {
-            ...page,
-            headers: [
-              ...page.headers,
-              {
-                ...header,
-                headerType: header.headerType || "request",
-                id: `${pageId}-${page.headers.length + 1}`,
-              },
-            ],
-          }
+          ...page,
+          headers: [
+            ...page.headers,
+            {
+              ...header,
+              headerType: header.headerType || "request",
+              id: `${pageId}-${page.headers.length + 1}`,
+            },
+          ],
+        }
         : page
     );
 
@@ -508,11 +509,11 @@ function useFlexHeaderSettings() {
     const newPages = pagesData.pages.map((page) =>
       page.id === pageId
         ? {
-            ...page,
-            headers: _reIndexHeaders(
-              page.headers.filter((header) => header.id !== id)
-            ),
-          }
+          ...page,
+          headers: _reIndexHeaders(
+            page.headers.filter((header) => header.id !== id)
+          ),
+        }
         : page
     );
 
@@ -550,9 +551,9 @@ function useFlexHeaderSettings() {
     const newPages = pagesData.pages.map((page) =>
       page.id === pageId
         ? {
-            ...page,
-            headers: page.headers.map((h) => (h.id === header.id ? header : h)),
-          }
+          ...page,
+          headers: page.headers.map((h) => (h.id === header.id ? header : h)),
+        }
         : page
     );
 
@@ -575,12 +576,12 @@ function useFlexHeaderSettings() {
     const newPages = pagesData.pages.map((page) =>
       page.id === pageId
         ? {
-            ...page,
-            filters: [
-              ...page.filters,
-              { ...filter, id: `${pageId}-${page.filters.length + 1}` },
-            ],
-          }
+          ...page,
+          filters: [
+            ...page.filters,
+            { ...filter, id: `${pageId}-${page.filters.length + 1}` },
+          ],
+        }
         : page
     );
 
@@ -599,9 +600,9 @@ function useFlexHeaderSettings() {
     const newPages = pagesData.pages.map((page) =>
       page.id === pageId
         ? {
-            ...page,
-            filters: page.filters.filter((filter) => filter.id !== filterId),
-          }
+          ...page,
+          filters: page.filters.filter((filter) => filter.id !== filterId),
+        }
         : page
     );
 
@@ -624,11 +625,11 @@ function useFlexHeaderSettings() {
       const newPages = pagesData.pages.map((page) =>
         page.id === pageId
           ? {
-              ...page,
-              filters: page.filters.map((f) =>
-                f.id === filter.id ? { ...filter, valid: result } : f
-              ),
-            }
+            ...page,
+            filters: page.filters.map((f) =>
+              f.id === filter.id ? { ...filter, valid: result } : f
+            ),
+          }
           : page
       );
 
