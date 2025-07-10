@@ -3,6 +3,11 @@ import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
 import { SELECTED_PAGE_KEY, SETTINGS_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX } from "../constants";
 
+export enum SettingsErrorType {
+  None = "None",
+  SaveError = "SaveError",
+}
+
 export type Page = {
   id: number;
   name: string;
@@ -80,6 +85,7 @@ export const clearStoredSettings = () => {
 };
 
 function useFlexHeaderSettings() {
+  const [lastError, setLastError] = useState<{ type: SettingsErrorType; time: number }>({ type: SettingsErrorType.None, time: 0 });
   const [pagesData, setPagesData] = useState<PagesData>({
     pages: [defaultPage],
     selectedPage: defaultPage.id,
@@ -164,15 +170,19 @@ function useFlexHeaderSettings() {
       if (callback) {
         callback();
       }
+      // On success, clear error
+      setLastError({ type: SettingsErrorType.None, time: 0 });
     } catch (error) {
       console.error("Failed to save settings:", error);
+      setLastError({ type: SettingsErrorType.SaveError, time: Date.now() });
       alertContext.setAlert({
         alertType: "error",
         alertText: "Failed to save settings. Please try again.",
         location: "bottom",
       });
     }
-  }, [savePage, saveMetadata, clearExtraPages, alertContext]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- alertContext is stable from context
+  }, [savePage, saveMetadata, clearExtraPages]);
 
   useEffect(() => {
     const selectedPage = pagesData.pages.find((page) => page.enabled);
@@ -190,11 +200,24 @@ function useFlexHeaderSettings() {
     }
   }, [pagesData]);
 
-  useEffect(() => {
-    if (!hasInitialized) return;
-
-    save(pagesData);
-  }, [pagesData, hasInitialized, save]);
+useEffect(() => {
+  if (!hasInitialized) return;
+  // Prevent save retry if a save error was triggered within the last minute
+  if (
+    lastError.type === SettingsErrorType.SaveError &&
+    Date.now() - lastError.time < 60 * 1000
+  ) {
+    console.warn("Skipping save: recent save error within last minute.");
+    alertContext.setAlert({
+      alertType: "error",
+      alertText: "Changes not saved due to recent error. Please try again later.",
+      location: "bottom",
+    });
+    return;
+  }
+  save(pagesData);
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, [pagesData, hasInitialized]);
 
   /**
    * Loads the settings from storage and sets the state
@@ -203,7 +226,6 @@ function useFlexHeaderSettings() {
     // Load dark mode setting
     try {
       const darkModeData = await browser.storage.sync.get("darkMode");
-      console.log("Dark mode data:", darkModeData);
       if (darkModeData.darkMode === undefined) {
         await browser.storage.sync.set({ darkMode: false });
       } else {
@@ -279,38 +301,6 @@ function useFlexHeaderSettings() {
         return;
       }
 
-      // Check for very old format (pre-v2) and migrate
-      const oldSettings = await browser.storage.sync.get("settings");
-
-      if (oldSettings.settings && Array.isArray(oldSettings.settings)) {
-        console.log("Migrating from v1 to v3 storage format");
-
-        const selectedPageData = await browser.storage.sync.get(SELECTED_PAGE_KEY);
-
-        const migratedData: PagesData = {
-          pages: oldSettings.settings
-            .sort((a: Page, b: Page) => a.id - b.id)
-            .map((p: any) => ({
-              ...p,
-              headers: p.headers.map((h: HeaderSetting) => ({
-                ...h,
-                headerType: h.headerType || "request",
-              })),
-            })),
-          selectedPage: (selectedPageData[SELECTED_PAGE_KEY] as number) || 0,
-        };
-
-        // Save in new format
-        await save(migratedData);
-
-        // Remove old storage
-        await browser.storage.sync.remove(["settings", SELECTED_PAGE_KEY]);
-
-        setPagesData(migratedData);
-        setHasInitialized(true);
-        return;
-      }
-
       // No existing settings found, use default
       setPagesData({
         pages: [defaultPage],
@@ -332,7 +322,8 @@ function useFlexHeaderSettings() {
       });
       setHasInitialized(true);
     }
-  }, [save, alertContext]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /**
    * Clears the storage and sets the state to the default page
