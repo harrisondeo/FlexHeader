@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
-import { SELECTED_PAGE_KEY, SETTINGS_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX } from "../constants";
+import { SELECTED_PAGE_KEY, SETTINGS_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, SETTINGS_SAVE_DEBOUNCE_TIME } from "../constants";
 
 export enum SettingsErrorType {
   None = "None",
@@ -44,6 +44,40 @@ export type SettingsV3Meta = {
   version: 3;
   selectedPage: number;
   pageCount: number;
+};
+
+/**
+ * Custom hook for debouncing function calls
+ * @param callback The function to debounce
+ * @param delay The delay in milliseconds
+ * @returns A debounced version of the callback
+ */
+const useDebounce = <T extends (...args: any[]) => any>(callback: T, delay: number) => {
+  const timeoutRef = useRef<number | null>(null);
+
+  const debouncedCallback = useCallback(
+    (...args: Parameters<T>) => {
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current);
+      }
+
+      timeoutRef.current = window.setTimeout(() => {
+        callback(...args);
+      }, delay);
+    },
+    [callback, delay]
+  );
+
+  // Clear timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  return debouncedCallback;
 };
 
 const defaultPage: Page = {
@@ -92,6 +126,7 @@ function useFlexHeaderSettings() {
   });
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const alertContext = useAlert();
 
@@ -101,17 +136,24 @@ function useFlexHeaderSettings() {
    */
   const clearExtraPages = useCallback(async (currentPageCount: number) => {
     // Get all storage keys to find orphaned page entries
-    const allData = await browser.storage.sync.get(null);
-    const pageKeys = Object.keys(allData).filter(key => key.startsWith(PAGE_KEY_PREFIX));
+    try {
+      const allData = await browser.storage.sync.get(null);
+      const pageKeys = Object.keys(allData).filter(key => key.startsWith(PAGE_KEY_PREFIX));
 
-    // Remove any page keys that exceed the current page count
-    const keysToRemove = pageKeys.filter(key => {
-      const pageIndex = parseInt(key.replace(PAGE_KEY_PREFIX, ''));
-      return pageIndex >= currentPageCount;
-    });
+      // Remove any page keys that exceed the current page count
+      const keysToRemove = pageKeys.filter(key => {
+        const pageIndex = parseInt(key.replace(PAGE_KEY_PREFIX, ''));
+        return pageIndex >= currentPageCount;
+      });
 
-    if (keysToRemove.length > 0) {
-      await browser.storage.sync.remove(keysToRemove);
+      // Only make the storage API call if we have keys to remove
+      if (keysToRemove.length > 0) {
+        console.log(`Clearing ${keysToRemove.length} extra page keys:`, keysToRemove);
+        await browser.storage.sync.remove(keysToRemove);
+      }
+    } catch (error) {
+      console.error("Error clearing extra pages:", error);
+      // Don't throw the error to avoid breaking the save process
     }
   }, []);
 
@@ -152,6 +194,9 @@ function useFlexHeaderSettings() {
    */
   const save = useCallback(async (settings: PagesData, callback?: () => void) => {
     try {
+      // Set the saving flag to prevent triggering additional saves
+      isSavingRef.current = true;
+
       // Save each page individually
       const savePromises = settings.pages.map((page, index) => savePage(page, index));
       await Promise.all(savePromises);
@@ -180,8 +225,13 @@ function useFlexHeaderSettings() {
         alertText: "Failed to save settings. Please try again.",
         location: "bottom",
       });
+    } finally {
+      // Reset the saving flag
+      setTimeout(() => {
+        isSavingRef.current = false;
+      }, SETTINGS_SAVE_DEBOUNCE_TIME * 2); // Wait twice the debounce time to ensure no overlapping saves
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- alertContext is stable from context
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- alertContext is stable from context
   }, [savePage, saveMetadata, clearExtraPages]);
 
   useEffect(() => {
@@ -200,24 +250,42 @@ function useFlexHeaderSettings() {
     }
   }, [pagesData]);
 
-useEffect(() => {
-  if (!hasInitialized) return;
-  // Prevent save retry if a save error was triggered within the last minute
-  if (
-    lastError.type === SettingsErrorType.SaveError &&
-    Date.now() - lastError.time < 60 * 1000
-  ) {
-    console.warn("Skipping save: recent save error within last minute.");
-    alertContext.setAlert({
-      alertType: "error",
-      alertText: "Changes not saved due to recent error. Please try again later.",
-      location: "bottom",
+  // Create a debounced version of the save function
+  const debouncedSave = useDebounce((settings: PagesData) => {
+    if (!hasInitialized) return;
+    if (isSavingRef.current) {
+      console.log("Skipping save: already saving.");
+      return;
+    }
+
+    // Prevent save retry if a save error was triggered within the last minute
+    if (
+      lastError.type === SettingsErrorType.SaveError &&
+      Date.now() - lastError.time < 60 * 1000
+    ) {
+      console.warn("Skipping save: recent save error within last minute.");
+      alertContext.setAlert({
+        alertType: "error",
+        alertText: "Changes not saved due to recent error. Please try again later.",
+        location: "bottom",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    save(settings, () => {
+      setIsSaving(false);
     });
-    return;
-  }
-  save(pagesData);
-// eslint-disable-next-line react-hooks/exhaustive-deps
-}, [pagesData, hasInitialized]);
+  }, SETTINGS_SAVE_DEBOUNCE_TIME);
+
+  // Use a ref to track if we're currently in a save operation to prevent loops
+  const isSavingRef = useRef(false);
+
+  useEffect(() => {
+    if (!hasInitialized || isSavingRef.current) return;
+    debouncedSave(pagesData);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagesData, hasInitialized, debouncedSave]);
 
   /**
    * Loads the settings from storage and sets the state
@@ -322,7 +390,7 @@ useEffect(() => {
       });
       setHasInitialized(true);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -694,6 +762,7 @@ useEffect(() => {
     pages: pagesData.pages,
     selectedPage: pagesData.selectedPage,
     darkModeEnabled,
+    isSaving,
     addPage,
     removePage,
     updatePage,
