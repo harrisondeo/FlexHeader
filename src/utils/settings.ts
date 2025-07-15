@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
-import { SELECTED_PAGE_KEY, SETTINGS_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, SETTINGS_SAVE_DEBOUNCE_TIME, LAST_SYNC_TIME_KEY, SYNC_INTERVAL } from "../constants";
-import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, saveMultipleToStorage, saveToBothStorages, getDataSizeInBytes } from "./storage";
+import { SELECTED_PAGE_KEY, SETTINGS_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX } from "../constants";
+import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage";
+import { log } from "./log";
 
 export enum SettingsErrorType {
   None = "None",
@@ -103,89 +104,11 @@ function useFlexHeaderSettings() {
   const alertContext = useAlert();
 
   /**
-   * Clears extra page storage items that are no longer needed
-   * @param currentPageCount The current number of pages
-   * @param storageType Which storage type to clear from
-   */
-  const clearExtraPages = useCallback(async (currentPageCount: number, storageType: 'local' | 'sync' | 'both' = 'both') => {
-    const clearFromStorage = async (type: 'local' | 'sync') => {
-      try {
-        const allData = await getAllFromStorage(type);
-        const pageKeys = Object.keys(allData).filter(key => key.startsWith(PAGE_KEY_PREFIX));
-
-        // Remove any page keys that exceed the current page count
-        const keysToRemove = pageKeys.filter(key => {
-          const pageIndex = parseInt(key.replace(PAGE_KEY_PREFIX, ''));
-          return pageIndex >= currentPageCount;
-        });
-
-        // Only make the storage API call if we have keys to remove
-        if (keysToRemove.length > 0) {
-          console.log(`Clearing ${keysToRemove.length} extra page keys from ${type} storage:`, keysToRemove);
-          await browser.storage[type].remove(keysToRemove);
-        }
-      } catch (error) {
-        console.error(`Error clearing extra pages from ${type} storage:`, error);
-        // Don't throw the error to avoid breaking the save process
-      }
-    };
-
-    if (storageType === 'both') {
-      await Promise.all([clearFromStorage('local'), clearFromStorage('sync')]);
-    } else {
-      await clearFromStorage(storageType);
-    }
-  }, []);
-
-  /**
-   * Saves a single page to storage
-   * @param page The page to save
-   * @param pageIndex The index of the page
-   * @param storageType Which storage type to use - local is faster, sync persists across devices
-   */
-  const savePage = useCallback(async (page: Page, pageIndex: number, storageType: 'local' | 'sync' = 'local') => {
-    const pageKey = `${PAGE_KEY_PREFIX}${pageIndex}`;
-    const sizeInBytes = getDataSizeInBytes(page);
-    const STORAGE_LIMIT = storageType === 'sync' ? 8192 : 5242880; // 8KB for sync, 5MB for local
-
-    if (sizeInBytes > STORAGE_LIMIT) {
-      alertContext.setAlert({
-        alertType: "error",
-        alertText: `Page too large (${(sizeInBytes / 1024).toFixed(1)}KB > ${STORAGE_LIMIT / 1024}KB). Please reduce the number of headers on this page.`,
-        location: "bottom",
-      });
-      throw new Error(`Page ${pageIndex} exceeds storage limit: ${sizeInBytes} bytes > ${STORAGE_LIMIT} bytes`);
-    }
-
-    try {
-      await saveToStorage(pageKey, page, storageType);
-    } catch (error) {
-      console.error(`Failed to save page to ${storageType} storage:`, error);
-      throw error;
-    }
-  }, []);
-
-  /**
-   * Saves metadata to storage
-   * @param meta The metadata to save
-   * @param storageType Which storage type to use
-   */
-  const saveMetadata = useCallback(async (meta: SettingsV3Meta, storageType: 'local' | 'sync' = 'local') => {
-    try {
-      await saveToStorage(SETTINGS_V3_META_KEY, meta, storageType);
-    } catch (error) {
-      console.error(`Failed to save metadata to ${storageType} storage:`, error);
-      throw error;
-    }
-  }, []);
-
-  /**
-   * Saves all pages and metadata to storage
+   * Handles saving data to local storage and manages cleanup of extra pages
+   * Syncing to remote storage is now handled by the background service worker
    * @param settings The complete settings data
-   * @param storageType Which storage type to use
-   * @param callback Optional callback after save completes
    */
-  const save = useCallback(async (settings: PagesData, storageType: 'local' | 'sync' | 'both' = 'local', callback?: () => void) => {
+  const saveToStorages = useCallback(async (settings: PagesData) => {
     try {
       // Create metadata
       const metadata: SettingsV3Meta = {
@@ -194,49 +117,66 @@ function useFlexHeaderSettings() {
         pageCount: settings.pages.length,
       };
 
-      if (storageType === 'both') {
-        // Save to local storage first (primary)
-        const localSavePromises = settings.pages.map((page, index) => savePage(page, index, 'local'));
-        await Promise.all(localSavePromises);
-        await saveMetadata(metadata, 'local');
+      try {
+        log(`SETTINGS: Saving to local storage`, "warning");
 
-        // Then attempt to save to sync storage (secondary)
+        // Save all pages in parallel
+        const savePromises = settings.pages.map((page, index) => {
+          const pageKey = `${PAGE_KEY_PREFIX}${index}`;
+          const sizeInBytes = getDataSizeInBytes(page);
+          const STORAGE_LIMIT = 5242880; // 5MB for local storage
+
+          if (sizeInBytes > STORAGE_LIMIT) {
+            alertContext.setAlert({
+              alertType: "error",
+              alertText: `Page too large (${(sizeInBytes / 1024).toFixed(1)}KB > ${STORAGE_LIMIT / 1024}KB). Please reduce the number of headers.`,
+              location: "bottom",
+            });
+            throw new Error(`Page ${index} exceeds storage limit: ${sizeInBytes} bytes > ${STORAGE_LIMIT} bytes`);
+          }
+
+          return saveToStorage(pageKey, page, 'local');
+        });
+
+        // Save metadata alongside pages
+        const metadataPromise = saveToStorage(SETTINGS_V3_META_KEY, metadata, 'local');
+
+        // Wait for all saves to complete
+        await Promise.all([...savePromises, metadataPromise]);
+
+        // Clean up any extra pages from storage
         try {
-          const syncSavePromises = settings.pages.map((page, index) => savePage(page, index, 'sync'));
-          await Promise.all(syncSavePromises);
-          await saveMetadata(metadata, 'sync');
+          const allData = await getAllFromStorage('local');
+          const pageKeys = Object.keys(allData)
+            .filter(key => key.startsWith(PAGE_KEY_PREFIX))
+            .filter(key => {
+              const pageIndex = parseInt(key.replace(PAGE_KEY_PREFIX, ''));
+              return pageIndex >= settings.pages.length;
+            });
 
-          // Update last sync time
-          await saveToStorage(LAST_SYNC_TIME_KEY, Date.now(), 'local');
-        } catch (syncError) {
-          console.warn("Failed to sync to remote storage:", syncError);
+          if (pageKeys.length > 0) {
+            log(`SETTINGS: Cleaning up ${pageKeys.length} extra keys from local storage`, "info");
+            await browser.storage.local.remove(pageKeys);
+          }
+        } catch (cleanupError) {
+          log(`SETTINGS: Error cleaning up extra pages from local storage: ${cleanupError}`, "error");
+          // Don't fail the whole operation for cleanup errors
         }
-      } else {
-        // Save to specified storage
-        console.log(`SETTINGS: Saving pages to ${storageType} storage`);
-        const savePromises = settings.pages.map((page, index) => savePage(page, index, storageType));
-        await Promise.all(savePromises);
-        console.log(`SETTINGS: Successfully saved pages to ${storageType} storage`);
 
-        console.log(`SETTINGS: Saving metadata to ${storageType} storage`);
-        await saveMetadata(metadata, storageType);
-        console.log(`SETTINGS: Successfully saved metadata to ${storageType} storage`)
-        // If saving to local, update the last modified time to track for future syncs
-        if (storageType === 'local') {
-          await saveToStorage('localModifiedTime', Date.now(), 'local');
-        }
+        // Update timestamps for local changes
+        await saveToStorage('localModifiedTime', Date.now(), 'local');
+
+      } catch (error) {
+        console.error(`Failed to save to local storage:`, error);
+        throw error; // Re-throw for local storage errors
+      } finally {
+        log(`SETTINGS: Finished saving to local storage`, "success");
       }
 
-      // Clear any extra pages that might exist from a previous state
-      await clearExtraPages(settings.pages.length, storageType === 'both' ? 'both' : storageType);
-
-      if (callback) {
-        callback();
-      }
-      // On success, clear error
+      // On success, clear error state
       setLastError({ type: SettingsErrorType.None, time: 0 });
     } catch (error) {
-      console.error(`Failed to save settings to ${storageType} storage:`, error);
+      console.error(`Failed to save settings:`, error);
       setLastError({ type: SettingsErrorType.SaveError, time: Date.now() });
       alertContext.setAlert({
         alertType: "error",
@@ -244,8 +184,7 @@ function useFlexHeaderSettings() {
         location: "bottom",
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- alertContext is stable from context
-  }, [savePage, saveMetadata, clearExtraPages]);
+  }, [alertContext]);
 
   useEffect(() => {
     const selectedPage = pagesData.pages.find((page) => page.enabled);
@@ -263,142 +202,51 @@ function useFlexHeaderSettings() {
     }
   }, [pagesData]);
 
-  // Direct save with periodic sync to sync storage
-  const saveWithSync = useCallback(
-    (settings: PagesData) => {
-      if (!hasInitialized) return;
-      if (isSavingRef.current === true) {
-        console.log("Skipping save: already saving.");
-        return;
-      }
-
-      // Prevent save retry if a save error was triggered within the last minute
-      if (
-        lastError.type === SettingsErrorType.SaveError &&
-        Date.now() - lastError.time < 60 * 1000
-      ) {
-        console.warn("Skipping save: recent save error within last minute.");
-        alertContext.setAlert({
-          alertType: "error",
-          alertText: "Changes not saved due to recent error. Please try again later.",
-          location: "bottom",
-        });
-        return;
-      }
-
-      // Immediately save to local storage (no debounce)
-      isSavingRef.current = true;
-      console.log(
-        `%cSETTINGS: Saving settings immediately to local storage`,
-        "color: #d28b19ff; font-weight: bold;"
-      );
-
-      // Save the settings but ensure we don't trigger more state updates
-      const settingsToSave = { ...settings }; // Create a copy to avoid reference issues
-      save(settingsToSave, 'local', () => {
-        // Use a timeout to ensure any pending state updates are processed before
-        // we allow saving again
-        setTimeout(() => {
-          console.log("2) Setting isSavingRef to false");
-          isSavingRef.current = false;
-        }, 0);
-      });
-    },
-    [hasInitialized, lastError, save]
-  );
-
-  // Set up periodic sync to sync storage
-  useEffect(() => {
-    if (!hasInitialized) return;
-
-    // Function to sync local data to sync storage
-    const syncToRemote = async () => {
-      // Skip sync if we're already in the middle of a save operation
-      if (isSavingRef.current === true) {
-        console.log("Skipping sync: already in a save operation");
-        return;
-      }
-
-      try {
-        console.log(
-          "%cSETTINGS: Syncing local data to sync storage",
-          "color: #d2193eff; font-weight: bold;"
-        );
-        isSavingRef.current = true;
-
-        // Get current data from local storage
-        const meta = await loadFromStorage<SettingsV3Meta | null>(SETTINGS_V3_META_KEY, null, ['local']);
-        if (!meta) {
-          console.log("No local metadata found, skipping sync");
-          return;
-        }
-
-        // Load all pages from local storage
-        const pagePromises = [];
-        for (let i = 0; i < meta.pageCount; i++) {
-          const pageKey = `${PAGE_KEY_PREFIX}${i}`;
-          pagePromises.push(loadFromStorage<Page | null>(pageKey, null, ['local']));
-        }
-
-        const pagesWithNulls = await Promise.all(pagePromises);
-        const pages: Page[] = pagesWithNulls
-          .filter((page): page is Page => page !== null);          // Sync to remote storage
-        if (pages.length > 0) {
-          // Create a new object to avoid any reference issues
-          const dataToSync = {
-            pages: JSON.parse(JSON.stringify(pages)),
-            selectedPage: meta.selectedPage
-          };
-
-          await save(dataToSync, 'sync');
-
-          // Update last sync time
-          await saveToStorage(LAST_SYNC_TIME_KEY, Date.now(), 'local');
-        }
-      } catch (error) {
-        console.error("Failed to sync to remote storage:", error);
-      } finally {
-        console.log("3) Setting isSavingRef to false");
-        isSavingRef.current = false;
-      }
-    };
-
-    // Initial sync when component loads
-    syncToRemote();
-
-    // Set up interval for periodic sync
-    const syncInterval = setInterval(syncToRemote, SYNC_INTERVAL);
-
-    return () => {
-      clearInterval(syncInterval);
-    };
-  }, [hasInitialized, save]);
-
   // Create a ref to track the previous pages data to prevent unnecessary saves
   const prevPagesDataRef = useRef<string | null>(null);
 
+  // Main save effect that watches for data changes
   useEffect(() => {
-    if (isSavingRef.current === true) {
-      console.log("Skipping save: already saving.");
-      return;
-    }
-    if (!hasInitialized) return;
+    if (!hasInitialized || isSavingRef.current) return;
 
     // Stringify current data for comparison
     const currentDataString = JSON.stringify(pagesData);
 
-    // Only save if the data has actually changed
+    // Only save if data has changed
     if (prevPagesDataRef.current === currentDataString) {
-      console.log("Skipping save: data hasn't changed");
       return;
     }
 
-    // Update the ref with current data string
+    // Block recent saves after errors to prevent infinite error loops
+    if (lastError.type === SettingsErrorType.SaveError && Date.now() - lastError.time < 60 * 1000) {
+      console.warn("Skipping save: recent save error within last minute.");
+      alertContext.setAlert({
+        alertType: "error",
+        alertText: "Changes not saved due to recent error. Please try again later.",
+        location: "bottom",
+      });
+      return;
+    }
+
+    // Update reference for next comparison
     prevPagesDataRef.current = currentDataString;
 
-    console.log("OO) Saving pages data with sync");
-    saveWithSync(pagesData);
-  }, [pagesData, hasInitialized, saveWithSync]);
+    // Start save operation
+    isSavingRef.current = true;
+    log("SETTINGS: Saving changes to storage", "warning");
+
+    // Make a deep copy to avoid mutation issues
+    const settingsToSave = JSON.parse(JSON.stringify(pagesData));
+
+    // Save to local storage immediately
+    saveToStorages(settingsToSave)
+      .finally(() => {
+        setTimeout(() => {
+          isSavingRef.current = false;
+          log("SETTINGS: Changes saved successfully", "success");
+        }, 0);
+      });
+  }, [pagesData, hasInitialized, lastError, saveToStorages, alertContext]);
 
   /**
    * Loads the settings from storage and sets the state
@@ -433,11 +281,7 @@ function useFlexHeaderSettings() {
       }
 
       if (meta) {
-        console.log(
-          `%cSETTINGS: Loading settings from ${storageType} storage`,
-          "color: #d28b19ff; font-weight: bold;"
-        );
-        // Load from distributed storage format
+        log("SETTINGS: Loading settings from distributed storage format", "info");
 
         // Load all pages
         const pagePromises = [];
@@ -473,16 +317,14 @@ function useFlexHeaderSettings() {
           setPagesData({
             pages,
             selectedPage: meta.selectedPage,
-          });
-
-          // If loaded from sync, save a copy to local storage
+          });      // If loaded from sync, save a copy to local storage
           if (storageType === 'sync') {
-            console.log("Saving sync data to local storage");
-            // Use the save function to save this data to local storage
-            await save({
+            log("SETTINGS: Saving sync data to local storage", "info");
+            // Save to local storage
+            await saveToStorages({
               pages,
               selectedPage: meta.selectedPage,
-            }, 'local');
+            });
           }
         }
 
@@ -494,10 +336,10 @@ function useFlexHeaderSettings() {
       const v2Data = await loadFromStorage<PagesData | null>(SETTINGS_KEY, null, ['sync']);
 
       if (v2Data) {
-        console.log("Migrating from v2 to v3 storage format");
+        log("SETTINGS: Migrating from v2 to v3 storage format", "info");
 
-        // Migrate to new format
-        await save(v2Data, 'both');
+        // Migrate to new format - only save to local storage, background will handle sync
+        await saveToStorages(v2Data);
 
         // Remove old storage format
         await browser.storage.sync.remove(SETTINGS_KEY);
@@ -530,7 +372,7 @@ function useFlexHeaderSettings() {
       setHasInitialized(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [save]);
+  }, [saveToStorages]);
 
   /**
    * Clears the storage and sets the state to the default page
@@ -587,7 +429,7 @@ function useFlexHeaderSettings() {
       : pagesData.selectedPage;
 
     newPages = _changeSelectedPage(newPageId, newPages);
-    console.log("Removing page", id, "new pages:", newPages);
+
     setPagesData({
       pages: newPages,
       selectedPage: newPageId,
@@ -848,15 +690,8 @@ function useFlexHeaderSettings() {
       const darkMode = await loadFromStorage("darkMode", false, ['local']);
       const newDarkMode = !darkMode;
 
-      // Save to both storage types
+      // Save to local storage only, background service worker will sync it
       await saveToStorage("darkMode", newDarkMode, 'local');
-
-      try {
-        await saveToStorage("darkMode", newDarkMode, 'sync');
-      } catch (err) {
-        console.warn("Failed to sync dark mode to sync storage:", err);
-      }
-
       setDarkModeEnabled(newDarkMode);
     } catch (error) {
       console.error("Error toggling dark mode:", error);
@@ -908,11 +743,9 @@ function useFlexHeaderSettings() {
   }, [retrieveSettings]);
 
   useEffect(() => {
-    saveToStorage(SELECTED_PAGE_KEY, pagesData.selectedPage, 'local');
-
-    // Also update in sync storage, but don't worry if it fails
-    saveToStorage(SELECTED_PAGE_KEY, pagesData.selectedPage, 'sync')
-      .catch(err => console.warn("Failed to sync selected page to sync storage:", err));
+    // Only save to local storage, background service worker will handle syncing
+    saveToStorage(SELECTED_PAGE_KEY, pagesData.selectedPage, 'local')
+      .catch(err => console.error("Failed to save selected page to local storage:", err));
   }, [pagesData.selectedPage]);
 
   return {
