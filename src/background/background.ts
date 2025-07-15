@@ -2,8 +2,6 @@ import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, SETTINGS_KEY } from "../constant
 import { Page, PagesData, SettingsV3Meta } from "../utils/settings";
 import browser from "webextension-polyfill";
 
-console.log("FlexHeader: background.js");
-
 const allResourceTypes = Object.values(
   chrome.declarativeNetRequest.ResourceType
 );
@@ -32,7 +30,10 @@ export async function getAndApplyHeaderRules() {
 
     if (meta) {
       // Use v3 storage format
-      console.log("FlexHeader: Using V3 storage format");
+      console.info(
+        "%cBACKGROUND: Using V3 storage format",
+        "color: #1976d2; font-weight: bold;"
+      );
 
       // Fetch all pages using the distributed storage format
       const pagePromises = [];
@@ -56,7 +57,11 @@ export async function getAndApplyHeaderRules() {
         pages = (legacyResult[SETTINGS_KEY] as PagesData).pages;
       }
     }
-    console.log("FlexHeader: Pages loaded", pages);
+
+    console.info(
+      "%cBACKGROUND: Pages loaded",
+      "color: #1976d2; font-weight: bold;"
+    );
     pages.forEach((page: Page) => {
       if (page.enabled || page.keepEnabled) {
         // each setting
