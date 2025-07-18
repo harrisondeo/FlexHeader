@@ -214,7 +214,23 @@ function App() {
             />
             <div>
               <p>Flex Headers</p>
-              <span>v{manifest?.version}</span>
+              <div>
+                <a
+                  href={`https://github.com/harrisondeo/FlexHeader/releases/tag/v${manifest?.version}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  v{manifest?.version}
+                </a>
+                {` - `}
+                <a
+                  href={`https://github.com/harrisondeo/FlexHeader/issues`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Feature Requests
+                </a>
+              </div>
               <div>
                 A passion project by{" "}
                 <a
@@ -348,7 +364,7 @@ function App() {
           />
         )}
       </div>
-    </div>
+    </div >
   );
 }
 
