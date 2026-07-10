@@ -9,6 +9,7 @@
  */
 
 import { Page, HeaderSetting, HeaderFilter } from './settings';
+import { normalizePage } from './headers';
 
 // Extract the merge logic functions for testing
 // These are pure functions that can be tested independently
@@ -76,6 +77,7 @@ const createHeader = (name: string, value: string, enabled = true): HeaderSettin
   id: `test-${Date.now()}-${Math.random()}`,
   headerName: name,
   headerValue: value,
+  headerComment: '',
   headerEnabled: enabled,
   headerType: 'request',
 });
@@ -352,6 +354,7 @@ describe('New User Scenarios', () => {
         id: 'default-1',
         headerName: 'X-Frame-Options',
         headerValue: 'ALLOW-FROM https://www.youtube.com/',
+        headerComment: '',
         headerEnabled: true,
         headerType: 'request',
       },
@@ -370,6 +373,7 @@ describe('New User Scenarios', () => {
         id: 'default-1',
         headerName: 'X-Frame-Options',
         headerValue: 'ALLOW-FROM https://www.youtube.com/',
+        headerComment: '',
         headerEnabled: true,
         headerType: 'request',
       },
@@ -435,6 +439,55 @@ describe('Existing User Scenarios', () => {
       expect(result.map(p => p.name)).toContain('Shared Page');
       expect(result.map(p => p.name)).toContain('Browser A Only');
       expect(result.map(p => p.name)).toContain('Browser B Only');
+    });
+  });
+});
+
+describe('Header Comment Import/Export', () => {
+  it('should preserve header comments through exported JSON and imported pages', () => {
+    const pages = [
+      createPage(0, 'Routes', true, [
+        {
+          ...createHeader('X-Route', 'service-a'),
+          headerComment: 'Use for checkout API',
+        },
+        {
+          ...createHeader('X-Route', 'service-b'),
+          headerComment: 'Use for catalog API',
+        },
+      ]),
+    ];
+
+    const exportedJson = JSON.stringify(pages);
+    const importedPages = (JSON.parse(exportedJson) as Page[]).map(normalizePage);
+
+    expect(importedPages[0].headers[0].headerComment).toBe('Use for checkout API');
+    expect(importedPages[0].headers[1].headerComment).toBe('Use for catalog API');
+  });
+
+  it('should add an empty header comment when importing legacy headers', () => {
+    const legacyPages = [
+      {
+        ...createPage(0, 'Legacy Routes', true, []),
+        headers: [
+          {
+            id: 'legacy-1',
+            headerName: 'X-Route',
+            headerValue: 'legacy-service',
+            headerEnabled: true,
+          },
+        ],
+      },
+    ];
+
+    const exportedJson = JSON.stringify(legacyPages);
+    const importedPages = (JSON.parse(exportedJson) as Page[]).map(normalizePage);
+
+    expect(importedPages[0].headers[0]).toMatchObject({
+      headerName: 'X-Route',
+      headerValue: 'legacy-service',
+      headerComment: '',
+      headerType: 'request',
     });
   });
 });

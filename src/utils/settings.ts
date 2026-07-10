@@ -4,6 +4,7 @@ import browser from "webextension-polyfill";
 import { SELECTED_PAGE_KEY, SETTINGS_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, SYNC_ENABLED_KEY, MIGRATION_COMPLETE_KEY } from "../constants";
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage";
 import { log } from "./log";
+import { normalizeHeader, normalizePage } from "./headers";
 
 export enum SettingsErrorType {
   None = "None",
@@ -33,6 +34,7 @@ export type HeaderSetting = {
   id: string;
   headerName: string;
   headerValue: string;
+  headerComment: string;
   headerEnabled: boolean;
   headerType: "request" | "response";
 };
@@ -64,6 +66,7 @@ const defaultPage: Page = {
       id: "default-1",
       headerName: "X-Frame-Options",
       headerValue: "ALLOW-FROM https://www.youtube.com/",
+      headerComment: "",
       headerEnabled: true,
       headerType: "request",
     },
@@ -302,19 +305,7 @@ function useFlexHeaderSettings() {
         const pagesWithNulls = await Promise.all(pagePromises);
         const pages: Page[] = pagesWithNulls
           .filter((page): page is Page => page !== null) // Remove any null/undefined pages with type guard
-          .map((page) => {
-            if (page && page.headers) {
-              // Ensure backwards compatibility for headerType
-              return {
-                ...page,
-                headers: page.headers.map((h: any) => ({
-                  ...h,
-                  headerType: h.headerType || "request",
-                }))
-              };
-            }
-            return page;
-          });
+          .map(normalizePage);
 
         if (pages.length === 0) {
           // No pages found, use default
@@ -348,13 +339,18 @@ function useFlexHeaderSettings() {
         log("SETTINGS: Migrating from v2 to v3 storage format", "info");
 
         // Migrate to new format - only save to local storage, background will handle sync
-        await saveToStorages(v2Data);
+        const normalizedV2Data = {
+          ...v2Data,
+          pages: v2Data.pages.map(normalizePage),
+        };
+
+        await saveToStorages(normalizedV2Data);
 
         // Remove old storage format
         await browser.storage.sync.remove(SETTINGS_KEY);
 
         // Set the migrated data
-        setPagesData(v2Data);
+        setPagesData(normalizedV2Data);
         setHasInitialized(true);
         return;
       }
@@ -536,6 +532,7 @@ function useFlexHeaderSettings() {
             {
               ...header,
               headerType: header.headerType || "request",
+              headerComment: header.headerComment || "",
               id: `${pageId}-${page.headers.length + 1}`,
             },
           ],
@@ -790,20 +787,14 @@ function useFlexHeaderSettings() {
         const pages = pageResults
           .map((result, index) => result[`${PAGE_KEY_PREFIX}${index}`] as Page)
           .filter(Boolean)
-          .map(page => ({
-            ...page,
-            headers: page.headers?.map((h: any) => ({
-              ...h,
-              headerType: h.headerType || "request",
-            })) || []
-          }));
+          .map(normalizePage);
         return pages.length > 0 ? pages : null;
       }
 
       // Check for legacy v2 format
       const v2Data = await browser.storage.sync.get(SETTINGS_KEY);
       if (v2Data[SETTINGS_KEY]) {
-        return (v2Data[SETTINGS_KEY] as PagesData).pages;
+        return (v2Data[SETTINGS_KEY] as PagesData).pages.map(normalizePage);
       }
 
       return null;
@@ -927,10 +918,7 @@ function useFlexHeaderSettings() {
             return {
               ...page,
               id: index,
-              headers: page.headers.map((h: any) => ({
-                ...h,
-                headerType: h.headerType ? h.headerType : "request",
-              })),
+              headers: page.headers.map(normalizeHeader),
             };
           });
 

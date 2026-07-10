@@ -80,6 +80,7 @@ function App() {
     const newHeader = addHeader(currentPage.id, {
       headerName: "",
       headerValue: "",
+      headerComment: "",
       headerEnabled: true,
       headerType: "request",
     });
@@ -286,7 +287,7 @@ function App() {
                       >
                         {currentPage?.headers?.map(
                           (
-                            { id, headerName, headerValue, headerEnabled, headerType },
+                            { id, headerName, headerValue, headerComment, headerEnabled, headerType },
                             index
                           ) => (
                             <Draggable key={id} draggableId={id} index={index}>
@@ -300,24 +301,11 @@ function App() {
                                     id={id}
                                     headerName={headerName}
                                     headerValue={headerValue}
+                                    headerComment={headerComment}
                                     headerEnabled={headerEnabled}
                                     headerType={headerType}
                                     onRemove={(id: string) => _removeHeader(id)}
-                                    onUpdate={(
-                                      id: string,
-                                      name: string,
-                                      value: string,
-                                      enabled: boolean,
-                                      type: "request" | "response"
-                                    ) =>
-                                      _updateHeader({
-                                        id: id,
-                                        headerName: name,
-                                        headerValue: value,
-                                        headerEnabled: enabled,
-                                        headerType: type,
-                                      })
-                                    }
+                                    onUpdate={_updateHeader}
                                     dragHandleProps={provided.dragHandleProps}
                                   />
                                 </div>
