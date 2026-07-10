@@ -80,6 +80,7 @@ function App() {
     const newHeader = addHeader(currentPage.id, {
       headerName: "",
       headerValue: "",
+      headerComment: "",
       headerEnabled: true,
       headerType: "request",
     });
@@ -132,6 +133,7 @@ function App() {
         id: newId,
         enabled: true,
         keepEnabled: false,
+        showHeaderComments: true,
         name: "New Page",
         headers: [],
         filters: [],
@@ -173,6 +175,18 @@ function App() {
 
       if (page) {
         page.keepEnabled = enabled;
+        updatePage(page);
+      }
+    },
+    [pages, updatePage]
+  );
+
+  const _changePageShowHeaderComments = useCallback(
+    async (id: number, showHeaderComments: boolean) => {
+      const page = pages.find((x) => x.id === id);
+
+      if (page) {
+        page.showHeaderComments = showHeaderComments;
         updatePage(page);
       }
     },
@@ -264,6 +278,7 @@ function App() {
               addPage={_addPage}
               updatePageName={_updatePageName}
               updatePageKeepEnabled={_changePageKeepEnabled}
+              updatePageShowHeaderComments={_changePageShowHeaderComments}
               removePage={removePage}
               changePageIndex={changePageIndex}
               toggleDarkMode={toggleDarkMode}
@@ -286,7 +301,7 @@ function App() {
                       >
                         {currentPage?.headers?.map(
                           (
-                            { id, headerName, headerValue, headerEnabled, headerType },
+                            { id, headerName, headerValue, headerComment, headerEnabled, headerType },
                             index
                           ) => (
                             <Draggable key={id} draggableId={id} index={index}>
@@ -300,24 +315,12 @@ function App() {
                                     id={id}
                                     headerName={headerName}
                                     headerValue={headerValue}
+                                    headerComment={headerComment}
                                     headerEnabled={headerEnabled}
                                     headerType={headerType}
+                                    showComment={currentPage.showHeaderComments}
                                     onRemove={(id: string) => _removeHeader(id)}
-                                    onUpdate={(
-                                      id: string,
-                                      name: string,
-                                      value: string,
-                                      enabled: boolean,
-                                      type: "request" | "response"
-                                    ) =>
-                                      _updateHeader({
-                                        id: id,
-                                        headerName: name,
-                                        headerValue: value,
-                                        headerEnabled: enabled,
-                                        headerType: type,
-                                      })
-                                    }
+                                    onUpdate={_updateHeader}
                                     dragHandleProps={provided.dragHandleProps}
                                   />
                                 </div>

@@ -4,6 +4,7 @@ import browser from "webextension-polyfill";
 import { SELECTED_PAGE_KEY, SETTINGS_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, SYNC_ENABLED_KEY, MIGRATION_COMPLETE_KEY } from "../constants";
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage";
 import { log } from "./log";
+import { normalizeHeader, normalizePage } from "./headers";
 
 export enum SettingsErrorType {
   None = "None",
@@ -15,6 +16,7 @@ export type Page = {
   name: string;
   enabled: boolean;
   keepEnabled: boolean;
+  showHeaderComments: boolean;
   filters: HeaderFilter[];
   headers: HeaderSetting[];
 };
@@ -33,6 +35,7 @@ export type HeaderSetting = {
   id: string;
   headerName: string;
   headerValue: string;
+  headerComment: string;
   headerEnabled: boolean;
   headerType: "request" | "response";
 };
@@ -58,12 +61,14 @@ const defaultPage: Page = {
   name: "Default",
   enabled: true,
   keepEnabled: false,
+  showHeaderComments: true,
   filters: [],
   headers: [
     {
       id: "default-1",
       headerName: "X-Frame-Options",
       headerValue: "ALLOW-FROM https://www.youtube.com/",
+      headerComment: "",
       headerEnabled: true,
       headerType: "request",
     },
@@ -100,7 +105,9 @@ function useFlexHeaderSettings() {
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const [syncEnabled, setSyncEnabled] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [saveVersion, setSaveVersion] = useState(0);
   const isSavingRef = useRef<boolean>(false);
+  const hasPendingSaveRef = useRef<boolean>(false);
 
   const alertContext = useAlert();
 
@@ -208,7 +215,12 @@ function useFlexHeaderSettings() {
 
   // Main save effect that watches for data changes
   useEffect(() => {
-    if (!hasInitialized || isSavingRef.current) return;
+    if (!hasInitialized) return;
+
+    if (isSavingRef.current) {
+      hasPendingSaveRef.current = true;
+      return;
+    }
 
     // Stringify current data for comparison
     const currentDataString = JSON.stringify(pagesData);
@@ -245,9 +257,13 @@ function useFlexHeaderSettings() {
         setTimeout(() => {
           isSavingRef.current = false;
           log("SETTINGS: Changes saved successfully", "success");
+          if (hasPendingSaveRef.current) {
+            hasPendingSaveRef.current = false;
+            setSaveVersion((version) => version + 1);
+          }
         }, 0);
       });
-  }, [pagesData, hasInitialized, lastError, saveToStorages, alertContext]);
+  }, [pagesData, hasInitialized, lastError, saveToStorages, alertContext, saveVersion]);
 
   /**
    * Loads the settings from storage and sets the state
@@ -302,19 +318,7 @@ function useFlexHeaderSettings() {
         const pagesWithNulls = await Promise.all(pagePromises);
         const pages: Page[] = pagesWithNulls
           .filter((page): page is Page => page !== null) // Remove any null/undefined pages with type guard
-          .map((page) => {
-            if (page && page.headers) {
-              // Ensure backwards compatibility for headerType
-              return {
-                ...page,
-                headers: page.headers.map((h: any) => ({
-                  ...h,
-                  headerType: h.headerType || "request",
-                }))
-              };
-            }
-            return page;
-          });
+          .map(normalizePage);
 
         if (pages.length === 0) {
           // No pages found, use default
@@ -348,13 +352,18 @@ function useFlexHeaderSettings() {
         log("SETTINGS: Migrating from v2 to v3 storage format", "info");
 
         // Migrate to new format - only save to local storage, background will handle sync
-        await saveToStorages(v2Data);
+        const normalizedV2Data = {
+          ...v2Data,
+          pages: v2Data.pages.map(normalizePage),
+        };
+
+        await saveToStorages(normalizedV2Data);
 
         // Remove old storage format
         await browser.storage.sync.remove(SETTINGS_KEY);
 
         // Set the migrated data
-        setPagesData(v2Data);
+        setPagesData(normalizedV2Data);
         setHasInitialized(true);
         return;
       }
@@ -536,6 +545,7 @@ function useFlexHeaderSettings() {
             {
               ...header,
               headerType: header.headerType || "request",
+              headerComment: header.headerComment || "",
               id: `${pageId}-${page.headers.length + 1}`,
             },
           ],
@@ -790,20 +800,14 @@ function useFlexHeaderSettings() {
         const pages = pageResults
           .map((result, index) => result[`${PAGE_KEY_PREFIX}${index}`] as Page)
           .filter(Boolean)
-          .map(page => ({
-            ...page,
-            headers: page.headers?.map((h: any) => ({
-              ...h,
-              headerType: h.headerType || "request",
-            })) || []
-          }));
+          .map(normalizePage);
         return pages.length > 0 ? pages : null;
       }
 
       // Check for legacy v2 format
       const v2Data = await browser.storage.sync.get(SETTINGS_KEY);
       if (v2Data[SETTINGS_KEY]) {
-        return (v2Data[SETTINGS_KEY] as PagesData).pages;
+        return (v2Data[SETTINGS_KEY] as PagesData).pages.map(normalizePage);
       }
 
       return null;
@@ -913,41 +917,42 @@ function useFlexHeaderSettings() {
   /**
    * Import json file
    */
-  const importSettings = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result;
+  const importSettings = (file: File): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error);
+      reader.onload = (e) => {
+        const result = e.target?.result;
 
-      if (typeof result === "string") {
-        const parsed = JSON.parse(result);
-        if (Array.isArray(parsed)) {
-          // remap the ids to avoid conflicts
-          const combinedPages = [...pagesData.pages, ...parsed];
-          const newPages = combinedPages.map((page: any, index) => {
-            return {
-              ...page,
-              id: index,
-              headers: page.headers.map((h: any) => ({
-                ...h,
-                headerType: h.headerType ? h.headerType : "request",
-              })),
-            };
-          });
+        if (typeof result === "string") {
+          const parsed = JSON.parse(result);
+          if (Array.isArray(parsed)) {
+            // remap the ids to avoid conflicts
+            const combinedPages = [...pagesData.pages, ...parsed];
+            const newPages = combinedPages.map((page: any, index) => {
+              return {
+                ...page,
+                id: index,
+                headers: page.headers.map(normalizeHeader),
+              };
+            });
 
-          setPagesData((prev) => ({
-            ...prev,
-            pages: newPages,
-          }));
+            setPagesData((prev) => ({
+              ...prev,
+              pages: newPages,
+            }));
 
-          alertContext.setAlert({
-            alertType: "info",
-            alertText: "Settings imported.",
-            location: "bottom",
-          });
+            alertContext.setAlert({
+              alertType: "info",
+              alertText: "Settings imported.",
+              location: "bottom",
+            });
+          }
         }
-      }
-    };
-    reader.readAsText(file);
+        resolve();
+      };
+      reader.readAsText(file);
+    });
   };
 
   useEffect(() => {

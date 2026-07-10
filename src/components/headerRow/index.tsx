@@ -7,36 +7,49 @@ const HeaderRow = ({
   id,
   headerName,
   headerValue,
+  headerComment,
   headerEnabled,
   headerType,
   onRemove,
   onUpdate,
   dragHandleProps,
+  showComment,
 }: HeaderSetting & {
+  showComment: boolean;
   onRemove: (id: string) => void;
-  onUpdate: (
-    id: string,
-    name: string,
-    value: string,
-    enabled: boolean,
-    type: "request" | "response"
-  ) => void;
+  onUpdate: (header: HeaderSetting) => void;
   dragHandleProps?: DraggableProvidedDragHandleProps | null | undefined;
 }) => {
+  const updateHeader = (patch: Partial<HeaderSetting>) => {
+    onUpdate({
+      id,
+      headerName,
+      headerValue,
+      headerComment,
+      headerEnabled,
+      headerType,
+      ...patch,
+    });
+  };
+
   const updateName = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onUpdate(id, e.target.value, headerValue, headerEnabled, headerType);
+    updateHeader({ headerName: e.target.value });
   };
 
   const updateValue = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onUpdate(id, headerName, e.target.value, headerEnabled, headerType);
+    updateHeader({ headerValue: e.target.value });
+  };
+
+  const updateComment = (e: React.ChangeEvent<HTMLInputElement>) => {
+    updateHeader({ headerComment: e.target.value });
   };
 
   const updateEnabled = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onUpdate(id, headerName, headerValue, e.target.checked, headerType);
+    updateHeader({ headerEnabled: e.target.checked });
   };
 
   const updateType = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    onUpdate(id, headerName, headerValue, headerEnabled, e.target.value as "request" | "response");
+    updateHeader({ headerType: e.target.value as "request" | "response" });
   };
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -44,7 +57,7 @@ const HeaderRow = ({
   };
 
   return (
-    <div className="header-row" data-headerId={id}>
+    <div className={`header-row${showComment ? "" : " header-row--comments-hidden"}`} data-headerId={id}>
       <div className="header-row__checkbox">
         {dragHandleProps && (
           <img
@@ -78,6 +91,17 @@ const HeaderRow = ({
           onFocus={handleFocus}
         />
       </div>
+      {showComment && (
+        <div className="header-row__comment">
+          <input
+            type="text"
+            placeholder="Comment"
+            value={headerComment}
+            onChange={updateComment}
+            onFocus={handleFocus}
+          />
+        </div>
+      )}
       <div className="header-row__type">
         <select
           value={headerType}

@@ -9,7 +9,8 @@
 }
 
 .header-row__name,
-.header-row__value {
+.header-row__value,
+.header-row__comment {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -20,10 +21,25 @@
 
 /* Optimize input fields for better space usage */
 .header-row__name input,
-.header-row__value input {
+.header-row__value input,
+.header-row__comment input {
   padding: 5px 8px;
   height: 28px;
   box-sizing: border-box;
+}
+
+.header-row__name,
+.header-row__value {
+  flex: 1.1;
+}
+
+.header-row__comment {
+  flex: 0.9;
+}
+
+.header-row--comments-hidden .header-row__name,
+.header-row--comments-hidden .header-row__value {
+  flex: 1;
 }
 
 .header-row__type {
