@@ -1,5 +1,5 @@
 {
-  "name": "FlexHeaders - Edit HTTP Headers",
+  "name": "FlexHeaders - Modify & Edit HTTP Headers",
   "version": "1.4.1",
   "manifest_version": 3,
   "description": "Modify request headers, filter by URL, share headers with friends, and import/export settings.",
