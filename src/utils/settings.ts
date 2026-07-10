@@ -103,7 +103,9 @@ function useFlexHeaderSettings() {
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const [syncEnabled, setSyncEnabled] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [saveVersion, setSaveVersion] = useState(0);
   const isSavingRef = useRef<boolean>(false);
+  const hasPendingSaveRef = useRef<boolean>(false);
 
   const alertContext = useAlert();
 
@@ -211,7 +213,12 @@ function useFlexHeaderSettings() {
 
   // Main save effect that watches for data changes
   useEffect(() => {
-    if (!hasInitialized || isSavingRef.current) return;
+    if (!hasInitialized) return;
+
+    if (isSavingRef.current) {
+      hasPendingSaveRef.current = true;
+      return;
+    }
 
     // Stringify current data for comparison
     const currentDataString = JSON.stringify(pagesData);
@@ -248,9 +255,13 @@ function useFlexHeaderSettings() {
         setTimeout(() => {
           isSavingRef.current = false;
           log("SETTINGS: Changes saved successfully", "success");
+          if (hasPendingSaveRef.current) {
+            hasPendingSaveRef.current = false;
+            setSaveVersion((version) => version + 1);
+          }
         }, 0);
       });
-  }, [pagesData, hasInitialized, lastError, saveToStorages, alertContext]);
+  }, [pagesData, hasInitialized, lastError, saveToStorages, alertContext, saveVersion]);
 
   /**
    * Loads the settings from storage and sets the state
@@ -904,38 +915,42 @@ function useFlexHeaderSettings() {
   /**
    * Import json file
    */
-  const importSettings = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result;
+  const importSettings = (file: File): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error);
+      reader.onload = (e) => {
+        const result = e.target?.result;
 
-      if (typeof result === "string") {
-        const parsed = JSON.parse(result);
-        if (Array.isArray(parsed)) {
-          // remap the ids to avoid conflicts
-          const combinedPages = [...pagesData.pages, ...parsed];
-          const newPages = combinedPages.map((page: any, index) => {
-            return {
-              ...page,
-              id: index,
-              headers: page.headers.map(normalizeHeader),
-            };
-          });
+        if (typeof result === "string") {
+          const parsed = JSON.parse(result);
+          if (Array.isArray(parsed)) {
+            // remap the ids to avoid conflicts
+            const combinedPages = [...pagesData.pages, ...parsed];
+            const newPages = combinedPages.map((page: any, index) => {
+              return {
+                ...page,
+                id: index,
+                headers: page.headers.map(normalizeHeader),
+              };
+            });
 
-          setPagesData((prev) => ({
-            ...prev,
-            pages: newPages,
-          }));
+            setPagesData((prev) => ({
+              ...prev,
+              pages: newPages,
+            }));
 
-          alertContext.setAlert({
-            alertType: "info",
-            alertText: "Settings imported.",
-            location: "bottom",
-          });
+            alertContext.setAlert({
+              alertType: "info",
+              alertText: "Settings imported.",
+              location: "bottom",
+            });
+          }
         }
-      }
-    };
-    reader.readAsText(file);
+        resolve();
+      };
+      reader.readAsText(file);
+    });
   };
 
   useEffect(() => {

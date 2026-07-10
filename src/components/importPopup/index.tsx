@@ -5,7 +5,7 @@ import Divider from "../divider";
 import DragDropFile from "../dragDropFile";
 
 interface ImportPopupProps {
-  importSettings: (file: File) => void;
+  importSettings: (file: File) => Promise<void>;
 }
 
 const ImportPopup = ({ importSettings }: ImportPopupProps) => {
@@ -15,8 +15,6 @@ const ImportPopup = ({ importSettings }: ImportPopupProps) => {
   const _handleClick = () => {
     setShow(!show);
   };
-
-  const _handleExport = () => { };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -67,22 +65,6 @@ const ImportPopup = ({ importSettings }: ImportPopupProps) => {
         <Divider thin />
         <div className="import-popup__actions">
           <Button content="Cancel" onClick={() => setShow(false)} />
-          <Button
-            content={
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-              >
-                <img
-                  src="/icons/import.svg"
-                  alt="import Pages"
-                  width={16}
-                  height={16}
-                />
-                <span>Import</span>
-              </div>
-            }
-            onClick={_handleExport}
-          />
         </div>
       </div>
     </>
