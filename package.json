@@ -22,7 +22,10 @@
   },
   "scripts": {
     "start": "craco start",
-    "build": "craco build",
+    "build:chrome": "craco build",
+    "build:firefox": "node scripts/prepare-firefox-build.mjs",
+    "build": "bun run build:chrome && bun run build:firefox",
+    "package:firefox": "bun run build && rm -f build-firefox.zip && cd build-firefox && zip -r ../build-firefox.zip . -x '*.DS_Store'",
     "test": "craco test",
     "eject": "react-scripts eject"
   },

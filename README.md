@@ -16,16 +16,37 @@ Package management is handled with [Bun](https://bun.sh/), so make sure you have
 
 ##### How to build
 
-`bun run build` will build the extension into the `/build` directory, this will contain everything you need to get the extension working in Chrome
+`bun run build` will build the extension for both browsers:
+
+- Chrome output in `/build`
+- Firefox output in `/build-firefox`
 
 ##### How to add the extension to Chrome for testing
 
-1. Run `bun run build` to generate a fresh `/build` directory
+1. Run `bun run build` to generate fresh `/build` and `/build-firefox` directories
 2. Open Chrome and navigate to `chrome://extensions`
 3. Enable **Developer mode** using the toggle in the top-right corner
 4. Click **Load unpacked**
 5. Select the `/build` directory produced in step 1
 6. The FlexHeaders extension should now appear in your extensions list and toolbar - pin it for easy access
+
+##### How to add the extension to Firefox for testing
+
+1. Run `bun run build` to generate a Firefox-compatible `/build-firefox` directory
+2. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
+3. Click **Load Temporary Add-on...**
+4. In the file picker, open the `/build-firefox` directory and select `manifest.json`
+5. The FlexHeaders extension should now appear under **Temporary Extensions** and in the toolbar
+
+Note: Temporary add-ons are removed when Firefox is closed, so repeat the steps above after restarting Firefox.
+Note: The Firefox build rewrites `background.service_worker` to `background.scripts` to avoid the Firefox error about service workers being disabled.
+
+##### How to package for Firefox Add-ons store
+
+Use `bun run package:firefox` to create `build-firefox.zip` in the project root.
+
+This ZIP is packaged correctly for upload because `manifest.json` is at the ZIP root.
+If you manually zip the `build-firefox` directory itself, the manifest ends up nested (`build-firefox/manifest.json`) and upload will fail.
 
 ##### How to make/see changes
 
