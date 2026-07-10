@@ -15,6 +15,10 @@
   gap: 0.5rem;
   align-items: center;
 }
+
+.pages-tabs__actions__buttons label {
+  white-space: nowrap;
+}
 .page-tabs__show-all {
   width: 2rem;
   cursor: pointer;

@@ -37,6 +37,11 @@
   flex: 0.9;
 }
 
+.header-row--comments-hidden .header-row__name,
+.header-row--comments-hidden .header-row__value {
+  flex: 1;
+}
+
 .header-row__type {
   display: flex;
   flex-direction: column;

@@ -101,6 +101,7 @@ const createPage = (
   name,
   enabled,
   keepEnabled: false,
+  showHeaderComments: true,
   headers,
   filters,
 });
@@ -489,5 +490,37 @@ describe('Header Comment Import/Export', () => {
       headerComment: '',
       headerType: 'request',
     });
+  });
+
+  it('should preserve the header comments visibility setting through JSON import/export', () => {
+    const pages = [
+      {
+        ...createPage(0, 'Routes', true, [createHeader('X-Route', 'service-a')]),
+        showHeaderComments: false,
+      },
+    ];
+
+    const exportedJson = JSON.stringify(pages);
+    const importedPages = (JSON.parse(exportedJson) as Page[]).map(normalizePage);
+
+    expect(importedPages[0].showHeaderComments).toBe(false);
+  });
+
+  it('should show header comments by default for legacy imported pages', () => {
+    const legacyPages = [
+      {
+        id: 0,
+        name: 'Legacy Routes',
+        enabled: true,
+        keepEnabled: false,
+        filters: [],
+        headers: [createHeader('X-Route', 'legacy-service')],
+      },
+    ];
+
+    const exportedJson = JSON.stringify(legacyPages);
+    const importedPages = (JSON.parse(exportedJson) as Page[]).map(normalizePage);
+
+    expect(importedPages[0].showHeaderComments).toBe(true);
   });
 });

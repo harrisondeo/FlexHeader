@@ -13,7 +13,9 @@ const HeaderRow = ({
   onRemove,
   onUpdate,
   dragHandleProps,
+  showComment,
 }: HeaderSetting & {
+  showComment: boolean;
   onRemove: (id: string) => void;
   onUpdate: (header: HeaderSetting) => void;
   dragHandleProps?: DraggableProvidedDragHandleProps | null | undefined;
@@ -55,7 +57,7 @@ const HeaderRow = ({
   };
 
   return (
-    <div className="header-row" data-headerId={id}>
+    <div className={`header-row${showComment ? "" : " header-row--comments-hidden"}`} data-headerId={id}>
       <div className="header-row__checkbox">
         {dragHandleProps && (
           <img
@@ -89,15 +91,17 @@ const HeaderRow = ({
           onFocus={handleFocus}
         />
       </div>
-      <div className="header-row__comment">
-        <input
-          type="text"
-          placeholder="Comment"
-          value={headerComment}
-          onChange={updateComment}
-          onFocus={handleFocus}
-        />
-      </div>
+      {showComment && (
+        <div className="header-row__comment">
+          <input
+            type="text"
+            placeholder="Comment"
+            value={headerComment}
+            onChange={updateComment}
+            onFocus={handleFocus}
+          />
+        </div>
+      )}
       <div className="header-row__type">
         <select
           value={headerType}

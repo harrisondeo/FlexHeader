@@ -11,6 +11,7 @@ const PagesTabs = ({
   removePage,
   updatePageName,
   updatePageKeepEnabled,
+  updatePageShowHeaderComments,
   changePageIndex,
   toggleDarkMode,
   toggleSync,
@@ -22,6 +23,7 @@ const PagesTabs = ({
   removePage: (id: number, autoSelectPage: boolean) => void;
   updatePageName: (name: string, id: number) => void;
   updatePageKeepEnabled: (id: number, enabled: boolean) => void;
+  updatePageShowHeaderComments: (id: number, showHeaderComments: boolean) => void;
   changePageIndex: (id: number, newIndex: number) => void;
   toggleDarkMode: () => void;
   toggleSync: () => void;
@@ -37,6 +39,14 @@ const PagesTabs = ({
           }
         />
         <label>Enabled in background</label>
+        <input
+          type="checkbox"
+          checked={currentPage.showHeaderComments}
+          onChange={(e) =>
+            updatePageShowHeaderComments(currentPage.id, e.target.checked)
+          }
+        />
+        <label>Show header comments</label>
       </div>
       <div className="pages-tabs__actions__buttons">
         <Button

@@ -8,5 +8,6 @@ export const normalizeHeader = (header: any): HeaderSetting => ({
 
 export const normalizePage = (page: any): Page => ({
   ...page,
+  showHeaderComments: page.showHeaderComments ?? true,
   headers: page.headers?.map(normalizeHeader) || [],
 });

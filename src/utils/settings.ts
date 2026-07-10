@@ -16,6 +16,7 @@ export type Page = {
   name: string;
   enabled: boolean;
   keepEnabled: boolean;
+  showHeaderComments: boolean;
   filters: HeaderFilter[];
   headers: HeaderSetting[];
 };
@@ -60,6 +61,7 @@ const defaultPage: Page = {
   name: "Default",
   enabled: true,
   keepEnabled: false,
+  showHeaderComments: true,
   filters: [],
   headers: [
     {

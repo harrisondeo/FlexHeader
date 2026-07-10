@@ -133,6 +133,7 @@ function App() {
         id: newId,
         enabled: true,
         keepEnabled: false,
+        showHeaderComments: true,
         name: "New Page",
         headers: [],
         filters: [],
@@ -174,6 +175,18 @@ function App() {
 
       if (page) {
         page.keepEnabled = enabled;
+        updatePage(page);
+      }
+    },
+    [pages, updatePage]
+  );
+
+  const _changePageShowHeaderComments = useCallback(
+    async (id: number, showHeaderComments: boolean) => {
+      const page = pages.find((x) => x.id === id);
+
+      if (page) {
+        page.showHeaderComments = showHeaderComments;
         updatePage(page);
       }
     },
@@ -265,6 +278,7 @@ function App() {
               addPage={_addPage}
               updatePageName={_updatePageName}
               updatePageKeepEnabled={_changePageKeepEnabled}
+              updatePageShowHeaderComments={_changePageShowHeaderComments}
               removePage={removePage}
               changePageIndex={changePageIndex}
               toggleDarkMode={toggleDarkMode}
@@ -304,6 +318,7 @@ function App() {
                                     headerComment={headerComment}
                                     headerEnabled={headerEnabled}
                                     headerType={headerType}
+                                    showComment={currentPage.showHeaderComments}
                                     onRemove={(id: string) => _removeHeader(id)}
                                     onUpdate={_updateHeader}
                                     dragHandleProps={provided.dragHandleProps}
