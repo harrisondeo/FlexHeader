@@ -1,6 +1,6 @@
 {
   "name": "flex-headers",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "private": true,
   "dependencies": {
     "@craco/craco": "^7.1.0",

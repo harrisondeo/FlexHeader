@@ -1,12 +1,10 @@
 import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, SETTINGS_KEY, SYNC_INTERVAL, LAST_SYNC_TIME_KEY, SELECTED_PAGE_KEY, SYNC_ENABLED_KEY } from "../constants";
-import { Page, PagesData, SettingsV3Meta } from "../utils/settings";
+import { HeaderSetting, Page, PagesData, SettingsV3Meta } from "../utils/settings";
 import browser from "webextension-polyfill";
 import { getAllFromStorage, saveToStorage, getDataSizeInBytes, loadFromStorage } from "../utils/storage";
 import { log } from "../utils/log";
 
-const allResourceTypes = Object.values(
-  chrome.declarativeNetRequest.ResourceType
-);
+import { buildHeaderRules } from "./rules";
 
 export async function getAndApplyHeaderRules() {
   try {
@@ -61,63 +59,14 @@ export async function getAndApplyHeaderRules() {
     pages.forEach((page: Page) => {
       if (page.enabled || page.keepEnabled) {
         // each setting
-        page.headers.forEach((header: any) => {
+        page.headers.forEach((header: HeaderSetting) => {
           if (header.headerEnabled && header.headerName) {
-            // Check for filters
-            let regexFilter = "";
-
-            if (page.filters) {
-              page.filters.forEach((filter) => {
-                if (filter.enabled && filter.valid) {
-                  if (filter.type === "include") {
-                    if (regexFilter === "") {
-                      regexFilter += filter.value;
-                    } else {
-                      regexFilter += `|${filter.value}`;
-                    }
-                  } else {
-                    if (regexFilter === "") {
-                      regexFilter += `~${filter.value}`;
-                    } else {
-                      regexFilter += `|~${filter.value}`;
-                    }
-                  }
-                }
-              });
-            }
-
-            // Ready to push
-            const hType = header.headerType || "request";
-            headers.push({
-              id: getUniqueRuleID(),
-              priority: 1,
-              action: {
-                type: "modifyHeaders",
-                ...(hType === "request"
-                  ? {
-                    requestHeaders: [
-                      {
-                        header: header.headerName,
-                        operation: "set",
-                        value: header.headerValue,
-                      },
-                    ],
-                  }
-                  : {
-                    responseHeaders: [
-                      {
-                        header: header.headerName,
-                        operation: "set",
-                        value: header.headerValue,
-                      },
-                    ],
-                  }),
-              },
-              condition: {
-                regexFilter: regexFilter || "|http*",
-                resourceTypes: allResourceTypes,
-              },
-            });
+            const headerRules = buildHeaderRules(
+              header,
+              page.filters || [],
+              getUniqueRuleID
+            );
+            headers.push(...headerRules);
           }
         });
       }
@@ -164,7 +113,6 @@ export async function syncLocalToRemoteStorage() {
     };
 
     // Add all pages
-    const pagePromises = [];
     for (let i = 0; i < metadata.pageCount; i++) {
       const pageKey = `${PAGE_KEY_PREFIX}${i}`;
       if (pageKey in localData) {

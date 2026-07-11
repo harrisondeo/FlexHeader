@@ -336,7 +336,7 @@ function App() {
               </div>
               {currentPage?.filters?.length > 0 && (
                 <div className="app__body__filters">
-                  <p>Filters</p>
+                  <p>Filters (Regex filtering only)</p>
                   <div className="app__body__filters__container">
                     {currentPage?.filters.map((filter) => (
                       <FilterRow
