@@ -6,7 +6,7 @@
  */
 
 import { buildHeaderRules, allResourceTypes } from './rules';
-import { HeaderFilter, HeaderSetting } from '../utils/settings';
+import type { HeaderFilter, HeaderSetting } from '../utils/settings';
 
 const createHeader = (overrides: Partial<HeaderSetting> = {}): HeaderSetting => ({
   id: 'header-1',
