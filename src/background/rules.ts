@@ -21,8 +21,6 @@ export const allResourceTypes: browser.DeclarativeNetRequest.ResourceType[] = [
   "csp_report",
   "media",
   "websocket",
-  "webtransport",
-  "webbundle",
   "other",
 ];
 
