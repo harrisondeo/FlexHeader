@@ -6,7 +6,7 @@
  */
 
 import type browser from "webextension-polyfill";
-import { HeaderFilter, HeaderSetting } from "../utils/settings";
+import type { HeaderFilter, HeaderSetting } from "../utils/settings";
 
 export const allResourceTypes: browser.DeclarativeNetRequest.ResourceType[] = [
   "main_frame",
