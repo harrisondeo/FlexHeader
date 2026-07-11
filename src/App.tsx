@@ -105,9 +105,10 @@ function App() {
   const _addFilter = useCallback(async () => {
     addFilter(currentPage.id, {
       type: "include",
-      value: "http*",
+      mode: "url",
+      value: "|http*",
       enabled: true,
-      valid: false,
+      valid: true,
     });
   }, [currentPage.id, addFilter]);
 
@@ -336,7 +337,7 @@ function App() {
               </div>
               {currentPage?.filters?.length > 0 && (
                 <div className="app__body__filters">
-                  <p>Filters (Regex filtering only)</p>
+                  <p>Filters (URL or Regex)</p>
                   <div className="app__body__filters__container">
                     {currentPage?.filters.map((filter) => (
                       <FilterRow

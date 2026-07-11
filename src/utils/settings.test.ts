@@ -8,7 +8,17 @@
  * - Preserving enabled state for existing pages
  */
 
-import { Page, HeaderSetting, HeaderFilter } from './settings';
+jest.mock('webextension-polyfill', () => ({
+  storage: {
+    local: { get: jest.fn(), set: jest.fn(), clear: jest.fn(), remove: jest.fn() },
+    sync: { get: jest.fn(), set: jest.fn(), clear: jest.fn(), remove: jest.fn() },
+  },
+  declarativeNetRequest: {
+    isRegexSupported: jest.fn().mockResolvedValue({ isSupported: true }),
+  },
+}));
+
+import { Page, HeaderSetting, HeaderFilter, isValidUrlFilter } from './settings';
 import { normalizePage } from './headers';
 
 // Extract the merge logic functions for testing
@@ -27,13 +37,14 @@ const getPageKey = (page: Page): string => {
   });
   const sortedFilters = [...page.filters].sort((a, b) => {
     if (a.type !== b.type) return a.type.localeCompare(b.type);
+    if (a.mode !== b.mode) return a.mode.localeCompare(b.mode);
     if (a.value !== b.value) return String(a.value).localeCompare(String(b.value));
     return 0;
   });
   // Only include the properties used for comparison
   return `${page.name}_${JSON.stringify({
     headers: sortedHeaders.map(h => ({ headerName: h.headerName, headerValue: h.headerValue })),
-    filters: sortedFilters.map(f => ({ type: f.type, value: f.value })),
+    filters: sortedFilters.map(f => ({ type: f.type, mode: f.mode, value: f.value })),
   })}`;
 };
 
@@ -82,9 +93,10 @@ const createHeader = (name: string, value: string, enabled = true): HeaderSettin
   headerType: 'request',
 });
 
-const createFilter = (type: 'include' | 'exclude', value: string, enabled = true): HeaderFilter => ({
+const createFilter = (type: 'include' | 'exclude', value: string, enabled = true, mode: 'regex' | 'url' = 'regex'): HeaderFilter => ({
   id: `filter-${Date.now()}-${Math.random()}`,
   type,
+  mode,
   value,
   enabled,
   valid: true,
@@ -166,6 +178,13 @@ describe('Page Key Generation', () => {
     ]);
     
     expect(getPageKey(page1)).toBe(getPageKey(page2));
+  });
+
+  it('should generate different keys for filters with the same value but different modes', () => {
+    const page1 = createPage(0, 'Test Page', true, [], [createFilter('include', 'example.com', true, 'regex')]);
+    const page2 = createPage(0, 'Test Page', true, [], [createFilter('include', 'example.com', true, 'url')]);
+    
+    expect(getPageKey(page1)).not.toBe(getPageKey(page2));
   });
 });
 
@@ -345,6 +364,37 @@ describe('Page Merging', () => {
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Local Page');
     });
+  });
+});
+
+describe('URL filter validation', () => {
+  it('accepts common valid URL patterns', () => {
+    expect(isValidUrlFilter('||example.com/')).toBe(true);
+    expect(isValidUrlFilter('|https://example.com/')).toBe(true);
+    expect(isValidUrlFilter('https://example.com|')).toBe(true);
+    expect(isValidUrlFilter('|https://example.com|')).toBe(true);
+    expect(isValidUrlFilter('example*^123|')).toBe(true);
+    expect(isValidUrlFilter('*')).toBe(true);
+  });
+
+  it('rejects empty patterns', () => {
+    expect(isValidUrlFilter('')).toBe(false);
+  });
+
+  it('rejects non-ASCII characters', () => {
+    expect(isValidUrlFilter('||example.com/ф')).toBe(false);
+  });
+
+  it('rejects invalid domain anchors', () => {
+    expect(isValidUrlFilter('||*')).toBe(false);
+    expect(isValidUrlFilter('||')).toBe(false);
+    expect(isValidUrlFilter('||ex|ample.com')).toBe(false);
+  });
+
+  it('rejects misplaced pipe characters', () => {
+    expect(isValidUrlFilter('ex|ample.com')).toBe(false);
+    expect(isValidUrlFilter('|foo|bar')).toBe(false);
+    expect(isValidUrlFilter('foo|bar|')).toBe(false);
   });
 });
 

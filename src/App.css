@@ -95,10 +95,15 @@
   justify-content: space-between;
 }
 
+.app__body__filters {
+  min-width: 0;
+}
+
 .app__body__filters__container {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  min-width: 0;
 }
 
 .app__footer__action_block {

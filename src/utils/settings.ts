@@ -4,7 +4,7 @@ import browser from "webextension-polyfill";
 import { SELECTED_PAGE_KEY, SETTINGS_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, SYNC_ENABLED_KEY, MIGRATION_COMPLETE_KEY } from "../constants";
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage";
 import { log } from "./log";
-import { normalizeHeader, normalizePage } from "./headers";
+import { normalizeFilter, normalizeHeader, normalizePage } from "./headers";
 
 export enum SettingsErrorType {
   None = "None",
@@ -22,12 +22,14 @@ export type Page = {
 };
 
 export type FilterType = "include" | "exclude";
+export type FilterMode = "regex" | "url";
 
 export type HeaderFilter = {
   id: string;
   enabled: boolean;
   valid: boolean;
   type: FilterType;
+  mode: FilterMode;
   value: string;
 };
 
@@ -75,10 +77,43 @@ const defaultPage: Page = {
   ],
 };
 
+/**
+ * Validates a URL pattern (urlFilter) for declarativeNetRequest.
+ * urlFilter syntax: '*' wildcard, '|' left/right anchor, '||' domain anchor,
+ * '^' separator. Must be non-empty, ASCII only, and use anchors correctly.
+ */
+export const isValidUrlFilter = (value: string): boolean => {
+  if (!value || value.length === 0) return false;
+
+  // ASCII only
+  if (/[^\x20-\x7E]/.test(value)) return false;
+
+  // Domain anchor
+  if (value.startsWith("||")) {
+    if (value === "||*" || value === "||") return false;
+    // No other pipe characters allowed
+    if (value.indexOf("|", 2) !== -1) return false;
+    return true;
+  }
+
+  // Left and/or right anchors: | can only appear at start or end
+  const pipes = value.split("|").length - 1;
+  if (pipes > 2) return false;
+  if (pipes === 1 && value[0] !== "|" && value[value.length - 1] !== "|") return false;
+  if (pipes === 2 && (value[0] !== "|" || value[value.length - 1] !== "|")) return false;
+
+  return true;
+};
+
 const filterIsValid = async (
   filter: Omit<HeaderFilter, "valid">,
   callback: (valid: boolean) => void
 ) => {
+  if (filter.mode === "url") {
+    callback(isValidUrlFilter(filter.value));
+    return;
+  }
+
   try {
     browser.declarativeNetRequest
       .isRegexSupported({
@@ -736,8 +771,8 @@ function useFlexHeaderSettings() {
         return 0;
       });
       const sortedFilters = [...page.filters].sort((a, b) => {
-        // Assuming filters have a 'type' and 'value' property; adjust as needed
         if (a.type !== b.type) return a.type.localeCompare(b.type);
+        if (a.mode !== b.mode) return a.mode.localeCompare(b.mode);
         if (a.value !== b.value) return String(a.value).localeCompare(String(b.value));
         return 0;
       });
@@ -934,6 +969,7 @@ function useFlexHeaderSettings() {
                 ...page,
                 id: index,
                 headers: page.headers.map(normalizeHeader),
+                filters: page.filters?.map(normalizeFilter) || [],
               };
             });
 

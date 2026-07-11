@@ -1,6 +1,6 @@
 {
   "name": "FlexHeaders - Modify & Edit HTTP Headers",
-  "version": "1.5.2",
+  "version": "1.6.0",
   "manifest_version": 3,
   "description": "Modify, Add & Remove headers for any request, filter by URL, share headers with others, and import/export settings.",
   "icons": {

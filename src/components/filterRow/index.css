@@ -1,18 +1,38 @@
 .filter-row {
   display: flex;
   width: 100%;
-  justify-content: space-between;
   align-items: center;
   flex-direction: row;
-  gap: 1rem;
+  gap: 0.5rem;
+}
+
+.filter-row__checkbox,
+.filter-row__remove {
+  flex: 0 0 auto;
 }
 
 .filter-row__type,
-.filter-row__value {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+.filter-row__mode {
+  flex: 0 0 auto;
+  min-width: 70px;
+  max-width: 90px;
+}
+
+.filter-row__type select,
+.filter-row__mode select {
   width: 100%;
+  min-width: 0;
+}
+
+.filter-row__value {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.filter-row__value input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .filter-row__remove {

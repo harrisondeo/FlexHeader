@@ -6,7 +6,7 @@
  */
 
 import type browser from "webextension-polyfill";
-import type { HeaderFilter, HeaderSetting } from "../utils/settings";
+import type { HeaderFilter, HeaderSetting, Page } from "../utils/settings";
 
 export const allResourceTypes: browser.DeclarativeNetRequest.ResourceType[] = [
   "main_frame",
@@ -32,18 +32,21 @@ export function buildHeaderRules(
   filters: HeaderFilter[],
   getRuleId: () => number
 ): browser.DeclarativeNetRequest.Rule[] {
-  let regexFilter = "";
-  let excludeFilter = "";
+  const enabledFilters = filters.filter((filter) => filter.enabled && filter.valid);
 
-  filters.forEach((filter) => {
-    if (filter.enabled && filter.valid) {
-      if (filter.type === "include") {
-        regexFilter = regexFilter === "" ? filter.value : `${regexFilter}|${filter.value}`;
-      } else {
-        excludeFilter = excludeFilter === "" ? filter.value : `${excludeFilter}|${filter.value}`;
-      }
-    }
-  });
+  const regexIncludes = enabledFilters
+    .filter((filter) => filter.type === "include" && filter.mode === "regex")
+    .map((filter) => filter.value);
+  const urlIncludes = enabledFilters
+    .filter((filter) => filter.type === "include" && filter.mode === "url")
+    .map((filter) => filter.value);
+
+  const regexExcludes = enabledFilters
+    .filter((filter) => filter.type === "exclude" && filter.mode === "regex")
+    .map((filter) => filter.value);
+  const urlExcludes = enabledFilters
+    .filter((filter) => filter.type === "exclude" && filter.mode === "url")
+    .map((filter) => filter.value);
 
   const hType = header.headerType || "request";
   const modifyHeadersAction: browser.DeclarativeNetRequest.Rule["action"] = {
@@ -69,49 +72,116 @@ export function buildHeaderRules(
       }),
   };
 
-  const filterCondition: browser.DeclarativeNetRequest.Rule["condition"] = regexFilter
-    ? { regexFilter, resourceTypes: allResourceTypes }
-    : { regexFilter: "|http*", resourceTypes: allResourceTypes };
+  const removeHeadersAction: browser.DeclarativeNetRequest.Rule["action"] = {
+    type: "modifyHeaders",
+    ...(hType === "request"
+      ? {
+        requestHeaders: [
+          {
+            header: header.headerName,
+            operation: "remove",
+          },
+        ],
+      }
+      : {
+        responseHeaders: [
+          {
+            header: header.headerName,
+            operation: "remove",
+          },
+        ],
+      }),
+  };
 
-  const rules: browser.DeclarativeNetRequest.Rule[] = [
-    {
+  const rules: browser.DeclarativeNetRequest.Rule[] = [];
+
+  if (regexIncludes.length > 0) {
+    rules.push({
       id: getRuleId(),
       priority: 1,
       action: modifyHeadersAction,
-      condition: filterCondition,
-    },
-  ];
-
-  if (excludeFilter) {
-    rules.push({
-      id: getRuleId(),
-      priority: 2,
-      action: {
-        type: "modifyHeaders",
-        ...(hType === "request"
-          ? {
-            requestHeaders: [
-              {
-                header: header.headerName,
-                operation: "remove",
-              },
-            ],
-          }
-          : {
-            responseHeaders: [
-              {
-                header: header.headerName,
-                operation: "remove",
-              },
-            ],
-          }),
-      },
       condition: {
-        regexFilter: excludeFilter,
+        regexFilter: regexIncludes.join("|"),
         resourceTypes: allResourceTypes,
       },
     });
   }
+
+  urlIncludes.forEach((urlFilter) => {
+    rules.push({
+      id: getRuleId(),
+      priority: 1,
+      action: modifyHeadersAction,
+      condition: {
+        urlFilter,
+        resourceTypes: allResourceTypes,
+      },
+    });
+  });
+
+  // Default catch-all: only when no include filters are defined
+  if (regexIncludes.length === 0 && urlIncludes.length === 0) {
+    rules.push({
+      id: getRuleId(),
+      priority: 1,
+      action: modifyHeadersAction,
+      condition: {
+        regexFilter: "|http*",
+        resourceTypes: allResourceTypes,
+      },
+    });
+  }
+
+  if (regexExcludes.length > 0) {
+    rules.push({
+      id: getRuleId(),
+      priority: 2,
+      action: removeHeadersAction,
+      condition: {
+        regexFilter: regexExcludes.join("|"),
+        resourceTypes: allResourceTypes,
+      },
+    });
+  }
+
+  urlExcludes.forEach((urlFilter) => {
+    rules.push({
+      id: getRuleId(),
+      priority: 2,
+      action: removeHeadersAction,
+      condition: {
+        urlFilter,
+        resourceTypes: allResourceTypes,
+      },
+    });
+  });
+
+  return rules;
+}
+
+/**
+ * Builds DNR rules for all enabled headers across all pages.
+ *
+ * This is the pure core of the background service worker's rule update path.
+ * It is tested separately so we can verify migration behaviour (e.g. old
+ * stored pages whose filters lack a `mode`) without loading
+ * webextension-polyfill.
+ */
+export function buildRulesFromPages(
+  pages: Page[],
+  getRuleId: () => number
+): browser.DeclarativeNetRequest.Rule[] {
+  const rules: browser.DeclarativeNetRequest.Rule[] = [];
+
+  pages.forEach((page) => {
+    if (!page.enabled && !page.keepEnabled) return;
+
+    page.headers.forEach((header) => {
+      if (header.headerEnabled && header.headerName) {
+        rules.push(...buildHeaderRules(header, page.filters || [], getRuleId));
+      }
+    });
+  });
 
   return rules;
 }
