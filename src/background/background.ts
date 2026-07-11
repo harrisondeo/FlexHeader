@@ -1,5 +1,5 @@
 import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, SETTINGS_KEY, SYNC_INTERVAL, LAST_SYNC_TIME_KEY, SELECTED_PAGE_KEY, SYNC_ENABLED_KEY } from "../constants";
-import { HeaderSetting, Page, PagesData, SettingsV3Meta } from "../utils/settings";
+import type { HeaderSetting, Page, PagesData, SettingsV3Meta } from "../utils/settings";
 import browser from "webextension-polyfill";
 import { getAllFromStorage, saveToStorage, getDataSizeInBytes, loadFromStorage } from "../utils/storage";
 import { log } from "../utils/log";
