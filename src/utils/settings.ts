@@ -107,7 +107,7 @@ export const isValidUrlFilter = (value: string): boolean => {
     if (value.length === 1) return false;
     if (value[0] !== "|" && value[value.length - 1] !== "|") return false;
   }
-  if (pipes === 2 && (value[0] !== "|" || value[value.length - 1] !== "|")) return false
+  if (pipes === 2 && (value[0] !== "|" || value[value.length - 1] !== "|")) return false;
   return true;
 };
 
