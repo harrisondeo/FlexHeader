@@ -96,12 +96,14 @@ export const isValidUrlFilter = (value: string): boolean => {
     return true;
   }
 
-  // Left and/or right anchors: | can only appear at start or end
+  // Left and/or right anchors: '|' can only appear at start or end, and must not be the only character
   const pipes = value.split("|").length - 1;
   if (pipes > 2) return false;
-  if (pipes === 1 && value[0] !== "|" && value[value.length - 1] !== "|") return false;
-  if (pipes === 2 && (value[0] !== "|" || value[value.length - 1] !== "|")) return false;
-
+  if (pipes === 1) {
+    if (value.length === 1) return false;
+    if (value[0] !== "|" && value[value.length - 1] !== "|") return false;
+  }
+  if (pipes === 2 && (value[0] !== "|" || value[value.length - 1] !== "|")) return false
   return true;
 };
 
