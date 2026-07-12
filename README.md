@@ -62,3 +62,7 @@ And the new version should appear within the app when you open it
 ##### Running tests
 
 `bun run test` will run the test suite via `craco test`
+
+##### Filter syntax
+
+Filters can match URLs using either Regex or URL pattern syntax. See [docs/filter-rule-syntax.md](docs/filter-rule-syntax.md) for full details.

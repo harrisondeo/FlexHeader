@@ -370,6 +370,8 @@ describe('Page Merging', () => {
 describe('URL filter validation', () => {
   it('accepts common valid URL patterns', () => {
     expect(isValidUrlFilter('||example.com/')).toBe(true);
+    expect(isValidUrlFilter('||example.com|')).toBe(true);
+    expect(isValidUrlFilter('||example.com/path|')).toBe(true);
     expect(isValidUrlFilter('|https://example.com/')).toBe(true);
     expect(isValidUrlFilter('https://example.com|')).toBe(true);
     expect(isValidUrlFilter('|https://example.com|')).toBe(true);
@@ -390,6 +392,11 @@ describe('URL filter validation', () => {
     expect(isValidUrlFilter('||*')).toBe(false);
     expect(isValidUrlFilter('||')).toBe(false);
     expect(isValidUrlFilter('||ex|ample.com')).toBe(false);
+  });
+
+  it('rejects invalid domain-anchor plus right-anchor combinations', () => {
+    expect(isValidUrlFilter('||example.com||')).toBe(false);
+    expect(isValidUrlFilter('||example.com|path')).toBe(false);
   });
 
   it('rejects misplaced pipe characters', () => {

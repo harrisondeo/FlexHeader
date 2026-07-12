@@ -91,8 +91,12 @@ export const isValidUrlFilter = (value: string): boolean => {
   // Domain anchor
   if (value.startsWith("||")) {
     if (value === "||*" || value === "||") return false;
-    // No other pipe characters allowed
-    if (value.indexOf("|", 2) !== -1) return false;
+    // Optional right anchor: the only other '|' allowed is a single trailing one
+    const afterDomain = value.slice(2);
+    const trailingPipe = afterDomain.endsWith("|");
+    const core = trailingPipe ? afterDomain.slice(0, -1) : afterDomain;
+    if (core.length === 0) return false;
+    if (core.includes("|")) return false;
     return true;
   }
 
