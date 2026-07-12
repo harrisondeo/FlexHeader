@@ -379,6 +379,7 @@ describe('URL filter validation', () => {
 
   it('rejects empty patterns', () => {
     expect(isValidUrlFilter('')).toBe(false);
+    expect(isValidUrlFilter('|')).toBe(false);
   });
 
   it('rejects non-ASCII characters', () => {
