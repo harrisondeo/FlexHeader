@@ -32,21 +32,27 @@ const PagesTabs = ({
     <div className="pages-tabs__actions">
       <div className="pages-tabs__actions__buttons">
         <input
+          id={`keepEnabled-${currentPage.id}`}
           type="checkbox"
           checked={currentPage.keepEnabled}
           onChange={(e) =>
             updatePageKeepEnabled(currentPage.id, e.target.checked)
           }
         />
-        <label>Enabled in background</label>
+        <label htmlFor={`keepEnabled-${currentPage.id}`}>
+          Enabled in background
+        </label>
         <input
+          id={`showHeaderComments-${currentPage.id}`}
           type="checkbox"
           checked={currentPage.showHeaderComments}
           onChange={(e) =>
             updatePageShowHeaderComments(currentPage.id, e.target.checked)
           }
         />
-        <label>Show header comments</label>
+        <label htmlFor={`showHeaderComments-${currentPage.id}`}>
+          Show header comments
+        </label>
       </div>
       <div className="pages-tabs__actions__buttons">
         <Button
