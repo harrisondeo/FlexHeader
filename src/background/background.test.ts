@@ -407,8 +407,6 @@ describe('buildHeaderRules fixtures', () => {
     compareWithFixture(buildHeaderRules(header, filters, getNextFixtureId), 'response-header', [
       { headerName: 'X-Test', operation: 'set', priority: 1, conditionType: 'regexFilter', conditionValue: '|http*', shouldBePresent: true },
       { headerName: 'X-Test', operation: 'remove', priority: 2, conditionType: 'regexFilter', conditionValue: 'https://exclude\\.com/.*', shouldBePresent: true },
-      { headerName: 'X-Test', operation: 'set', conditionType: 'regexFilter', conditionValue: '|http*', shouldBePresent: true },
-      { headerName: 'X-Test', operation: 'remove', priority: 2, conditionType: 'regexFilter', conditionValue: 'https://exclude\\.com/.*', shouldBePresent: true },
     ]);
   });
 
