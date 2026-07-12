@@ -11,11 +11,11 @@ Regex filters are matched against the full request URL. Common examples:
 
 | Value | Meaning |
 |-------|---------|
-| `^https://example\\.com/.*` | Any URL on `example.com` |
-| `example\\.com` | Any URL containing `example.com` |
-| `\\.(png\|jpg\|gif)$` | Image file extensions |
+| `^https://example\.com/.*` | Any URL on `example.com` |
+| `example\.com` | Any URL containing `example.com` |
+| `\.(png\|jpg\|gif)$` | Image file extensions |
 
-Backslashes must be escaped in the stored/entered value, so `\\.` matches a literal dot.
+Enter a single backslash to escape regex metacharacters, so `\.` matches a literal dot.
 
 ## URL mode
 
