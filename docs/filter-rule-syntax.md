@@ -5,9 +5,13 @@ FlexHeaders supports two filter modes for controlling which requests a header ap
 - **Regex** — uses Chrome's `declarativeNetRequest` regex syntax.
 - **URL** — uses Chrome's `declarativeNetRequest` `urlFilter` syntax.
 
+See the [Chrome declarativeNetRequest documentation](https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest) for the full filter specification.
+
 ## Regex mode
 
-Regex filters are matched against the full request URL. Common examples:
+Regex filters are matched against the full request URL. See the [regexFilter documentation](https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest#property-RuleCondition-regexFilter) for details.
+
+Common examples:
 
 | Value | Meaning |
 |-------|---------|
@@ -19,7 +23,7 @@ Enter a single backslash to escape regex metacharacters, so `\.` matches a liter
 
 ## URL mode
 
-URL filters use the DNR `urlFilter` pattern syntax. They are faster and simpler than regex for matching domains or URL prefixes.
+URL filters use the DNR `urlFilter` pattern syntax. They are faster and simpler than regex for matching domains or URL prefixes. See the [urlFilter documentation](https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest#property-RuleCondition-urlFilter) for details.
 
 ### Special characters
 
