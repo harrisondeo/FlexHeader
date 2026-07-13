@@ -24,13 +24,15 @@ const DragDropFile = ({
     try {
       await importSettings(file);
       setStatus({ type: "success", message: "Import successful" });
+      closeCallback?.();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Import failed";
       setStatus({ type: "error", message });
-      throw error;
+    } finally {
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
     }
-
-    closeCallback?.();
   };
 
   // triggers when file is selected with click
