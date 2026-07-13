@@ -1,10 +1,11 @@
 import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, SETTINGS_KEY, SYNC_INTERVAL, LAST_SYNC_TIME_KEY, SELECTED_PAGE_KEY, SYNC_ENABLED_KEY } from "../constants";
-import type { HeaderSetting, Page, PagesData, SettingsV3Meta } from "../utils/settings";
+import type { Page, PagesData, SettingsV3Meta } from "../utils/settings";
 import browser from "webextension-polyfill";
 import { getAllFromStorage, saveToStorage, getDataSizeInBytes, loadFromStorage } from "../utils/storage";
 import { log } from "../utils/log";
+import { normalizePage } from "../utils/headers";
 
-import { buildHeaderRules } from "./rules";
+import { buildRulesFromPages } from "./rules";
 
 export async function getAndApplyHeaderRules() {
   try {
@@ -12,8 +13,7 @@ export async function getAndApplyHeaderRules() {
     const metaResult = await browser.storage.local.get(SETTINGS_V3_META_KEY);
     const meta = metaResult[SETTINGS_V3_META_KEY] as SettingsV3Meta | undefined;
 
-    // Initialize headers array and get existing rules
-    let headers: browser.DeclarativeNetRequest.Rule[] = [];
+    // Get existing rules
     const oldRules = await browser.declarativeNetRequest.getDynamicRules();
     const oldRuleIds = oldRules ? oldRules.map((rule) => rule.id) : [];
 
@@ -41,14 +41,15 @@ export async function getAndApplyHeaderRules() {
           const pageKey = `${PAGE_KEY_PREFIX}${index}`;
           return result[pageKey] as Page;
         })
-        .filter(Boolean); // Filter out any undefined/null pages
+        .filter(Boolean) // Filter out any undefined/null pages
+        .map(normalizePage);
     } else {
       // Try legacy v2 format as fallback
       console.log("FlexHeader: Falling back to V2 storage format");
       const legacyResult = await browser.storage.local.get(SETTINGS_KEY);
 
       if (legacyResult[SETTINGS_KEY]) {
-        pages = (legacyResult[SETTINGS_KEY] as PagesData).pages;
+        pages = (legacyResult[SETTINGS_KEY] as PagesData).pages.map(normalizePage);
       }
     }
 
@@ -56,21 +57,7 @@ export async function getAndApplyHeaderRules() {
       "%cBACKGROUND: Pages loaded",
       "color: #1976d2; font-weight: bold;"
     );
-    pages.forEach((page: Page) => {
-      if (page.enabled || page.keepEnabled) {
-        // each setting
-        page.headers.forEach((header: HeaderSetting) => {
-          if (header.headerEnabled && header.headerName) {
-            const headerRules = buildHeaderRules(
-              header,
-              page.filters || [],
-              getUniqueRuleID
-            );
-            headers.push(...headerRules);
-          }
-        });
-      }
-    })
+    const headers = buildRulesFromPages(pages, getUniqueRuleID);
 
     browser.declarativeNetRequest.updateDynamicRules({
       removeRuleIds: oldRuleIds,
@@ -116,7 +103,7 @@ export async function syncLocalToRemoteStorage() {
     for (let i = 0; i < metadata.pageCount; i++) {
       const pageKey = `${PAGE_KEY_PREFIX}${i}`;
       if (pageKey in localData) {
-        const page = localData[pageKey] as Page;
+        const page = normalizePage(localData[pageKey] as Page);
         const sizeInBytes = getDataSizeInBytes(page);
         const STORAGE_LIMIT = 8192; // 8KB for sync storage
 

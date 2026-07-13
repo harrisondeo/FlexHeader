@@ -1,0 +1,34 @@
+[
+  {
+    "id": 101,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "X-Test",
+          "operation": "set",
+          "value": "test-value"
+        }
+      ]
+    },
+    "condition": {
+      "regexFilter": "https://a\\.com/.*|https://b\\.com/.*",
+      "resourceTypes": [
+        "main_frame",
+        "sub_frame",
+        "stylesheet",
+        "script",
+        "image",
+        "font",
+        "object",
+        "xmlhttprequest",
+        "ping",
+        "csp_report",
+        "media",
+        "websocket",
+        "other"
+      ]
+    }
+  }
+]

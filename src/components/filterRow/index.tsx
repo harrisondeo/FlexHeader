@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { FilterType, HeaderFilter } from "../../utils/settings";
+import { FilterMode, FilterType, HeaderFilter } from "../../utils/settings";
+import Button from "../button";
 import "./index.css";
 
 const FilterRow = ({
   id,
   enabled,
   type,
+  mode,
   value,
   valid,
   onRemove,
@@ -16,24 +18,42 @@ const FilterRow = ({
 }) => {
   const [cachedFilterValue, setCachedFilterValue] = useState(value);
 
+  const updateFilter = (patch: Partial<HeaderFilter>) => {
+    onUpdate({
+      id,
+      enabled,
+      type,
+      mode,
+      value,
+      ...patch,
+    });
+  };
+
   const updateType = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const type: FilterType = e.target.value as FilterType;
-    onUpdate({ id, enabled, type: type, value });
+    updateFilter({ type });
+  };
+
+  const updateMode = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const mode: FilterMode = e.target.value as FilterMode;
+    updateFilter({ mode });
   };
 
   const updateValue = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCachedFilterValue(e.target.value);
-    onUpdate({ id, enabled, type, value: e.target.value });
+    updateFilter({ value: e.target.value });
   };
 
   const updateEnabled = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
-    onUpdate({ id, enabled: e.target.checked, type, value });
+    updateFilter({ enabled: e.target.checked });
   };
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     e.target.select();
   };
+
+  const placeholder = mode === "url" ? "||example.com/" : "^https://example\\.com/.*";
 
   return (
     <div className="filter-row">
@@ -46,10 +66,16 @@ const FilterRow = ({
           <option value="exclude">Exclude</option>
         </select>
       </div>
+      <div className="filter-row__mode">
+        <select value={mode} onChange={updateMode}>
+          <option value="url">URL</option>
+          <option value="regex">Regex</option>
+        </select>
+      </div>
       <div className="filter-row__value">
         <input
           type="text"
-          placeholder="Value"
+          placeholder={placeholder}
           value={cachedFilterValue}
           onChange={updateValue}
           onFocus={handleFocus}
@@ -57,7 +83,10 @@ const FilterRow = ({
         />
       </div>
       <div className="filter-row__remove" onClick={() => onRemove(id)}>
-        <span>Remove</span>
+        <Button
+          content={<img src="/icons/basket.svg" alt="Remove Filter" />}
+          style={{ height: "28px", padding: "6px 8px" }}
+        />
       </div>
     </div>
   );

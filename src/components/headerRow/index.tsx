@@ -1,7 +1,7 @@
 import { DraggableProvidedDragHandleProps } from "react-beautiful-dnd";
 import { HeaderSetting } from "../../utils/settings";
-import "./index.css";
 import Button from "../button";
+import "./index.css";
 
 const HeaderRow = ({
   id,

@@ -1,6 +1,6 @@
 {
   "name": "flex-headers",
-  "version": "1.5.3",
+  "version": "1.6.0",
   "private": true,
   "dependencies": {
     "@craco/craco": "^7.1.0",
@@ -27,6 +27,7 @@
     "build": "bun run build:chrome && bun run build:firefox",
     "package": "node scripts/build-and-package.mjs",
     "test": "craco test",
+    "test:update-fixtures": "UPDATE_FIXTURES=true craco test --testPathPattern=background.test.ts",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
