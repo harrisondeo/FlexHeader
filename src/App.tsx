@@ -14,7 +14,7 @@ import Alert from "./components/alert";
 import { useAlert } from "./context/alertContext";
 import ExportPopup from "./components/exportPopup";
 import SettingsPage from "./components/settingsPage";
-import DragDropFile from "./components/dragDropFile";
+import ImportPopup from "./components/importPopup";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import browser from "webextension-polyfill";
 import { PagesList } from "./components/pagesList";
@@ -244,8 +244,6 @@ function App() {
           importSettings={importSettings}
           syncEnabled={syncEnabled}
           toggleSync={toggleSync}
-          darkModeEnabled={darkModeEnabled}
-          toggleDarkMode={toggleDarkMode}
         />
         <Alert />
       </div>
@@ -308,12 +306,14 @@ function App() {
           <div style={{ width: "100%" }}>
             <PagesTabs
               currentPage={currentPage}
+              darkModeEnabled={darkModeEnabled}
               addPage={_addPage}
               updatePageName={_updatePageName}
               updatePageKeepEnabled={_changePageKeepEnabled}
               updatePageShowHeaderComments={_changePageShowHeaderComments}
               removePage={removePage}
               changePageIndex={changePageIndex}
+              toggleDarkMode={toggleDarkMode}
             />
             <div key={selectedPage} className="app__body__contents">
               <div>
@@ -406,12 +406,7 @@ function App() {
                 onClick={openSettingsForImport}
               />
             ) : (
-              <DragDropFile
-                importSettings={importSettings}
-                closeCallback={() => {
-                  // Inline import in the popup: no extra UI to close.
-                }}
-              />
+              <ImportPopup importSettings={importSettings} />
             )}
             <ExportPopup pages={pages} />
           </div>

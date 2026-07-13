@@ -5,20 +5,24 @@ import Button from "../button";
 
 const PagesTabs = ({
   currentPage,
+  darkModeEnabled,
   addPage,
   removePage,
   updatePageName,
   updatePageKeepEnabled,
   updatePageShowHeaderComments,
   changePageIndex,
+  toggleDarkMode,
 }: {
   currentPage: Page;
+  darkModeEnabled: boolean;
   addPage: (page?: Page) => void;
   removePage: (id: number, autoSelectPage: boolean) => void;
   updatePageName: (name: string, id: number) => void;
   updatePageKeepEnabled: (id: number, enabled: boolean) => void;
   updatePageShowHeaderComments: (id: number, showHeaderComments: boolean) => void;
   changePageIndex: (id: number, newIndex: number) => void;
+  toggleDarkMode: () => Promise<void>;
 }) => {
   return (
     <div className="pages-tabs__actions">
@@ -61,10 +65,12 @@ const PagesTabs = ({
         />
         <PageOptionsDropdown
           page={currentPage}
+          darkModeEnabled={darkModeEnabled}
           removePage={() => removePage(currentPage.id, true)}
           updatePageName={(name: string) =>
             updatePageName(name, currentPage.id)
           }
+          toggleDarkMode={toggleDarkMode}
         />
       </div>
     </div>

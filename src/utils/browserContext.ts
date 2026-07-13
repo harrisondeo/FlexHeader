@@ -23,12 +23,8 @@ export const closeActionPopup = (): void => {
 export const isFirefox = (): boolean => {
   try {
     const runtime = browser.runtime as any;
-    if (typeof runtime.getBrowserInfo === "function") {
-      // getBrowserInfo is Firefox-only.
-      return true;
-    }
-    const manifest = runtime.getManifest?.();
-    return !!manifest?.browser_specific_settings?.gecko?.id;
+    // getBrowserInfo is Firefox-only, so its presence is a reliable signal.
+    return typeof runtime.getBrowserInfo === "function";
   } catch {
     return false;
   }

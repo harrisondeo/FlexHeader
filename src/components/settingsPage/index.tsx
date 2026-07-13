@@ -10,8 +10,6 @@ interface SettingsPageProps {
   importSettings: (file: File) => Promise<void>;
   syncEnabled: boolean;
   toggleSync: () => Promise<void>;
-  darkModeEnabled: boolean;
-  toggleDarkMode: () => Promise<void>;
 }
 
 const SettingsPage = ({
@@ -19,8 +17,6 @@ const SettingsPage = ({
   importSettings,
   syncEnabled,
   toggleSync,
-  darkModeEnabled,
-  toggleDarkMode,
 }: SettingsPageProps) => {
   return (
     <div className="settings-page">
@@ -54,28 +50,6 @@ const SettingsPage = ({
         <h2>Export Pages</h2>
         <p>Choose which pages to save to a local JSON file.</p>
         <ExportPopup pages={pages} />
-      </div>
-
-      <Divider />
-
-      <div className="settings-page__section">
-        <h2>Appearance</h2>
-        <Button
-          onClick={toggleDarkMode}
-          content={
-            <span
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              <img src="/icons/dark-mode.svg" alt="Dark Mode" />
-              {darkModeEnabled ? "Disable Dark Mode" : "Enable Dark Mode"}
-            </span>
-          }
-        />
       </div>
 
       <Divider />
