@@ -987,16 +987,18 @@ function useFlexHeaderSettings() {
           const parsed = importedPayloadSchema.parse(JSON.parse(result));
 
           // remap the ids to avoid conflicts
-          const combinedPages = [...pagesData.pages, ...parsed];
-          const newPages = combinedPages.map((page, index) => ({
-            ...normalizePage(page),
-            id: index,
-          }));
+          setPagesData((prev) => {
+            const combinedPages = [...prev.pages, ...parsed.map(normalizePage)];
+            const newPages = combinedPages.map((page, index) => ({
+              ...page,
+              id: index,
+            }));
 
-          setPagesData((prev) => ({
-            ...prev,
-            pages: newPages,
-          }));
+            return {
+              ...prev,
+              pages: newPages,
+            };
+          });
 
           alertContext.setAlert({
             alertType: "info",
