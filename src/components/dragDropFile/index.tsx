@@ -89,6 +89,7 @@ const DragDropFile = ({
           onChange={handleChange}
         />
         <label
+          htmlFor="input-file-upload"
           id="label-file-upload"
           className={isDragging ? "dragging" : ""}
         >
