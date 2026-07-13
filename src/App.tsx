@@ -106,7 +106,7 @@ function App() {
     addFilter(currentPage.id, {
       type: "include",
       mode: "url",
-      value: "||example.com/",
+      value: "|http*",
       enabled: true,
       valid: true,
     });
