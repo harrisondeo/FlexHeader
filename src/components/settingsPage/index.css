@@ -1,0 +1,48 @@
+.settings-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: left;
+}
+
+.settings-page__header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.settings-page__header h1 {
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.settings-page__header p {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.settings-page__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 0;
+}
+
+.settings-page__section h2 {
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+.settings-page__section p {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.settings-page__section code {
+  background-color: var(--background-secondary);
+  padding: 0.1rem 0.3rem;
+  border-radius: var(--input-radius);
+}

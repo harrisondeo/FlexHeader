@@ -1,24 +1,18 @@
 import { Page } from "../../utils/settings";
 import { useState, useRef, useEffect } from "react";
+import browser from "webextension-polyfill";
+import { closeActionPopup } from "../../utils/browserContext";
 import "./index.css";
 import Button from "../button";
 
 const PageOptionsDropdown = ({
   page,
-  darkModeEnabled,
-  syncEnabled,
   removePage,
   updatePageName,
-  toggleDarkMode,
-  toggleSync,
 }: {
   page: Page;
-  darkModeEnabled: boolean;
-  syncEnabled: boolean;
   removePage: () => void;
   updatePageName: (name: string, id: number) => void;
-  toggleDarkMode: () => void;
-  toggleSync: () => void;
 }) => {
   const [show, setShow] = useState(false);
   const optionButtonRef = useRef<HTMLDivElement>(null);
@@ -36,6 +30,12 @@ const PageOptionsDropdown = ({
 
   const _removePage = () => {
     removePage();
+    setShow(false);
+  };
+
+  const _openSettingsPage = async () => {
+    await browser.runtime.openOptionsPage();
+    closeActionPopup();
     setShow(false);
   };
 
@@ -81,7 +81,7 @@ const PageOptionsDropdown = ({
         </div>
         <div className="page-options-dropdown__item">
           <Button
-            onClick={toggleDarkMode}
+            onClick={_openSettingsPage}
             width="full"
             content={
               <span
@@ -92,27 +92,8 @@ const PageOptionsDropdown = ({
                   gap: "4px",
                 }}
               >
-                <img src="/icons/dark-mode.svg" alt="Dark Mode" />
-                {darkModeEnabled ? "Disable Dark Mode" : "Enable Dark Mode"}
-              </span>
-            }
-          />
-        </div>
-        <div className="page-options-dropdown__item">
-          <Button
-            onClick={toggleSync}
-            width="full"
-            content={
-              <span
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  gap: "4px",
-                }}
-              >
-                <img src="/icons/sync.svg" alt="Sync" />
-                {syncEnabled ? "Disable Sync" : "Enable Sync"}
+                <img src="/icons/expand-arrow.svg" alt="Settings" />
+                Settings
               </span>
             }
           />

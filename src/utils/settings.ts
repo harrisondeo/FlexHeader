@@ -963,35 +963,37 @@ function useFlexHeaderSettings() {
       const reader = new FileReader();
       reader.onerror = () => reject(reader.error);
       reader.onload = (e) => {
-        const result = e.target?.result;
+        try {
+          const result = e.target?.result;
 
-        if (typeof result === "string") {
-          const parsed = JSON.parse(result);
-          if (Array.isArray(parsed)) {
-            // remap the ids to avoid conflicts
-            const combinedPages = [...pagesData.pages, ...parsed];
-            const newPages = combinedPages.map((page: any, index) => {
-              return {
+          if (typeof result === "string") {
+            const parsed = JSON.parse(result);
+            if (Array.isArray(parsed)) {
+              // remap the ids to avoid conflicts
+              const combinedPages = [...pagesData.pages, ...parsed];
+              const newPages = combinedPages.map((page: any, index) => ({
                 ...page,
                 id: index,
-                headers: page.headers.map(normalizeHeader),
+                headers: page.headers?.map(normalizeHeader) || [],
                 filters: page.filters?.map(normalizeFilter) || [],
-              };
-            });
+              }));
 
-            setPagesData((prev) => ({
-              ...prev,
-              pages: newPages,
-            }));
+              setPagesData((prev) => ({
+                ...prev,
+                pages: newPages,
+              }));
 
-            alertContext.setAlert({
-              alertType: "info",
-              alertText: "Settings imported.",
-              location: "bottom",
-            });
+              alertContext.setAlert({
+                alertType: "success",
+                alertText: "Settings imported.",
+                location: "bottom",
+              });
+            }
           }
+          resolve();
+        } catch (error) {
+          reject(error);
         }
-        resolve();
       };
       reader.readAsText(file);
     });
