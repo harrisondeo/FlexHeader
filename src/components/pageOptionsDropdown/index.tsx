@@ -34,9 +34,14 @@ const PageOptionsDropdown = ({
   };
 
   const _openSettingsPage = async () => {
-    await browser.runtime.openOptionsPage();
-    closeActionPopup();
-    setShow(false);
+    try {
+      await browser.runtime.openOptionsPage();
+      closeActionPopup();
+    } catch (error) {
+      console.error("Failed to open settings page:", error);
+    } finally {
+      setShow(false);
+    }
   };
 
   useEffect(() => {
