@@ -39,7 +39,7 @@ URL filters use the DNR `urlFilter` pattern syntax. They are faster and simpler 
 | Value | Matches |
 |-------|---------|
 | `\|\|example.com/` | `https://example.com/...`, `https://www.example.com/...` |
-| `\|\|example.com\|` | Exactly `https://example.com/` (domain + right anchor) |
+| `\|\|example.com\|` | The `example.com` domain with no path, including subdomains/ports, e.g. `https://example.com` (domain + right anchor) |
 | `\|https://example.com/` | URLs starting with `https://example.com/` |
 | `https://example.com\|` | URLs ending with `https://example.com/` |
 | `*example.com*` | Any URL containing `example.com` |
