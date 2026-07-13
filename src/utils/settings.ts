@@ -1008,11 +1008,22 @@ function useFlexHeaderSettings() {
 
           resolve();
         } catch (error) {
-          reject(
-            error instanceof Error
-              ? error
-              : new Error("Failed to import settings.")
-          );
+          const err =
+            error instanceof z.ZodError
+              ? new Error(
+                  "Invalid settings file. Please export settings from FlexHeaders and try again."
+                )
+              : error instanceof Error
+                ? error
+                : new Error("Failed to import settings.");
+
+          alertContext.setAlert({
+            alertType: "error",
+            alertText: err.message,
+            location: "bottom",
+          });
+
+          reject(err);
         }
       };
       reader.readAsText(file);
