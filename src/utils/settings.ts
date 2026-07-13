@@ -12,47 +12,55 @@ export enum SettingsErrorType {
   SaveError = "SaveError",
 }
 
-export type Page = {
-  id: number;
-  name: string;
-  enabled: boolean;
-  keepEnabled: boolean;
-  showHeaderComments: boolean;
-  filters: HeaderFilter[];
-  headers: HeaderSetting[];
-};
+export const filterTypeSchema = z.enum(["include", "exclude"]);
+export const filterModeSchema = z.enum(["regex", "url"]);
 
-export type FilterType = "include" | "exclude";
-export type FilterMode = "regex" | "url";
+export const headerSettingSchema = z.object({
+  id: z.string(),
+  headerName: z.string(),
+  headerValue: z.string(),
+  headerComment: z.string().default(""),
+  headerEnabled: z.boolean(),
+  headerType: z.enum(["request", "response"]).default("request"),
+});
 
-export type HeaderFilter = {
-  id: string;
-  enabled: boolean;
-  valid: boolean;
-  type: FilterType;
-  mode: FilterMode;
-  value: string;
-};
+export const headerFilterSchema = z.object({
+  id: z.string(),
+  enabled: z.boolean(),
+  valid: z.boolean(),
+  type: filterTypeSchema,
+  mode: filterModeSchema.default("regex"),
+  value: z.string(),
+});
 
-export type HeaderSetting = {
-  id: string;
-  headerName: string;
-  headerValue: string;
-  headerComment: string;
-  headerEnabled: boolean;
-  headerType: "request" | "response";
-};
+export const pageSchema = z.object({
+  id: z.number(),
+  name: z.string().min(1),
+  enabled: z.boolean(),
+  keepEnabled: z.boolean(),
+  showHeaderComments: z.boolean().default(true),
+  filters: z.array(headerFilterSchema).default([]),
+  headers: z.array(headerSettingSchema).default([]),
+});
 
-export type PagesData = {
-  pages: Page[];
-  selectedPage: number;
-};
+export const pagesDataSchema = z.object({
+  pages: z.array(pageSchema),
+  selectedPage: z.number(),
+});
 
-export type SettingsV3Meta = {
-  version: 3;
-  selectedPage: number;
-  pageCount: number;
-};
+export const settingsV3MetaSchema = z.object({
+  version: z.literal(3),
+  selectedPage: z.number(),
+  pageCount: z.number(),
+});
+
+export type FilterType = z.infer<typeof filterTypeSchema>;
+export type FilterMode = z.infer<typeof filterModeSchema>;
+export type HeaderSetting = z.infer<typeof headerSettingSchema>;
+export type HeaderFilter = z.infer<typeof headerFilterSchema>;
+export type Page = z.infer<typeof pageSchema>;
+export type PagesData = z.infer<typeof pagesDataSchema>;
+export type SettingsV3Meta = z.infer<typeof settingsV3MetaSchema>;
 
 /**
  * The debouncing logic has been moved into the component to allow access to the timeout ref
@@ -956,36 +964,8 @@ function useFlexHeaderSettings() {
     }
   };
 
-  const importedHeaderSchema = z.object({
-    id: z.string(),
-    headerName: z.string(),
-    headerValue: z.string(),
-    headerComment: z.string().default(""),
-    headerEnabled: z.boolean(),
-    headerType: z.enum(["request", "response"]).default("request"),
-  });
-
-  const importedFilterSchema = z.object({
-    id: z.string(),
-    enabled: z.boolean(),
-    valid: z.boolean(),
-    type: z.enum(["include", "exclude"]),
-    mode: z.enum(["regex", "url"]).default("regex"),
-    value: z.string(),
-  });
-
-  const importedPageSchema = z.object({
-    id: z.number(),
-    name: z.string().min(1),
-    enabled: z.boolean(),
-    keepEnabled: z.boolean(),
-    showHeaderComments: z.boolean().default(true),
-    filters: z.array(importedFilterSchema).default([]),
-    headers: z.array(importedHeaderSchema).default([]),
-  });
-
   const importedPayloadSchema = z
-    .array(importedPageSchema)
+    .array(pageSchema)
     .min(1, "Imported file does not contain any pages.");
 
   /**
