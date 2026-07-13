@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
+import { z } from "zod";
 import { SELECTED_PAGE_KEY, SETTINGS_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, SYNC_ENABLED_KEY, MIGRATION_COMPLETE_KEY } from "../constants";
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage";
 import { log } from "./log";
-import { normalizeFilter, normalizeHeader, normalizePage } from "./headers";
+import { normalizePage } from "./headers";
 
 export enum SettingsErrorType {
   None = "None",
@@ -955,43 +956,82 @@ function useFlexHeaderSettings() {
     }
   };
 
+  const importedHeaderSchema = z.object({
+    id: z.string(),
+    headerName: z.string(),
+    headerValue: z.string(),
+    headerComment: z.string().default(""),
+    headerEnabled: z.boolean(),
+    headerType: z.enum(["request", "response"]).default("request"),
+  });
+
+  const importedFilterSchema = z.object({
+    id: z.string(),
+    enabled: z.boolean(),
+    valid: z.boolean(),
+    type: z.enum(["include", "exclude"]),
+    mode: z.enum(["regex", "url"]).default("regex"),
+    value: z.string(),
+  });
+
+  const importedPageSchema = z.object({
+    id: z.number(),
+    name: z.string().min(1),
+    enabled: z.boolean(),
+    keepEnabled: z.boolean(),
+    showHeaderComments: z.boolean().default(true),
+    filters: z.array(importedFilterSchema).default([]),
+    headers: z.array(importedHeaderSchema).default([]),
+  });
+
+  const importedPayloadSchema = z
+    .array(importedPageSchema)
+    .min(1, "Imported file does not contain any pages.");
+
   /**
    * Import json file
    */
   const importSettings = (file: File): Promise<void> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onerror = () => reject(reader.error);
+      reader.onerror = () => reject(new Error("Failed to read file."));
       reader.onload = (e) => {
-        const result = e.target?.result;
+        try {
+          const result = e.target?.result;
 
-        if (typeof result === "string") {
-          const parsed = JSON.parse(result);
-          if (Array.isArray(parsed)) {
-            // remap the ids to avoid conflicts
-            const combinedPages = [...pagesData.pages, ...parsed];
-            const newPages = combinedPages.map((page: any, index) => {
-              return {
-                ...page,
-                id: index,
-                headers: page.headers.map(normalizeHeader),
-                filters: page.filters?.map(normalizeFilter) || [],
-              };
-            });
-
-            setPagesData((prev) => ({
-              ...prev,
-              pages: newPages,
-            }));
-
-            alertContext.setAlert({
-              alertType: "info",
-              alertText: "Settings imported.",
-              location: "bottom",
-            });
+          if (typeof result !== "string") {
+            reject(new Error("Unable to read file contents."));
+            return;
           }
+
+          const parsed = importedPayloadSchema.parse(JSON.parse(result));
+
+          // remap the ids to avoid conflicts
+          const combinedPages = [...pagesData.pages, ...parsed];
+          const newPages = combinedPages.map((page, index) => ({
+            ...normalizePage(page),
+            id: index,
+          }));
+
+          setPagesData((prev) => ({
+            ...prev,
+            pages: newPages,
+          }));
+
+          alertContext.setAlert({
+            alertType: "info",
+            alertText: "Settings imported.",
+            location: "bottom",
+          });
+
+          resolve();
+        } catch (error) {
+          reject(
+            error instanceof Error
+              ? error
+              : new Error("Failed to import settings.")
+          );
         }
-        resolve();
       };
       reader.readAsText(file);
     });
