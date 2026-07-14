@@ -89,6 +89,7 @@ const DragDropFile = ({
           className="drag-drop-file__input"
           accept=".json"
           onChange={handleChange}
+          data-testid="import-file-input"
         />
         <label
           htmlFor={inputFileId}

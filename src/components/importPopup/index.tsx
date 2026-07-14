@@ -46,9 +46,10 @@ const ImportPopup = ({ importSettings }: ImportPopupProps) => {
           </div>
         }
         onClick={_handleClick}
+        testId="import-button"
       />
       <div className={`import-popup__backdrop ${show ? "show" : ""}`}></div>
-      <div className={`import-popup ${show ? "show" : ""}`} ref={popupRef}>
+      <div className={`import-popup ${show ? "show" : ""}`} ref={popupRef} data-testid="import-popup">
         <div className="import-popup__title">
           <h2>Import Pages</h2>
         </div>
