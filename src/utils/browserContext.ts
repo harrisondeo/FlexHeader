@@ -6,7 +6,10 @@ export const isRunningInActionPopup = (): boolean => {
     // chrome-extension://<id>/index.html?flexheader-popup=1. This lets
     // Playwright open the popup UI in a normal tab while keeping production
     // behaviour unchanged.
-    if (typeof window !== "undefined" && window.location?.search?.includes("flexheader-popup=1")) {
+    if (
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location?.search ?? "").get("flexheader-popup") === "1"
+    ) {
       return true;
     }
 
