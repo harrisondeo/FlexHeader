@@ -13,7 +13,7 @@ export const TEST_SERVER_URL =
 export async function fetchRequestHeaders(
   context: BrowserContext,
   path: string
-): Promise<Record<string, string>> {
+): Promise<Record<string, string | string[]>> {
   const page = await context.newPage();
   try {
     const response = await page.goto(`${TEST_SERVER_URL}${path}`, {
