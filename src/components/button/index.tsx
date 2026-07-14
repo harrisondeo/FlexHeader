@@ -7,7 +7,7 @@ export interface ButtonProps {
   size?: "small" | "medium" | "large";
   width?: "full" | "auto";
   color?: "primary" | "warning" | "danger" | "info" | "secondary";
-  onClick?: () => void;
+  onClick?: () => void | Promise<void>;
   style?: React.CSSProperties;
   title?: string;
   ariaLabel?: string;
