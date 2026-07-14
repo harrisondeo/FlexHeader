@@ -53,8 +53,7 @@ const PagesTabs = ({
     const page = pages.find((x) => x.id === id);
 
     if (page) {
-      page.showHeaderComments = showHeaderComments;
-      updatePage(page);
+      updatePage({ ...page, showHeaderComments });
     }
   };
 
