@@ -42,8 +42,7 @@ const PagesTabs = ({
     const page = pages.find((x) => x.id === id);
 
     if (page) {
-      page.keepEnabled = enabled;
-      updatePage(page);
+      updatePage({ ...page, keepEnabled: enabled });
     }
   };
 
