@@ -80,8 +80,8 @@ const AppFooter = ({
   return (
     <div className="app-footer">
       <div className="app-footer__action_block">
-        <Button content="Add Header" onClick={handleAddHeader} />
-        <Button content="Add Filter Rule" onClick={handleAddFilter} />
+        <Button content="Add Header" onClick={handleAddHeader} testId="add-header" />
+        <Button content="Add Filter Rule" onClick={handleAddFilter} testId="add-filter" />
       </div>
       <div className="app-footer__action_block">
         {shouldOpenSettingsForImport ? (

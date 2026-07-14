@@ -106,7 +106,7 @@ const DragDropFile = ({
               Drag & drop your exported .json file here
             </p>
             <p className="drag-drop-file__subtitle">or</p>
-            <button type="button" className="upload-button" onClick={onButtonClick}>
+            <button type="button" className="upload-button" onClick={onButtonClick} data-testid="drag-drop-file-upload-button">
               Click to upload a file
             </button>
           </div>
@@ -120,6 +120,7 @@ const DragDropFile = ({
               ? "drag-drop-file__status--success"
               : "drag-drop-file__status--error"
           }`}
+          data-testid="drag-drop-file-status"
         >
           <img
             src={`/icons/${status.type === "success" ? "check" : "error"}.svg`}

@@ -49,7 +49,7 @@ const AppHeader = ({ onAddPage }: AppHeaderProps) => {
           </div>
         </div>
       </div>
-      <Button content="New Page" onClick={onAddPage} />
+      <Button content="New Page" onClick={onAddPage} testId="new-page" />
       {/* <span onClick={clear}>Clear Settings</span> */}
     </div>
   );
