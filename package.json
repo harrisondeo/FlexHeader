@@ -29,6 +29,7 @@
     "package": "node scripts/build-and-package.mjs",
     "test": "craco test",
     "test:update-fixtures": "UPDATE_FIXTURES=true craco test --testPathPattern=background.test.ts",
+    "typecheck": "tsc --noEmit",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
