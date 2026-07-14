@@ -45,7 +45,7 @@ export class PageSection {
    * counts should start from a new page created via this helper.
    */
   async addEmptyPage(): Promise<void> {
-    await this.newPageButton.click();
+    await this.addNewPage();
   }
 
   async duplicateCurrentPage(): Promise<void> {
