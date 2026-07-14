@@ -114,7 +114,7 @@ function App() {
                   )}
                   <HeadersList
                     currentPageId={currentPage.id}
-                    headers={currentPage?.headers}
+                    headers={currentPage.headers}
                     showComments={currentPage.showHeaderComments}
                     removeHeader={removeHeader}
                     updateHeader={updateHeader}
