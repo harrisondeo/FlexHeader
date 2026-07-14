@@ -21,9 +21,9 @@ import { PagesList } from "./components/pagesList";
 import ReviewPrompt from "./components/reviewPrompt";
 import useReviewPrompt from "./utils/useReviewPrompt";
 import {
-  closeActionPopup,
   isFirefox,
   isRunningInActionPopup,
+  openOptionsPageAndClosePopup,
 } from "./utils/browserContext";
 
 const reorder = (
@@ -224,15 +224,6 @@ function App() {
     hidePrompt();
   };
 
-  const openSettingsForImport = async () => {
-    try {
-      await browser.runtime.openOptionsPage();
-      closeActionPopup();
-    } catch (error) {
-      console.error("Failed to open settings page for import:", error);
-    }
-  };
-
   const isPopup = isRunningInActionPopup();
   const shouldOpenSettingsForImport = isPopup && isFirefox();
 
@@ -403,7 +394,7 @@ function App() {
                     <span>Import</span>
                   </div>
                 }
-                onClick={openSettingsForImport}
+                onClick={openOptionsPageAndClosePopup}
               />
             ) : (
               <ImportPopup importSettings={importSettings} />

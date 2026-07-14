@@ -1,7 +1,6 @@
 import { Page } from "../../utils/settings";
 import { useState, useRef, useEffect } from "react";
-import browser from "webextension-polyfill";
-import { closeActionPopup } from "../../utils/browserContext";
+import { openOptionsPageAndClosePopup } from "../../utils/browserContext";
 import "./index.css";
 import Button from "../button";
 
@@ -38,14 +37,8 @@ const PageOptionsDropdown = ({
   };
 
   const _openSettingsPage = async () => {
-    try {
-      await browser.runtime.openOptionsPage();
-      closeActionPopup();
-    } catch (error) {
-      console.error("Failed to open settings page:", error);
-    } finally {
-      setShow(false);
-    }
+    await openOptionsPageAndClosePopup();
+    setShow(false);
   };
 
   useEffect(() => {

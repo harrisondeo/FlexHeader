@@ -29,3 +29,12 @@ export const isFirefox = (): boolean => {
     return false;
   }
 };
+
+export const openOptionsPageAndClosePopup = async (): Promise<void> => {
+  try {
+    await browser.runtime.openOptionsPage();
+    closeActionPopup();
+  } catch (error) {
+    console.error("Failed to open settings page:", error);
+  }
+};
