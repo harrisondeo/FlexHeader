@@ -85,6 +85,7 @@ Notes:
 - Chrome extension loading requires a headed browser, so the tests run with `headless: false`.
 - Tests navigate to `chrome-extension://<id>/index.html?flexheader-popup=1` to force the popup layout in a tab.
 - Selectors use `data-testid` attributes; update the attributes in the React components if the UI changes.
+- A local HTTP server (`e2e/server.mjs`) is started automatically for tests that assert headers are really modified by `declarativeNetRequest`.
 
 ##### Filter syntax
 

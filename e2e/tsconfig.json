@@ -5,7 +5,7 @@
     "module": "esnext",
     "moduleResolution": "node",
     "baseUrl": ".",
-    "types": ["@playwright/test"],
+    "types": ["@playwright/test", "node", "chrome"],
     "noEmit": true,
     "jsx": "react-jsx"
   },

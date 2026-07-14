@@ -20,6 +20,11 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
+  webServer: {
+    command: "node e2e/server.mjs",
+    url: "http://localhost:9876/health",
+    reuseExistingServer: !process.env.CI,
+  },
   projects: [
     {
       name: "chromium",

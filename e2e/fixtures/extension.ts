@@ -54,3 +54,25 @@ export async function clearExtensionStorage(page: Page): Promise<void> {
     await chrome.storage.sync.clear();
   });
 }
+
+/**
+ * Waits until the extension's dynamic DNR rules contain a rule that touches
+ * the given header name. This is more reliable than a fixed sleep because the
+ * background service worker updates rules asynchronously after storage changes.
+ */
+export async function waitForHeaderRule(page: Page, headerName: string): Promise<void> {
+  await page.waitForFunction(
+    async (name: string) => {
+      const rules = await chrome.declarativeNetRequest.getDynamicRules();
+      return rules.some((rule) => {
+        const action = rule.action as
+          | { requestHeaders?: Array<{ header: string }>; responseHeaders?: Array<{ header: string }> }
+          | undefined;
+        const headers = action?.requestHeaders ?? action?.responseHeaders ?? [];
+        return headers.some((h) => h.header === name);
+      });
+    },
+    headerName,
+    { timeout: 5000 }
+  );
+}
