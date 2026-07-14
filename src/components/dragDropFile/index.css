@@ -70,6 +70,35 @@
   bottom: 0px;
   left: 0px;
 }
+.drag-drop-file__input {
+  display: none;
+}
+
+.drag-drop-file__label {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  justify-content: center;
+  border-width: 2px;
+  border-radius: 1rem;
+  border-style: dashed;
+  border-color: var(--background-quaternary);
+  background-color: var(--background-senary);
+  padding: 0 0.75rem;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.drag-drop-file__label.dragging {
+  border-color: var(--primary);
+  background-color: var(--background-secondary);
+}
+
+.drag-drop-file__label > div {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
 
 .drag-drop-file--large {
   height: 240px;
