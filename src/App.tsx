@@ -283,7 +283,7 @@ function App() {
               </div>
             </div>
           </div>
-          <Button content="New Page" onClick={() => _addPage()} />
+          <Button content="New Page" onClick={() => _addPage()} testId="new-page" />
           {/* <span onClick={clear}>Clear Settings</span> */}
         </div>
         <Divider />
@@ -377,8 +377,8 @@ function App() {
         <Divider />
         <div className="app__footer">
           <div className="app__footer__action_block">
-            <Button content="Add Header" onClick={_addHeader} />
-            <Button content="Add Filter Rule" onClick={_addFilter} />
+            <Button content="Add Header" onClick={_addHeader} testId="add-header" />
+            <Button content="Add Filter Rule" onClick={_addFilter} testId="add-filter" />
           </div>
           <div className="app__footer__action_block">
             {shouldOpenSettingsForImport ? (

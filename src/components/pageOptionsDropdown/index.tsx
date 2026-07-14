@@ -63,6 +63,7 @@ const PageOptionsDropdown = ({
           onClick={() => setShow(!show)}
           size="medium"
           content={<img src="/icons/three-dots.svg" alt="More Settings" />}
+          testId="page-options-menu"
         />
       </div>
       <div
@@ -79,6 +80,7 @@ const PageOptionsDropdown = ({
             type="text"
             value={page.name}
             onChange={(e) => updatePageName(e.target.value, page.id)}
+            data-testid="page-name-input"
           />
         </div>
         <div className="page-options-dropdown__item">
@@ -120,7 +122,7 @@ const PageOptionsDropdown = ({
           />
         </div>
         <div className="page-options-dropdown__item">
-          <Button onClick={_removePage} width="full" content="Delete Page" />
+          <Button onClick={_removePage} width="full" content="Delete Page" testId="page-delete" />
         </div>
       </div>
     </>

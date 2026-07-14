@@ -56,18 +56,18 @@ const FilterRow = ({
   const placeholder = mode === "url" ? "||example.com/" : "^https://example\\.com/.*";
 
   return (
-    <div className="filter-row">
+    <div className="filter-row" data-testid="filter-row">
       <div className="filter-row__checkbox">
-        <input type="checkbox" checked={enabled} onChange={updateEnabled} />
+        <input type="checkbox" checked={enabled} onChange={updateEnabled} data-testid="filter-enabled" />
       </div>
       <div className="filter-row__type">
-        <select value={type} onChange={updateType}>
+        <select value={type} onChange={updateType} data-testid="filter-type">
           <option value="include">Include</option>
           <option value="exclude">Exclude</option>
         </select>
       </div>
       <div className="filter-row__mode">
-        <select value={mode} onChange={updateMode}>
+        <select value={mode} onChange={updateMode} data-testid="filter-mode">
           <option value="url">URL</option>
           <option value="regex">Regex</option>
         </select>
@@ -80,12 +80,14 @@ const FilterRow = ({
           onChange={updateValue}
           onFocus={handleFocus}
           style={{ backgroundColor: valid ? "white" : "red" }}
+          data-testid="filter-value"
         />
       </div>
       <div className="filter-row__remove" onClick={() => onRemove(id)}>
         <Button
           content={<img src="/icons/basket.svg" alt="Remove Filter" />}
           style={{ height: "28px", padding: "6px 8px" }}
+          testId="filter-remove"
         />
       </div>
     </div>

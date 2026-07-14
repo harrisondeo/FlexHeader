@@ -11,6 +11,7 @@ export interface ButtonProps {
   style?: React.CSSProperties;
   title?: string;
   ariaLabel?: string;
+  testId?: string;
 }
 
 const Button = ({
@@ -22,6 +23,7 @@ const Button = ({
   style,
   title,
   ariaLabel,
+  testId,
 }: ButtonProps) => {
   return (
     <div
@@ -30,6 +32,7 @@ const Button = ({
       onClick={onClick}
       title={title}
       aria-label={ariaLabel || title}
+      data-testid={testId}
     >
       {content}
     </div>
