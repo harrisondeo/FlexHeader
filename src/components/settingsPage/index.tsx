@@ -2,22 +2,16 @@ import Button from "../button";
 import Divider from "../divider";
 import DragDropFile from "../dragDropFile";
 import ExportPopup from "../exportPopup";
-import { Page } from "../../utils/settings";
+import useFlexHeaderSettings from "../../utils/settings";
 import "./index.css";
 
-interface SettingsPageProps {
-  pages: Page[];
-  importSettings: (file: File) => Promise<void>;
-  syncEnabled: boolean;
-  toggleSync: () => Promise<void>;
-}
-
-const SettingsPage = ({
-  pages,
-  importSettings,
-  syncEnabled,
-  toggleSync,
-}: SettingsPageProps) => {
+const SettingsPage = () => {
+  const {
+    pages,
+    importSettings,
+    syncEnabled,
+    toggleSync,
+  } = useFlexHeaderSettings();
   return (
     <div className="settings-page">
       <div className="settings-page__header">

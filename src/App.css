@@ -3,7 +3,7 @@
   background-color: var(--background-primary);
   color: var(--text-color);
 
-  width: 760px;
+  width: 768px;
   height: 600px;
   max-height: 600px;
   overflow: hidden;
@@ -46,31 +46,6 @@
   padding-bottom: 44px;
 }
 
-.app__header {
-  text-align: left;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-}
-
-.app__header__logo {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.app__header__logo a,
-.app__header__logo a:visited,
-.app__header__logo a:hover,
-.app__header__logo a:active {
-  color: var(--text-color);
-}
-
-.app__header p {
-  font-size: 2rem;
-}
-
 .app__body {
   display: flex;
   height: 100%;
@@ -92,33 +67,6 @@
   font-weight: 500;
 }
 
-.app__footer {
-  position: absolute;
-  bottom: 8px;
-  display: flex;
-  flex-direction: row;
-  gap: 0.5rem;
-  height: 38px;
-  width: 100%;
-  justify-content: space-between;
-}
-
-.app__body__filters {
-  min-width: 0;
-}
-
-.app__body__filters__container {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  min-width: 0;
-}
-
-.app__footer__action_block {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
 
 .app__body__contents {
   overflow-y: auto;

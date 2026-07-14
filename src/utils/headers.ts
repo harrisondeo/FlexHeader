@@ -27,6 +27,7 @@ export const normalizeFilter = (filter: any): HeaderFilter => ({
 export const normalizePage = (page: any): Page => ({
   ...page,
   showHeaderComments: page.showHeaderComments ?? true,
+  filtersExpanded: page.filtersExpanded ?? true,
   headers: page.headers?.map(normalizeHeader) || [],
   filters: page.filters?.map(normalizeFilter) || [],
 });

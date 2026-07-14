@@ -2,34 +2,70 @@ import { Page } from "../../utils/settings";
 import "./index.css";
 import PageOptionsDropdown from "../pageOptionsDropdown";
 import Button from "../button";
+import { AlertContextType } from "../../context/alertContext";
 
 const PagesTabs = ({
   currentPage,
+  pages,
   darkModeEnabled,
   addPage,
   removePage,
-  updatePageName,
-  updatePageKeepEnabled,
-  updatePageShowHeaderComments,
+  updatePage,
   changePageIndex,
   toggleDarkMode,
+  setAlert,
 }: {
   currentPage: Page;
+  pages: Page[];
   darkModeEnabled: boolean;
   addPage: (page?: Page) => void;
   removePage: (id: number, autoSelectPage: boolean) => void;
-  updatePageName: (name: string, id: number) => void;
-  updatePageKeepEnabled: (id: number, enabled: boolean) => void;
-  updatePageShowHeaderComments: (id: number, showHeaderComments: boolean) => void;
+  updatePage: (page: Page) => void;
   changePageIndex: (id: number, newIndex: number) => void;
   toggleDarkMode: () => Promise<void>;
+  setAlert: AlertContextType["setAlert"];
 }) => {
+  const handleUpdatePageName = (name: string, id: number) => {
+    const page = pages.find((x) => x.id === id);
+
+    if (page) {
+      page.name = name;
+      updatePage(page);
+      setAlert({
+        alertText: `Page name updated to ${name}`,
+        alertType: "success",
+        location: "bottom",
+      });
+    }
+  };
+
+  const handleUpdatePageKeepEnabled = (id: number, enabled: boolean) => {
+    const page = pages.find((x) => x.id === id);
+
+    if (page) {
+      page.keepEnabled = enabled;
+      updatePage(page);
+    }
+  };
+
+  const handleUpdatePageShowHeaderComments = (
+    id: number,
+    showHeaderComments: boolean
+  ) => {
+    const page = pages.find((x) => x.id === id);
+
+    if (page) {
+      page.showHeaderComments = showHeaderComments;
+      updatePage(page);
+    }
+  };
+
   return (
     <div className="pages-tabs__actions">
       <div className="pages-tabs__actions__buttons">
         <Button
           onClick={() =>
-            updatePageKeepEnabled(currentPage.id, !currentPage.keepEnabled)
+            handleUpdatePageKeepEnabled(currentPage.id, !currentPage.keepEnabled)
           }
           color={currentPage.keepEnabled ? "primary" : "secondary"}
           title={
@@ -50,7 +86,7 @@ const PagesTabs = ({
         />
         <Button
           onClick={() =>
-            updatePageShowHeaderComments(
+            handleUpdatePageShowHeaderComments(
               currentPage.id,
               !currentPage.showHeaderComments
             )
@@ -91,7 +127,7 @@ const PagesTabs = ({
           darkModeEnabled={darkModeEnabled}
           removePage={() => removePage(currentPage.id, true)}
           updatePageName={(name: string) =>
-            updatePageName(name, currentPage.id)
+            handleUpdatePageName(name, currentPage.id)
           }
           toggleDarkMode={toggleDarkMode}
         />

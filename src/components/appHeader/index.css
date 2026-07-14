@@ -1,0 +1,24 @@
+.app-header {
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.app-header__logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.app-header__logo a,
+.app-header__logo a:visited,
+.app-header__logo a:hover,
+.app-header__logo a:active {
+  color: var(--text-color);
+}
+
+.app-header p {
+  font-size: 2rem;
+}
