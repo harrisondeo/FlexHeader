@@ -27,28 +27,51 @@ const PagesTabs = ({
   return (
     <div className="pages-tabs__actions">
       <div className="pages-tabs__actions__buttons">
-        <input
-          id={`keepEnabled-${currentPage.id}`}
-          type="checkbox"
-          checked={currentPage.keepEnabled}
-          onChange={(e) =>
-            updatePageKeepEnabled(currentPage.id, e.target.checked)
+        <Button
+          onClick={() =>
+            updatePageKeepEnabled(currentPage.id, !currentPage.keepEnabled)
+          }
+          color={currentPage.keepEnabled ? "primary" : "secondary"}
+          title={
+            currentPage.keepEnabled
+              ? "Keep this page enabled even when another page is selected"
+              : "This page is disabled when another page is selected"
+          }
+          content={
+            <span className="pages-tabs__toggle-button-content">
+              <img
+                className="pages-tabs__toggle-icon"
+                src={`/icons/power-${currentPage.keepEnabled ? "active" : "inactive"}.svg`}
+                alt=""
+              />
+              Background
+            </span>
           }
         />
-        <label htmlFor={`keepEnabled-${currentPage.id}`}>
-          Enabled in background
-        </label>
-        <input
-          id={`showHeaderComments-${currentPage.id}`}
-          type="checkbox"
-          checked={currentPage.showHeaderComments}
-          onChange={(e) =>
-            updatePageShowHeaderComments(currentPage.id, e.target.checked)
+        <Button
+          onClick={() =>
+            updatePageShowHeaderComments(
+              currentPage.id,
+              !currentPage.showHeaderComments
+            )
+          }
+          color={currentPage.showHeaderComments ? "primary" : "secondary"}
+          title={
+            currentPage.showHeaderComments
+              ? "Show the header comments"
+              : "Hide the header comments"
+          }
+          content={
+            <span className="pages-tabs__toggle-button-content">
+              <img
+                className="pages-tabs__toggle-icon"
+                src={`/icons/comment-${currentPage.showHeaderComments ? "active" : "inactive"}.svg`}
+                alt=""
+              />
+              Comments
+            </span>
           }
         />
-        <label htmlFor={`showHeaderComments-${currentPage.id}`}>
-          Show header comments
-        </label>
       </div>
       <div className="pages-tabs__actions__buttons">
         <Button

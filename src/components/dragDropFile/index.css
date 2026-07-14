@@ -11,36 +11,6 @@
   position: relative;
 }
 
-#input-file-upload {
-  display: none;
-}
-
-#label-file-upload {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  justify-content: center;
-  border-width: 2px;
-  border-radius: 1rem;
-  border-style: dashed;
-  border-color: var(--background-quaternary);
-  background-color: var(--background-senary);
-  padding: 0 0.75rem;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-
-#label-file-upload.dragging {
-  border-color: var(--primary);
-  background-color: var(--background-secondary);
-}
-
-#label-file-upload > div {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
 .drag-drop-file__title,
 .drag-drop-file__subtitle {
   display: none;
@@ -60,16 +30,6 @@
   text-decoration-line: underline;
 }
 
-#drag-file-element {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border-radius: 1rem;
-  top: 0px;
-  right: 0px;
-  bottom: 0px;
-  left: 0px;
-}
 .drag-drop-file__input {
   display: none;
 }

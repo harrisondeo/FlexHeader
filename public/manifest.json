@@ -25,6 +25,8 @@
   },
   "action": {
     "default_popup": "index.html",
-    "default_icon": "logo128.png"
+    "default_icon": {
+      "128": "logo128.png"
+    }
   }
 }

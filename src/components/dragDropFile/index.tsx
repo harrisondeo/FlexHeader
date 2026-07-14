@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import "./index.css";
 
 interface DragDropFileProps {
@@ -12,6 +12,7 @@ const DragDropFile = ({
   closeCallback,
   variant = "compact",
 }: DragDropFileProps) => {
+  const inputFileId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [status, setStatus] = useState<
