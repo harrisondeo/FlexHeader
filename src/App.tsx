@@ -123,7 +123,7 @@ function App() {
                 </div>
                 <FilterSection
                   page={currentPage}
-                  filters={currentPage?.filters}
+                  filters={currentPage.filters}
                   onUpdate={updateFilter}
                   onRemove={removeFilter}
                   updatePage={updatePage}
