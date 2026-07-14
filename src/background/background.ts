@@ -1,5 +1,5 @@
-import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, SETTINGS_KEY, SYNC_INTERVAL, LAST_SYNC_TIME_KEY, SELECTED_PAGE_KEY, SYNC_ENABLED_KEY } from "../constants";
-import type { Page, PagesData, SettingsV3Meta } from "../utils/settings";
+import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, SYNC_INTERVAL, LAST_SYNC_TIME_KEY, SELECTED_PAGE_KEY, SYNC_ENABLED_KEY } from "../constants";
+import type { Page, SettingsV3Meta } from "../utils/settings";
 import browser from "webextension-polyfill";
 import { getAllFromStorage, saveToStorage, getDataSizeInBytes, loadFromStorage } from "../utils/storage";
 import { log } from "../utils/log";
@@ -28,7 +28,9 @@ export async function getAndApplyHeaderRules() {
 
     let pages: Page[] = [];
 
-    if (meta) {
+    if (!meta) {
+      console.log("FlexHeader: No settings metadata found, applying empty rules");
+    } else {
       // Fetch all pages using the distributed storage format
       const pagePromises = [];
       for (let i = 0; i < meta.pageCount; i++) {
@@ -43,14 +45,6 @@ export async function getAndApplyHeaderRules() {
         })
         .filter(Boolean) // Filter out any undefined/null pages
         .map(normalizePage);
-    } else {
-      // Try legacy v2 format as fallback
-      console.log("FlexHeader: Falling back to V2 storage format");
-      const legacyResult = await browser.storage.local.get(SETTINGS_KEY);
-
-      if (legacyResult[SETTINGS_KEY]) {
-        pages = (legacyResult[SETTINGS_KEY] as PagesData).pages.map(normalizePage);
-      }
     }
 
     console.log(
@@ -140,7 +134,7 @@ export async function syncLocalToRemoteStorage() {
 
 browser.storage.local.onChanged.addListener(function (changes) {
   // Trigger update if any settings change (v3 meta or any page_* key)
-  if (SETTINGS_V3_META_KEY in changes || SETTINGS_KEY in changes ||
+  if (SETTINGS_V3_META_KEY in changes ||
     Object.keys(changes).some(key => key.startsWith(PAGE_KEY_PREFIX))) {
     getAndApplyHeaderRules();
   }

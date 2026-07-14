@@ -1,4 +1,3 @@
-export const SETTINGS_KEY = "settings_v2"; // Legacy key for migration
 export const SETTINGS_V3_META_KEY = "settings_v3_meta";
 export const PAGE_KEY_PREFIX = "page_";
 export const SELECTED_PAGE_KEY = "selectedPage";
