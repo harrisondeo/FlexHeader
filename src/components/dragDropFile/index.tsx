@@ -55,7 +55,7 @@ const DragDropFile = ({
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(true);
+    setIsDragging((prev) => (prev ? prev : true));
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
