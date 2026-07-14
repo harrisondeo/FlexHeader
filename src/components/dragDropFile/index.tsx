@@ -84,14 +84,14 @@ const DragDropFile = ({
         <input
           ref={inputRef}
           type="file"
-          id="input-file-upload"
+          id={inputFileId}
+          className="drag-drop-file__input"
           accept=".json"
           onChange={handleChange}
         />
         <label
-          htmlFor="input-file-upload"
-          id="label-file-upload"
-          className={isDragging ? "dragging" : ""}
+          htmlFor={inputFileId}
+          className={`drag-drop-file__label${isDragging ? " dragging" : ""}`}
         >
           <div>
             <img
