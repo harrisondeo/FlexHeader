@@ -1,0 +1,16 @@
+.app-footer {
+  position: absolute;
+  bottom: 8px;
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  height: 38px;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.app-footer__action_block {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}

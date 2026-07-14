@@ -9,15 +9,10 @@ interface SettingsPageProps {
   pages: Page[];
   importSettings: (file: File) => Promise<void>;
   syncEnabled: boolean;
-  toggleSync: () => Promise<void>;
+  toggleSync: () => void;
 }
 
-const SettingsPage = ({
-  pages,
-  importSettings,
-  syncEnabled,
-  toggleSync,
-}: SettingsPageProps) => {
+const SettingsPage = ({ pages, importSettings, syncEnabled, toggleSync }: SettingsPageProps) => {
   return (
     <div className="settings-page">
       <div className="settings-page__header">

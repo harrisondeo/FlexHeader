@@ -1,0 +1,34 @@
+.filter-section {
+  min-width: 0;
+}
+
+.filter-section__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0 0 0.5rem 0;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.filter-section__toggle:hover {
+  opacity: 0.8;
+}
+
+.filter-section__toggle__icon {
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.filter-section__container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}

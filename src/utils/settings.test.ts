@@ -8,6 +8,9 @@
  * - Preserving enabled state for existing pages
  */
 
+import { Page, HeaderSetting, HeaderFilter, isValidUrlFilter } from './settings';
+import { normalizePage } from './headers';
+
 jest.mock('webextension-polyfill', () => ({
   storage: {
     local: { get: jest.fn(), set: jest.fn(), clear: jest.fn(), remove: jest.fn() },
@@ -17,9 +20,6 @@ jest.mock('webextension-polyfill', () => ({
     isRegexSupported: jest.fn().mockResolvedValue({ isSupported: true }),
   },
 }));
-
-import { Page, HeaderSetting, HeaderFilter, isValidUrlFilter } from './settings';
-import { normalizePage } from './headers';
 
 // Extract the merge logic functions for testing
 // These are pure functions that can be tested independently
@@ -114,6 +114,7 @@ const createPage = (
   enabled,
   keepEnabled: false,
   showHeaderComments: true,
+  filtersExpanded: true,
   headers,
   filters,
 });

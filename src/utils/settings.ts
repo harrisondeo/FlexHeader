@@ -39,6 +39,7 @@ export const pageSchema = z.object({
   enabled: z.boolean(),
   keepEnabled: z.boolean(),
   showHeaderComments: z.boolean().default(true),
+  filtersExpanded: z.boolean().default(true),
   filters: z.array(headerFilterSchema).default([]),
   headers: z.array(headerSettingSchema).default([]),
 });
@@ -73,6 +74,7 @@ const defaultPage: Page = {
   enabled: true,
   keepEnabled: false,
   showHeaderComments: true,
+  filtersExpanded: true,
   filters: [],
   headers: [
     {
