@@ -26,7 +26,8 @@ const Button = ({
   testId,
 }: ButtonProps) => {
   return (
-    <div
+    <button
+      type="button"
       className={`button ${size} width-${width} color-${color}`}
       style={style}
       onClick={onClick}
@@ -35,7 +36,7 @@ const Button = ({
       data-testid={testId}
     >
       {content}
-    </div>
+    </button>
   );
 };
 
