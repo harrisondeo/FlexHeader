@@ -57,7 +57,7 @@ const HeaderRow = ({
   };
 
   return (
-    <div className={`header-row${showComment ? "" : " header-row--comments-hidden"}`} data-headerId={id}>
+    <div className={`header-row${showComment ? "" : " header-row--comments-hidden"}`} data-headerId={id} data-testid="header-row">
       <div className="header-row__checkbox">
         {dragHandleProps && (
           <img
@@ -71,6 +71,7 @@ const HeaderRow = ({
           type="checkbox"
           checked={headerEnabled}
           onChange={updateEnabled}
+          data-testid="header-enabled"
         />
       </div>
       <div className="header-row__name">
@@ -80,6 +81,7 @@ const HeaderRow = ({
           value={headerName}
           onChange={updateName}
           onFocus={handleFocus}
+          data-testid="header-name"
         />
       </div>
       <div className="header-row__value">
@@ -89,6 +91,7 @@ const HeaderRow = ({
           value={headerValue}
           onChange={updateValue}
           onFocus={handleFocus}
+          data-testid="header-value"
         />
       </div>
       {showComment && (
@@ -109,6 +112,7 @@ const HeaderRow = ({
           className="compact-select"
           title={headerType === "request" ? "Request Header" : "Response Header"}
           aria-label="Header type"
+          data-testid="header-type"
         >
           <option value="request">Req</option>
           <option value="response">Res</option>
@@ -118,6 +122,7 @@ const HeaderRow = ({
         <Button
           content={<img src="/icons/basket.svg" alt="Remove Header" />}
           style={{ height: "28px", padding: "6px 8px" }}
+          testId="header-remove"
         />
       </div>
     </div>

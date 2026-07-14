@@ -20,7 +20,7 @@ export const PagesList = ({
   }, [currentPage]);
 
   return (
-    <div className="pages-list">
+    <div className="pages-list" data-testid="pages-list">
       {pages.map((page) => (
         <PageListItem
           key={page.id}
@@ -51,6 +51,8 @@ const PageListItem = ({
         active ? "active" : ""
       }`}
       onClick={() => onClick(page.id)}
+      data-testid="page-list-item"
+      data-page-id={page.id}
     >
       <h3>{page.name}</h3>
       <div
