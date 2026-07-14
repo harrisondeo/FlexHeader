@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
 import { z } from "zod";
-import { SELECTED_PAGE_KEY, SETTINGS_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, SYNC_ENABLED_KEY, MIGRATION_COMPLETE_KEY } from "../constants";
+import { SELECTED_PAGE_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, SYNC_ENABLED_KEY, MIGRATION_COMPLETE_KEY } from "../constants";
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage";
 import { log } from "./log";
 import { normalizePage } from "./headers";
@@ -391,29 +391,6 @@ function useFlexHeaderSettings() {
           }
         }
 
-        setHasInitialized(true);
-        return;
-      }
-
-      // Check for legacy v2 format and migrate
-      const v2Data = await loadFromStorage<PagesData | null>(SETTINGS_KEY, null, ['sync']);
-
-      if (v2Data) {
-        log("SETTINGS: Migrating from v2 to v3 storage format", "info");
-
-        // Migrate to new format - only save to local storage, background will handle sync
-        const normalizedV2Data = {
-          ...v2Data,
-          pages: v2Data.pages.map(normalizePage),
-        };
-
-        await saveToStorages(normalizedV2Data);
-
-        // Remove old storage format
-        await browser.storage.sync.remove(SETTINGS_KEY);
-
-        // Set the migrated data
-        setPagesData(normalizedV2Data);
         setHasInitialized(true);
         return;
       }
@@ -852,12 +829,6 @@ function useFlexHeaderSettings() {
           .filter(Boolean)
           .map(normalizePage);
         return pages.length > 0 ? pages : null;
-      }
-
-      // Check for legacy v2 format
-      const v2Data = await browser.storage.sync.get(SETTINGS_KEY);
-      if (v2Data[SETTINGS_KEY]) {
-        return (v2Data[SETTINGS_KEY] as PagesData).pages.map(normalizePage);
       }
 
       return null;
