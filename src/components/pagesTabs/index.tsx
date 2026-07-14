@@ -29,8 +29,7 @@ const PagesTabs = ({
     const page = pages.find((x) => x.id === id);
 
     if (page) {
-      page.name = name;
-      updatePage(page);
+      updatePage({ ...page, name });
       setAlert({
         alertText: `Page name updated to ${name}`,
         alertType: "success",
