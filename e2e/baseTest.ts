@@ -17,16 +17,20 @@ export const test = base.extend<{
   extensionId: string;
   popupPage: PopupPage;
 }>({
-  context: async ({}, use) => {
-    const context = await chromium.launchPersistentContext("", {
+  context: async ({}, use, testInfo) => {
+    const userDataDir = testInfo.outputPath("user-data-dir");
+    const context = await chromium.launchPersistentContext(userDataDir, {
       headless: false,
       args: [
         `--disable-extensions-except=${pathToExtension}`,
         `--load-extension=${pathToExtension}`,
       ],
     });
-    await use(context);
-    await context.close();
+    try {
+      await use(context);
+    } finally {
+      await context.close();
+    }
   },
   extensionId: async ({ context }, use) => {
     const id = await getExtensionId(context);
