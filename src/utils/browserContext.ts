@@ -2,6 +2,17 @@ import browser from "webextension-polyfill";
 
 export const isRunningInActionPopup = (): boolean => {
   try {
+    // Allow tests to force popup mode by navigating to
+    // chrome-extension://<id>/index.html?flexheader-popup=1. This lets
+    // Playwright open the popup UI in a normal tab while keeping production
+    // behaviour unchanged.
+    if (
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location?.search ?? "").get("flexheader-popup") === "1"
+    ) {
+      return true;
+    }
+
     // getViews is not exposed by webextension-polyfill's types in all MV3
     // builds, but it is supported by Firefox and Chromium for popup windows.
     const views = (browser as any).extension?.getViews?.({ type: "popup" });

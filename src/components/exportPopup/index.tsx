@@ -65,9 +65,10 @@ const ExportPopup = ({ pages }: { pages: Page[] }) => {
           </div>
         }
         onClick={_handleClick}
+        testId="export-button"
       />
       <div className={`export-popup__backdrop ${show ? "show" : ""}`}></div>
-      <div className={`export-popup ${show ? "show" : ""}`} ref={popupRef}>
+      <div className={`export-popup ${show ? "show" : ""}`} ref={popupRef} data-testid="export-popup">
         <div className="export-popup__title">
           <h2>Export Pages</h2>
         </div>
@@ -75,13 +76,14 @@ const ExportPopup = ({ pages }: { pages: Page[] }) => {
         <div className="export-popup__body">
           {pages.map((page) => {
             return (
-              <div className="export-popup__page">
+                <div className="export-popup__page" data-testid="export-popup__page">
                 <div className="export-popup__page__name">
                   <input
                     type="checkbox"
                     alt="Select Page for Export"
                     onClick={() => _handlePageSelect(page)}
                     checked={selectedPages.includes(page)}
+                    data-testid="export-popup__page-checkbox"
                   />
                   {page.name}
                 </div>
@@ -113,6 +115,7 @@ const ExportPopup = ({ pages }: { pages: Page[] }) => {
               </div>
             }
             onClick={_handleExport}
+            testId="export-popup__export-button"
           />
         </div>
       </div>

@@ -29,6 +29,10 @@
     "package": "node scripts/build-and-package.mjs",
     "test": "craco test",
     "test:update-fixtures": "UPDATE_FIXTURES=true craco test --testPathPattern=background.test.ts",
+    "test:e2e:install": "playwright install chromium",
+    "pretest:e2e": "bun run build:chrome",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "typecheck": "tsc --noEmit",
     "eject": "react-scripts eject"
   },
@@ -51,6 +55,7 @@
     ]
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/chrome": "^0.0.243",
     "@types/react-beautiful-dnd": "^13.1.8",
     "@types/webextension-polyfill": "^0.12.5"

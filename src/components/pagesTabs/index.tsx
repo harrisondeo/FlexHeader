@@ -110,14 +110,17 @@ const PagesTabs = ({
         <Button
           onClick={() => changePageIndex(currentPage.id, currentPage.id - 1)}
           content={"<"}
+          testId="page-move-left"
         />
         <Button
           onClick={() => changePageIndex(currentPage.id, currentPage.id + 1)}
           content={">"}
+          testId="page-move-right"
         />
         <Button
           onClick={() => addPage(currentPage)}
           content={<img src="/icons/duplicate.svg" alt="Duplicate" />}
+          testId="duplicate-page"
         />
         <PageOptionsDropdown
           page={currentPage}
