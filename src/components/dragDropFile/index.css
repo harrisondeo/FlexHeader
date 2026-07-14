@@ -77,11 +77,11 @@
   min-width: auto;
 }
 
-.drag-drop-file--large #label-file-upload {
+.drag-drop-file--large .drag-drop-file__label {
   padding: 1.5rem;
 }
 
-.drag-drop-file--large #label-file-upload > div {
+.drag-drop-file--large .drag-drop-file__label > div {
   flex-direction: column;
   gap: 0.5rem;
 }
