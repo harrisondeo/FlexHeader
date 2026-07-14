@@ -1,6 +1,6 @@
 {
   "name": "FlexHeaders - Modify & Edit HTTP Headers",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "manifest_version": 3,
   "description": "Modify, Add & Remove headers for any request, filter by URL, share headers with others, and import/export settings.",
   "icons": {
@@ -16,6 +16,7 @@
   "background": {
     "service_worker": "static/js/background.js"
   },
+  "options_page": "index.html",
   "browser_specific_settings": {
     "gecko": {
       "id": "flexheaders@harrisondeo.me.uk",
@@ -24,6 +25,8 @@
   },
   "action": {
     "default_popup": "index.html",
-    "default_icon": "logo128.png"
+    "default_icon": {
+      "128": "logo128.png"
+    }
   }
 }

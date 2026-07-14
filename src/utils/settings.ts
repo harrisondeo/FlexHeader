@@ -1001,7 +1001,7 @@ function useFlexHeaderSettings() {
           });
 
           alertContext.setAlert({
-            alertType: "info",
+            alertType: "success",
             alertText: "Settings imported.",
             location: "bottom",
           });

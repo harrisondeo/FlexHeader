@@ -16,8 +16,20 @@
   align-items: center;
 }
 
-.pages-tabs__actions__buttons label {
-  white-space: nowrap;
+.pages-tabs__toggle-button-content {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pages-tabs__toggle-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.button.color-primary .pages-tabs__toggle-icon,
+.button.color-secondary .pages-tabs__toggle-icon {
+  filter: brightness(0) saturate(100%) invert(100%);
 }
 .page-tabs__show-all {
   width: 2rem;

@@ -54,12 +54,12 @@ const ImportPopup = ({ importSettings }: ImportPopupProps) => {
         </div>
         <Divider thin />
         <div className="import-popup__body">
-          {/* Add "on drag or select" component for dropping a file to import */}
           <DragDropFile
             importSettings={importSettings}
             closeCallback={() => {
               setShow(false);
             }}
+            variant="large"
           />
         </div>
         <Divider thin />

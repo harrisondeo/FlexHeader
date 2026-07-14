@@ -64,6 +64,7 @@
 }
 
 .header-row__type {
+  height: 28px;
   min-width: 45px;
   max-width: 60px;
   flex-shrink: 0;

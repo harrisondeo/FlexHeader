@@ -1,16 +1,40 @@
-.drag-drop-file {
-  height: 100%;
+.drag-drop-file__wrapper {
   width: 100%;
+}
+
+.drag-drop-file {
+  height: 38px;
+  width: auto;
+  min-width: 110px;
   max-width: 100%;
   text-align: center;
   position: relative;
 }
 
-#input-file-upload {
+.drag-drop-file__title,
+.drag-drop-file__subtitle {
   display: none;
 }
 
-#label-file-upload {
+.upload-button {
+  cursor: pointer;
+  padding: 0.25rem;
+  font-size: 1rem;
+  border: none;
+  background-color: transparent;
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.upload-button:hover {
+  text-decoration-line: underline;
+}
+
+.drag-drop-file__input {
+  display: none;
+}
+
+.drag-drop-file__label {
   height: 100%;
   display: flex;
   align-items: center;
@@ -21,28 +45,69 @@
   border-style: dashed;
   border-color: var(--background-quaternary);
   background-color: var(--background-senary);
+  padding: 0 0.75rem;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
-.upload-button {
-  cursor: pointer;
-  padding: 0.25rem;
+.drag-drop-file__label.dragging {
+  border-color: var(--primary);
+  background-color: var(--background-secondary);
+}
+
+.drag-drop-file__label > div {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.drag-drop-file--large {
+  height: 240px;
+  width: 100%;
+  min-width: auto;
+}
+
+.drag-drop-file--large .drag-drop-file__label {
+  padding: 1.5rem;
+}
+
+.drag-drop-file--large .drag-drop-file__label > div {
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.drag-drop-file--large .drag-drop-file__title,
+.drag-drop-file--large .drag-drop-file__subtitle {
+  display: block;
+}
+
+.drag-drop-file--large .drag-drop-file__title {
   font-size: 1rem;
-  border: none;
-  background-color: transparent;
+  font-weight: 600;
+}
+
+.drag-drop-file--large .drag-drop-file__subtitle {
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+.drag-drop-file--large .upload-button {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.drag-drop-file__status {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
   color: var(--text-color);
 }
 
-.upload-button:hover {
-  text-decoration-line: underline;
+.drag-drop-file__status--success img {
+  filter: brightness(0) saturate(100%) invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%);
 }
 
-#drag-file-element {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border-radius: 1rem;
-  top: 0px;
-  right: 0px;
-  bottom: 0px;
-  left: 0px;
+.drag-drop-file__status--error img {
+  filter: brightness(0) saturate(100%) invert(32%) sepia(90%) saturate(7450%) hue-rotate(348deg) brightness(93%) contrast(101%);
 }

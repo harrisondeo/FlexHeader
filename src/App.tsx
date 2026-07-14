@@ -13,12 +13,18 @@ import PagesTabs from "./components/pagesTabs";
 import Alert from "./components/alert";
 import { useAlert } from "./context/alertContext";
 import ExportPopup from "./components/exportPopup";
+import SettingsPage from "./components/settingsPage";
 import ImportPopup from "./components/importPopup";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import browser from "webextension-polyfill";
 import { PagesList } from "./components/pagesList";
 import ReviewPrompt from "./components/reviewPrompt";
 import useReviewPrompt from "./utils/useReviewPrompt";
+import {
+  isFirefox,
+  isRunningInActionPopup,
+  openOptionsPageAndClosePopup,
+} from "./utils/browserContext";
 
 const reorder = (
   headers: HeaderSetting[],
@@ -218,6 +224,23 @@ function App() {
     hidePrompt();
   };
 
+  const isPopup = isRunningInActionPopup();
+  const shouldOpenSettingsForImport = isPopup && isFirefox();
+
+  if (!isPopup) {
+    return (
+      <div className={`app app--full-page ${darkModeEnabled ? "darkmode" : ""}`}>
+        <SettingsPage
+          pages={pages}
+          importSettings={importSettings}
+          syncEnabled={syncEnabled}
+          toggleSync={toggleSync}
+        />
+        <Alert />
+      </div>
+    );
+  }
+
   return (
     <div className={`app ${darkModeEnabled ? "darkmode" : ""}`}>
       <div className="app__container">
@@ -275,7 +298,6 @@ function App() {
             <PagesTabs
               currentPage={currentPage}
               darkModeEnabled={darkModeEnabled}
-              syncEnabled={syncEnabled}
               addPage={_addPage}
               updatePageName={_updatePageName}
               updatePageKeepEnabled={_changePageKeepEnabled}
@@ -283,7 +305,6 @@ function App() {
               removePage={removePage}
               changePageIndex={changePageIndex}
               toggleDarkMode={toggleDarkMode}
-              toggleSync={toggleSync}
             />
             <div key={selectedPage} className="app__body__contents">
               <div>
@@ -360,7 +381,24 @@ function App() {
             <Button content="Add Filter Rule" onClick={_addFilter} />
           </div>
           <div className="app__footer__action_block">
-            <ImportPopup importSettings={importSettings} />
+            {shouldOpenSettingsForImport ? (
+              <Button
+                content={
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <img
+                      src="/icons/import.svg"
+                      alt="Import Settings"
+                      width={16}
+                      height={16}
+                    />
+                    <span>Import</span>
+                  </div>
+                }
+                onClick={openOptionsPageAndClosePopup}
+              />
+            ) : (
+              <ImportPopup importSettings={importSettings} />
+            )}
             <ExportPopup pages={pages} />
           </div>
         </div>

@@ -7,8 +7,10 @@ export interface ButtonProps {
   size?: "small" | "medium" | "large";
   width?: "full" | "auto";
   color?: "primary" | "warning" | "danger" | "info" | "secondary";
-  onClick?: () => void;
+  onClick?: () => void | Promise<void>;
   style?: React.CSSProperties;
+  title?: string;
+  ariaLabel?: string;
 }
 
 const Button = ({
@@ -18,12 +20,16 @@ const Button = ({
   color = "primary",
   onClick,
   style,
+  title,
+  ariaLabel,
 }: ButtonProps) => {
   return (
     <div
       className={`button ${size} width-${width} color-${color}`}
       style={style}
       onClick={onClick}
+      title={title}
+      aria-label={ariaLabel || title}
     >
       {content}
     </div>
