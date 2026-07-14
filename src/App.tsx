@@ -36,6 +36,8 @@ function App() {
     importSettings,
     changePageIndex,
     toggleDarkMode,
+    syncEnabled,
+    toggleSync,
   } = useFlexHeaderSettings();
   const alertContext = useAlert();
   const { shouldShow: shouldShowReviewPrompt, loading: reviewPromptLoading, hidePrompt } = useReviewPrompt();
@@ -75,7 +77,12 @@ function App() {
   if (!isRunningInActionPopup()) {
     return (
       <div className={`app app--full-page ${darkModeEnabled ? "darkmode" : ""}`}>
-        <SettingsPage />
+        <SettingsPage
+          pages={pages}
+          importSettings={importSettings}
+          syncEnabled={syncEnabled}
+          toggleSync={toggleSync}
+        />
         <Alert />
       </div>
     );
