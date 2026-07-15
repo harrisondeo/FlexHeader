@@ -8,60 +8,80 @@ Thank you for checking out the FlexHeaders Github! This is a personal project th
 ##### Setup
 To get setup you will first need the correct version of Node, I personally use [NVM](https://github.com/nvm-sh/nvm) but as long as you have the correct version of node as defined in the `.nvmrc` file you should be good to go
 
-Package management is handled with [Bun](https://bun.sh/), so make sure you have it installed. Once installed, run `bun install` to install all the project dependencies.
+Package management is handled with [Bun](https://bun.sh/), so make sure you have it installed. Once installed, run `bun install` to install all the project dependencies and prepare WXT's generated types.
+
+##### Available scripts
+
+The project uses [WXT](https://wxt.dev/) to build, develop and package the browser extension. The main commands are:
+
+| Command | What it does |
+| --- | --- |
+| `bun run start` | Start the WXT development server for Chrome. Builds incrementally and opens the default browser with the extension loaded when possible. |
+| `bun run start:firefox` | Start the WXT development server for Firefox (MV3). |
+| `bun run build:chrome` | Build a production version of the Chrome extension into `dist/chrome`. |
+| `bun run build:firefox` | Build a production version of the Firefox extension into `dist/firefox`. |
+| `bun run build` | Build both the Chrome and Firefox extensions. |
+| `bun run package` | Build both browsers and create ZIPs for distribution in `builds/`. |
+| `bun run release` | Verify the version has been bumped, then build and package both extensions. |
+| `bun run test` | Run the unit/integration test suite with Vitest. |
+| `bun run test:update-fixtures` | Update the background script test fixtures from the current declarativeNetRequest rules. |
+| `bun run test:e2e:install` | Install the Playwright Chromium browser (one-time setup). |
+| `bun run test:e2e` | Build the Chrome extension and run the Playwright end-to-end tests. |
+| `bun run test:e2e:ui` | Run the Playwright tests in the interactive UI mode. |
+| `bun run typecheck` | Run TypeScript type checking without emitting files. |
 
 ##### How to run locally
 
-`bun run start` will run the extension in development mode. This is useful for iterating on UI/logic outside of the extension popup, but note that some Chrome-extension-specific APIs (e.g. `chrome.declarativeNetRequest`) will not function outside of a loaded extension, so you'll still want to load the `/build` output into Chrome for full end-to-end testing (see below).
+`bun run start` runs the extension in development mode for Chrome. WXT watches source files, rebuilds incrementally and reloads the extension in the browser when possible. This is useful for iterating on UI/logic, but note that some Chrome-extension-specific APIs (e.g. `chrome.declarativeNetRequest`) will only function when the extension is loaded in a real browser.
+
+For Firefox use `bun run start:firefox`.
 
 ##### How to build
 
 `bun run build` will build the extension for both browsers:
 
-- Chrome output in `/build`
-- Firefox output in `/build-firefox`
+- Chrome output in `dist/chrome`
+- Firefox output in `dist/firefox`
 
 ##### How to add the extension to Chrome for testing
 
-1. Run `bun run build` to generate fresh `/build` and `/build-firefox` directories
-2. Open Chrome and navigate to `chrome://extensions`
-3. Enable **Developer mode** using the toggle in the top-right corner
-4. Click **Load unpacked**
-5. Select the `/build` directory produced in step 1
-6. The FlexHeaders extension should now appear in your extensions list and toolbar - pin it for easy access
+1. Run `bun run build:chrome` to generate a fresh `dist/chrome` directory.
+2. Open Chrome and navigate to `chrome://extensions`.
+3. Enable **Developer mode** using the toggle in the top-right corner.
+4. Click **Load unpacked**.
+5. Select the `dist/chrome` directory produced in step 1.
+6. The FlexHeaders extension should now appear in your extensions list and toolbar - pin it for easy access.
 
 ##### How to add the extension to Firefox for testing
 
-1. Run `bun run build` to generate a Firefox-compatible `/build-firefox` directory
-2. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
-3. Click **Load Temporary Add-on...**
-4. In the file picker, open the `/build-firefox` directory and select `manifest.json`
-5. The FlexHeaders extension should now appear under **Temporary Extensions** and in the toolbar
+1. Run `bun run build:firefox` to generate a Firefox-compatible `dist/firefox` directory.
+2. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`.
+3. Click **Load Temporary Add-on...**.
+4. In the file picker, open the `dist/firefox` directory and select `manifest.json`.
+5. The FlexHeaders extension should now appear under **Temporary Extensions** and in the toolbar.
 
 Note: Temporary add-ons are removed when Firefox is closed, so repeat the steps above after restarting Firefox.
-Note: The Firefox build rewrites `background.service_worker` to `background.scripts` to avoid the Firefox error about service workers being disabled.
 
-##### How to package for Firefox Add-ons store
+##### How to package for distribution
 
-Use `bun run package:firefox` to create `build-firefox.zip` in the project root.
+Use `bun run package` to build and ZIP both browser variants into the `builds/` directory:
 
-This ZIP is packaged correctly for upload because `manifest.json` is at the ZIP root.
-If you manually zip the `build-firefox` directory itself, the manifest ends up nested (`build-firefox/manifest.json`) and upload will fail.
+- `builds/v{version}.zip` — Chrome build
+- `builds/v{version}-firefox.zip` — Firefox build
+
+These ZIPs have `manifest.json` at the root, so they are ready for upload to the Chrome Web Store and Firefox Add-ons store. Zipping the `dist/` directory directly would nest `manifest.json` and the upload would fail.
 
 ##### How to make/see changes
 
-- Make your local changes and make sure to save all the files
-- Run `bun run build` to generate the new version of the app
-- Go back to `chrome://extensions` and click the refresh icon on the FlexHeaders card to reload the updated build
-- If you want to be 100% sure your changes are present in the browser you can update the application version in:
-  - `package.json`
-  - `public/manifest.json`
-
-And the new version should appear within the app when you open it
+- Make your local changes and save all files.
+- If the dev server is running, WXT will rebuild and reload the extension automatically.
+- If you are using a manual build, run `bun run build` to generate the new version of the extension.
+- Go back to `chrome://extensions` and click the refresh icon on the FlexHeaders card to reload the updated build.
+- If you want to be 100% sure your changes are present in the browser you can update the application version in `package.json` and the new version should appear within the app when you open it.
 
 ##### Running tests
 
-`bun run test` will run the unit/integration test suite via `vitest`.
+`bun run test` will run the unit/integration test suite via Vitest.
 
 ##### Running end-to-end tests
 
