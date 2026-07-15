@@ -7,24 +7,30 @@
  * - Existing users with multiple extension instances (sync scenarios)
  */
 
-// Create mock storage data - must be declared before jest.mock
+import { vi } from 'vitest';
+
+// Create mock storage data - must be declared before vi.mock
 let mockLocalData: Record<string, any> = {};
 let mockSyncData: Record<string, any> = {};
 
-// Mock the entire webextension-polyfill module BEFORE any imports
-jest.mock('webextension-polyfill', () => ({
-  storage: {
-    local: {
-      get: jest.fn(),
-      set: jest.fn(),
-      clear: jest.fn(),
-      remove: jest.fn(),
-    },
-    sync: {
-      get: jest.fn(),
-      set: jest.fn(),
-      clear: jest.fn(),
-      remove: jest.fn(),
+// Mock the entire webextension-polyfill module BEFORE any imports.
+// Vitest factory mocks need a `default` export when the consumer imports
+// the module via a default import.
+vi.mock('webextension-polyfill', () => ({
+  default: {
+    storage: {
+      local: {
+        get: vi.fn(),
+        set: vi.fn(),
+        clear: vi.fn(),
+        remove: vi.fn(),
+      },
+      sync: {
+        get: vi.fn(),
+        set: vi.fn(),
+        clear: vi.fn(),
+        remove: vi.fn(),
+      },
     },
   },
 }));
@@ -43,37 +49,37 @@ beforeEach(() => {
   mockSyncData = {};
   
   // Mock local storage
-  (browser.storage.local.get as jest.Mock).mockImplementation((key: string | null) => {
+  (browser.storage.local.get as ReturnType<typeof vi.fn>).mockImplementation((key: string | null) => {
     if (key === null) {
       return Promise.resolve({ ...mockLocalData });
     }
     return Promise.resolve({ [key]: mockLocalData[key] });
   });
   
-  (browser.storage.local.set as jest.Mock).mockImplementation((data: Record<string, any>) => {
+  (browser.storage.local.set as ReturnType<typeof vi.fn>).mockImplementation((data: Record<string, any>) => {
     Object.assign(mockLocalData, data);
     return Promise.resolve();
   });
   
-  (browser.storage.local.clear as jest.Mock).mockImplementation(() => {
+  (browser.storage.local.clear as ReturnType<typeof vi.fn>).mockImplementation(() => {
     mockLocalData = {};
     return Promise.resolve();
   });
   
   // Mock sync storage
-  (browser.storage.sync.get as jest.Mock).mockImplementation((key: string | null) => {
+  (browser.storage.sync.get as ReturnType<typeof vi.fn>).mockImplementation((key: string | null) => {
     if (key === null) {
       return Promise.resolve({ ...mockSyncData });
     }
     return Promise.resolve({ [key]: mockSyncData[key] });
   });
   
-  (browser.storage.sync.set as jest.Mock).mockImplementation((data: Record<string, any>) => {
+  (browser.storage.sync.set as ReturnType<typeof vi.fn>).mockImplementation((data: Record<string, any>) => {
     Object.assign(mockSyncData, data);
     return Promise.resolve();
   });
   
-  (browser.storage.sync.clear as jest.Mock).mockImplementation(() => {
+  (browser.storage.sync.clear as ReturnType<typeof vi.fn>).mockImplementation(() => {
     mockSyncData = {};
     return Promise.resolve();
   });
