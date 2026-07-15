@@ -25,27 +25,92 @@ input[type="text"],
 input[type="number"] {
   width: 100%;
   height: 2rem;
-  border: 1px solid #e8e8e8;
-  border-radius: 0;
-  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--background-primary);
+  color: var(--text-color);
   border-radius: var(--input-radius);
+  padding: 0.35rem 0.5rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
 }
 
 input[type="checkbox"] {
   width: 1rem;
   height: 1rem;
-  border: 1px solid #e8e8e8;
-  border-radius: 0;
-  padding: 0.5rem;
-  background-color: #008c26;
+  accent-color: var(--primary);
+  border-radius: var(--radius-sm);
 }
 
 select {
   width: 100%;
   height: 2rem;
-  border: 1px solid #e8e8e8;
-  border-radius: 0;
-  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--background-primary);
+  color: var(--text-color);
+  border-radius: var(--input-radius);
+  padding: 0.3rem 0.5rem;
+}
+
+/* Modern pill-style toggle switch, used in place of raw checkboxes */
+.toggle-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 38px;
+  height: 22px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.toggle-switch input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+
+.toggle-switch__slider {
+  position: absolute;
+  inset: 0;
+  background-color: var(--background-quaternary);
+  border-radius: var(--radius-pill);
+  transition: background-color 0.2s ease;
+  pointer-events: none;
+}
+
+.toggle-switch__slider::before {
+  content: "";
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  top: 3px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.toggle-switch input:checked ~ .toggle-switch__slider {
+  background-color: var(--primary);
+}
+
+.toggle-switch input:checked ~ .toggle-switch__slider::before {
+  transform: translateX(16px);
+}
+
+.toggle-switch input:focus-visible ~ .toggle-switch__slider {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 code {
@@ -56,15 +121,19 @@ code {
 :root {
   --primary: #00a82e;
   --primary-dark: #008c26;
+  --primary-soft: rgba(0, 168, 46, 0.12);
 
   --text-color: #2c2c2c;
+  --text-muted: rgba(44, 44, 44, 0.65);
 
   --background-primary: #ffffff;
-  --background-secondary: #e8e8e8;
-  --background-tertiary: #d1d1d1;
-  --background-quaternary: #bcbcbc;
+  --background-secondary: #f4f4f4;
+  --background-tertiary: #e4e4e4;
+  --background-quaternary: #cfcfcf;
   --background-quinary: #a6a6a6;
   --background-senary: #919191;
+
+  --border-color: #e2e2e2;
 
   --color-success: #00a82e;
   --color-warning: #ff9800;
@@ -75,21 +144,32 @@ code {
   --tab-color-active: #b3b3b3;
   --tab-color-hover: #9e9e9e;
 
-  --input-radius: 0.25rem;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+  --input-radius: var(--radius-sm);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.06);
 }
 
 :root .darkmode {
   --primary: #00a82e;
   --primary-dark: #008c26;
+  --primary-soft: rgba(0, 168, 46, 0.18);
 
   --text-color: #e8eaed;
+  --text-muted: rgba(232, 234, 237, 0.6);
 
-  --background-primary: #191919;
-  --background-secondary: #282828;
-  --background-tertiary: #3b3b3b;
-  --background-quaternary: #4f4f4f;
-  --background-quinary: #626262;
-  --background-senary: #767676;
+  --background-primary: #101215;
+  --background-secondary: #1a1d22;
+  --background-tertiary: #262a30;
+  --background-quaternary: #33383f;
+  --background-quinary: #4a505a;
+  --background-senary: #626870;
+
+  --border-color: #2a2e35;
 
   --color-success: #00a82e;
   --color-warning: #ff9800;
@@ -99,4 +179,7 @@ code {
 
   --tab-color-active: #e5e5e5;
   --tab-color-hover: #f5f5f5;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.35);
 }

@@ -1,26 +1,32 @@
 import browser from "webextension-polyfill";
-import Button from "../button";
 import "./index.css";
+import Button from "../button";
+import { openOptionsPageAndClosePopup } from "../../utils/browserContext";
+import ExportPopup from "../exportPopup";
+import ImportPopup from "../importPopup";
+import {
+  useSettingsState,
+  useSettingsActions,
+} from "../../context/settingsContext";
 
-interface AppHeaderProps {
-  onAddPage: () => void;
-}
-
-const AppHeader = ({ onAddPage }: AppHeaderProps) => {
+const AppHeader = () => {
+  const { darkModeEnabled, pages } = useSettingsState();
+  const { toggleDarkMode, importSettings } = useSettingsActions();
   const manifest = browser.runtime.getManifest();
 
   return (
     <div className="app-header">
-      <div className="app-header__logo">
-        <img
-          src="logo128.png"
-          alt="FlexHeaders Logo"
-          width={50}
-          height={50}
-        />
-        <div>
-          <p>Flex Headers</p>
-          <div>
+      <img
+        className="app-header__logo"
+        src="logo128.png"
+        alt="FlexHeaders Logo"
+        width={32}
+        height={32}
+      />
+      <div className="app-header__info">
+        <div className="app-header__title-row">
+          <p className="app-header__name">Flex Headers</p>
+          <span className="app-header__meta">
             <a
               href={`https://github.com/harrisondeo/FlexHeader/releases/tag/v${manifest?.version}`}
               target="_blank"
@@ -28,7 +34,7 @@ const AppHeader = ({ onAddPage }: AppHeaderProps) => {
             >
               v{manifest?.version}
             </a>
-            {` - `}
+            {" · "}
             <a
               href={`https://github.com/harrisondeo/FlexHeader/issues`}
               target="_blank"
@@ -36,21 +42,68 @@ const AppHeader = ({ onAddPage }: AppHeaderProps) => {
             >
               Feature Requests
             </a>
-          </div>
-          <div>
-            A passion project by{" "}
-            <a
-              href="https://harrisondeo.me.uk"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Harrison Deo
-            </a>
-          </div>
+          </span>
+        </div>
+        <div className="app-header__credit">
+          A passion project by{" "}
+          <a
+            href="https://harrisondeo.me.uk"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Harrison Deo
+          </a>
         </div>
       </div>
-      <Button content="New Page" onClick={onAddPage} testId="new-page" />
-      {/* <span onClick={clear}>Clear Settings</span> */}
+      <button
+        type="button"
+        className="app-header__icon-button"
+        onClick={toggleDarkMode}
+        aria-label={darkModeEnabled ? "Disable Dark Mode" : "Enable Dark Mode"}
+        title={darkModeEnabled ? "Disable Dark Mode" : "Enable Dark Mode"}
+        data-testid="dark-mode-toggle"
+      >
+        {darkModeEnabled ? (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="5" />
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+          </svg>
+        ) : (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 48 48"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <rect width="48" height="48" fill="none" />
+            <path d="M14,24A10,10,0,0,0,24,34V14A10,10,0,0,0,14,24Z" />
+            <path d="M24,2A22,22,0,1,0,46,24,21.9,21.9,0,0,0,24,2ZM6,24A18.1,18.1,0,0,1,24,6v8a10,10,0,0,1,0,20v8A18.1,18.1,0,0,1,6,24Z" />
+          </svg>
+        )}
+      </button>
+      <div className="app-header__actions">
+        <ImportPopup importSettings={importSettings} />
+        <ExportPopup pages={pages} />
+      </div>
+      <button
+        type="button"
+        className="app-header__icon-button"
+        onClick={openOptionsPageAndClosePopup}
+        aria-label="Settings"
+        title="Settings"
+        data-testid="header-settings"
+      >
+        <img src="/icons/settings.svg" alt="Settings" />
+      </button>
     </div>
   );
 };

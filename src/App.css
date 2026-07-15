@@ -8,7 +8,23 @@
   max-height: 600px;
   overflow: hidden;
 
-  padding: 1rem 1rem 0 1rem;
+  padding-top: 1rem;
+}
+
+.app .app-header,
+.app__container > .app__page-title {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.app__body {
+  padding-right: 6px;
+}
+
+.app:not(.darkmode) img[src$="import.svg"],
+.app:not(.darkmode) img[src$="export.svg"],
+.app:not(.darkmode) img[src$="settings.svg"] {
+  filter: invert(1);
 }
 
 .app--full-page {
@@ -17,6 +33,13 @@
   max-height: none;
   overflow: auto;
   padding: 0;
+}
+
+.app__page-title {
+  text-align: left;
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
 }
 
 ::-webkit-scrollbar {
@@ -50,6 +73,7 @@
   display: flex;
   height: 100%;
   justify-content: space-between;
+  gap: 1rem;
   overflow: hidden;
   padding-right: 6px;
 }
@@ -74,5 +98,13 @@
   height: calc(100% - 38px - 1rem);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.headers-panel {
+  background-color: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 0.5rem;
+  box-sizing: border-box;
 }

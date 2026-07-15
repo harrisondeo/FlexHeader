@@ -1,16 +1,11 @@
+import { useState } from "react";
 import { HeaderSetting } from "../../utils/settings";
 import HeaderRow from "../headerRow";
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import "./index.css";
-
-interface HeadersListProps {
-  currentPageId: number;
-  headers: HeaderSetting[];
-  showComments: boolean;
-  removeHeader: (pageId: number, id: string) => void;
-  updateHeader: (pageId: number, header: HeaderSetting) => void;
-  saveHeaders: (headers: HeaderSetting[], pageId: number) => void;
-}
+import {
+  useSettingsState,
+  useSettingsActions,
+} from "../../context/settingsContext";
 
 const reorder = (
   headers: HeaderSetting[],
@@ -24,14 +19,16 @@ const reorder = (
   return result;
 };
 
-const HeadersList = ({
-  currentPageId,
-  headers,
-  showComments,
-  removeHeader,
-  updateHeader,
-  saveHeaders,
-}: HeadersListProps) => {
+const HeadersList = () => {
+  const { currentPage } = useSettingsState();
+  const { removeHeader, updateHeader, saveHeaders } = useSettingsActions();
+
+  const currentPageId = currentPage.id;
+  const headers = currentPage.headers;
+  const showComments = currentPage.showHeaderComments;
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
   const handleRemoveHeader = (id: string) => {
     removeHeader(currentPageId, id);
   };
@@ -40,70 +37,68 @@ const HeadersList = ({
     updateHeader(currentPageId, header);
   };
 
-  const handleDragEnd = (result: any) => {
-    if (!result.destination) {
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragEnter = (index: number) => {
+    setDragOverIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (targetIndex: number) => {
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
       return;
     }
 
-    const reorderedHeaders = reorder(
-      headers,
-      result.source.index,
-      result.destination.index
-    );
-
+    const reorderedHeaders = reorder(headers, draggedIndex, targetIndex);
     saveHeaders(reorderedHeaders, currentPageId);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   return (
-    <DragDropContext onDragEnd={handleDragEnd}>
-      <Droppable droppableId="droppable-headers">
-        {(provided) => (
-          <div
-            {...provided.droppableProps}
-            ref={provided.innerRef}
-            className="app__body__headers"
-          >
-            {headers.map(
-              (
-                {
-                  id,
-                  headerName,
-                  headerValue,
-                  headerComment,
-                  headerEnabled,
-                  headerType,
-                },
-                index
-              ) => (
-                <Draggable key={id} draggableId={id} index={index}>
-                  {(provided) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                    >
-                      <HeaderRow
-                        key={`header-row__${id}`}
-                        id={id}
-                        headerName={headerName}
-                        headerValue={headerValue}
-                        headerComment={headerComment}
-                        headerEnabled={headerEnabled}
-                        headerType={headerType}
-                        showComment={showComments}
-                        onRemove={handleRemoveHeader}
-                        onUpdate={handleUpdateHeader}
-                        dragHandleProps={provided.dragHandleProps}
-                      />
-                    </div>
-                  )}
-                </Draggable>
-              )
-            )}
-            {provided.placeholder}
-          </div>
-        )}
-      </Droppable>
-    </DragDropContext>
+    <div className="app__body__headers">
+      {headers.map(
+        (
+          {
+            id,
+            headerName,
+            headerValue,
+            headerComment,
+            headerEnabled,
+            headerType,
+          },
+          index
+        ) => (
+          <HeaderRow
+            key={`header-row__${id}`}
+            id={id}
+            headerName={headerName}
+            headerValue={headerValue}
+            headerComment={headerComment}
+            headerEnabled={headerEnabled}
+            headerType={headerType}
+            showComment={showComments}
+            onRemove={handleRemoveHeader}
+            onUpdate={handleUpdateHeader}
+            index={index}
+            isDragging={draggedIndex === index}
+            isDragOver={dragOverIndex === index}
+            onDragStart={() => handleDragStart(index)}
+            onDragEnter={() => handleDragEnter(index)}
+            onDragEnd={handleDragEnd}
+            onDrop={() => handleDrop(index)}
+          />
+        )
+      )}
+    </div>
   );
 };
 

@@ -1,5 +1,6 @@
-import { DraggableProvidedDragHandleProps } from "react-beautiful-dnd";
+import { useId, useMemo, useRef, useState } from "react";
 import { HeaderSetting } from "../../utils/settings";
+import { POPULAR_HEADER_NAMES } from "../../constants";
 import Button from "../button";
 import "./index.css";
 
@@ -12,13 +13,25 @@ const HeaderRow = ({
   headerType,
   onRemove,
   onUpdate,
-  dragHandleProps,
   showComment,
+  index,
+  isDragging,
+  isDragOver,
+  onDragStart,
+  onDragEnter,
+  onDragEnd,
+  onDrop,
 }: HeaderSetting & {
   showComment: boolean;
   onRemove: (id: string) => void;
   onUpdate: (header: HeaderSetting) => void;
-  dragHandleProps?: DraggableProvidedDragHandleProps | null | undefined;
+  index: number;
+  isDragging: boolean;
+  isDragOver: boolean;
+  onDragStart: () => void;
+  onDragEnter: () => void;
+  onDragEnd: () => void;
+  onDrop: () => void;
 }) => {
   const updateHeader = (patch: Partial<HeaderSetting>) => {
     onUpdate({
@@ -56,33 +69,129 @@ const HeaderRow = ({
     e.target.select();
   };
 
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const dropdownId = useId();
+
+  const filteredSuggestions = useMemo(() => {
+    const value = headerName.trim().toLowerCase();
+    if (!isDropdownOpen || value.length < 2) return [];
+    return POPULAR_HEADER_NAMES.filter((name) =>
+      name.toLowerCase().includes(value)
+    );
+  }, [headerName, isDropdownOpen]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    updateName(e);
+    setIsDropdownOpen(true);
+  };
+
+  const selectSuggestion = (suggestion: string) => {
+    updateHeader({ headerName: suggestion });
+    setIsDropdownOpen(false);
+    nameInputRef.current?.focus();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      setIsDropdownOpen(false);
+    }
+  };
+
   return (
-    <div className={`header-row${showComment ? "" : " header-row--comments-hidden"}`} data-headerId={id} data-testid="header-row">
+    <div
+      className={`header-row${showComment ? "" : " header-row--comments-hidden"}${isDragging ? " header-row--dragging" : ""}${isDragOver ? " header-row--drag-over" : ""}${!headerEnabled ? " header-row--disabled" : ""}`}
+      data-headerid={id}
+      data-testid="header-row"
+      onDragEnter={(e) => {
+        e.preventDefault();
+        onDragEnter();
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        onDrop();
+      }}
+    >
       <div className="header-row__checkbox">
-        {dragHandleProps && (
-          <img
-            src="/icons/draggable.svg"
-            alt="Draggable"
-            className="draggable-icon"
-            {...dragHandleProps}
-          />
-        )}
-        <input
-          type="checkbox"
-          checked={headerEnabled}
-          onChange={updateEnabled}
-          data-testid="header-enabled"
+        <img
+          src="/icons/draggable.svg"
+          alt="Draggable"
+          className={`draggable-icon${isDragging ? " draggable-icon--dragging" : ""}`}
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/plain", String(index));
+            onDragStart();
+          }}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            onDragEnter();
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            onDrop();
+          }}
+          onDragEnd={onDragEnd}
         />
+        <label className="toggle-switch">
+          <input
+            type="checkbox"
+            checked={headerEnabled}
+            onChange={updateEnabled}
+            data-testid="header-enabled"
+          />
+          <span className="toggle-switch__slider"></span>
+        </label>
       </div>
-      <div className="header-row__name">
+      <div className="header-row__name header-row__name--autocomplete">
         <input
+          ref={nameInputRef}
           type="text"
           placeholder="Header"
           value={headerName}
-          onChange={updateName}
+          onChange={handleInputChange}
           onFocus={handleFocus}
+          onKeyDown={handleKeyDown}
+          onBlur={() => setTimeout(() => setIsDropdownOpen(false), 150)}
+          aria-autocomplete="list"
+          aria-controls={dropdownId}
+          aria-expanded={isDropdownOpen && filteredSuggestions.length > 0}
+          role="combobox"
+          autoComplete="off"
           data-testid="header-name"
         />
+        {filteredSuggestions.length > 0 && (
+          <ul
+            id={dropdownId}
+            className="header-row__suggestions"
+            role="listbox"
+          >
+            {filteredSuggestions.map((name) => (
+              <li
+                key={name}
+                role="option"
+                tabIndex={-1}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  selectSuggestion(name);
+                }}
+              >
+                {name}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       <div className="header-row__value">
         <input

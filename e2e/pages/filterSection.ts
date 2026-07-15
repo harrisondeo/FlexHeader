@@ -62,8 +62,8 @@ export class FilterSection {
     const background = await valueInput.evaluate((el) =>
       window.getComputedStyle(el).backgroundColor
     );
-    // Invalid filters are styled with a red background.
-    return background !== "rgb(255, 0, 0)";
+    // Invalid filters are styled with a semi-transparent red background.
+    return !background.includes("244, 67, 54");
   }
 
   async count(): Promise<number> {

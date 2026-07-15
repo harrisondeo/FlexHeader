@@ -1,35 +1,23 @@
-import { HeaderFilter, Page } from "../../utils/settings";
+import { HeaderFilter } from "../../utils/settings";
 import FilterRow from "../filterRow";
 import "./index.css";
+import {
+  useSettingsState,
+  useSettingsActions,
+} from "../../context/settingsContext";
 
-interface FilterSectionProps {
-  page: Page;
-  filters: HeaderFilter[];
-  onUpdate: (
-    pageId: number,
-    filter: Omit<HeaderFilter, "valid">
-  ) => void;
-  onRemove: (pageId: number, id: string) => void;
-  updatePage: (page: Page) => void;
-}
+const FilterSection = () => {
+  const { currentPage } = useSettingsState();
+  const { updateFilter, removeFilter } = useSettingsActions();
 
-const FilterSection = ({
-  page,
-  filters,
-  onUpdate,
-  onRemove,
-  updatePage,
-}: FilterSectionProps) => {
-  const onToggle = () => {
-    updatePage({ ...page, filtersExpanded: !page.filtersExpanded });
-  };
+  const filters = currentPage.filters;
 
   const handleUpdate = (filter: Omit<HeaderFilter, "valid">) => {
-    onUpdate(page.id, filter);
+    updateFilter(currentPage.id, filter);
   };
 
   const handleRemove = (id: string) => {
-    onRemove(page.id, id);
+    removeFilter(currentPage.id, id);
   };
 
   if (filters.length === 0) {
@@ -38,30 +26,17 @@ const FilterSection = ({
 
   return (
     <div className="filter-section">
-      <button
-        className="filter-section__toggle"
-        onClick={onToggle}
-        aria-expanded={page.filtersExpanded}
-        aria-label={page.filtersExpanded ? "Hide filters" : "Show filters"}
-        type="button"
-      >
-        <span>Filters ({filters.length})</span>
-        <span className="filter-section__toggle__icon">
-          {page.filtersExpanded ? "▲" : "▼"}
-        </span>
-      </button>
-      {page.filtersExpanded && (
-        <div className="filter-section__container">
-          {filters.map((filter) => (
-            <FilterRow
-              key={`filter-row__${filter.id}`}
-              {...filter}
-              onRemove={handleRemove}
-              onUpdate={handleUpdate}
-            />
-          ))}
-        </div>
-      )}
+      <div className="filter-section__header">Filters ({filters.length})</div>
+      <div className="filter-section__container">
+        {filters.map((filter) => (
+          <FilterRow
+            key={`filter-row__${filter.id}`}
+            {...filter}
+            onRemove={handleRemove}
+            onUpdate={handleUpdate}
+          />
+        ))}
+      </div>
     </div>
   );
 };

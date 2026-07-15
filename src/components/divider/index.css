@@ -1,17 +1,17 @@
 .divider.horizontal {
-  border-top: 1px solid #e8e8e8;
-  margin: 1rem 0;
+  border-top: 1px solid var(--border-color);
+  margin: 0.5rem 0;
   width: 100%;
 }
 
 .divider.thin {
-  border-top: 1px solid #e8e8e8;
+  border-top: 1px solid var(--border-color);
   margin: 0.2rem 0;
   width: 100%;
 }
 
 .divider.vertical {
-  border-left: 1px solid #e8e8e8;
-  margin: 0 1rem;
+  border-left: 1px solid var(--border-color);
+  margin: 0 0.5rem;
   height: 100%;
 }

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useRef, useState } from "react";
 
 export type Alert = {
   alertText: string;
@@ -27,15 +27,17 @@ export const AlertProvider = ({ children }: { children: React.ReactNode }) => {
   });
   const [show, setShow] = useState(false);
 
-  let timeout: NodeJS.Timeout;
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const updateAlert = (alert: Alert) => {
-    clearTimeout(timeout);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
 
     setAlert(alert);
     setShow(true);
 
-    timeout = setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
       setShow(false);
     }, 5000);
   };
