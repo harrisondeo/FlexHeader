@@ -25,11 +25,14 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? "dev"),
   },
-  server: {    // Allow Vite to serve source files that live outside src/web-dev (e.g.
+  server: {
+    // Allow Vite to serve source files that live outside src/web-dev (e.g.
     // src/entrypoints/app/main.tsx and src/App.tsx).
     fs: {
       allow: [path.resolve(__dirname, "src")],
-    },    // Force the popup layout by default. Remove the query parameter to view
+    },
+
+    // Force the popup layout by default. Remove the query parameter to view
     // the full-page settings/options layout.
     open: "/?flexheader-popup=1",
   },
