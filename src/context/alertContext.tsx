@@ -27,7 +27,7 @@ export const AlertProvider = ({ children }: { children: React.ReactNode }) => {
   });
   const [show, setShow] = useState(false);
 
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const updateAlert = (alert: Alert) => {
     if (timeoutRef.current) {
