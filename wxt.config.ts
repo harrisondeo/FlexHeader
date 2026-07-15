@@ -33,7 +33,7 @@ export default defineConfig({
     browser_specific_settings: {
       gecko: {
         id: "flexheaders@harrisondeo.me.uk",
-        strict_min_version: "58.0",
+        strict_min_version: "113.0",
       },
     },
   },
