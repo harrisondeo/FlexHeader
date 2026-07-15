@@ -99,8 +99,8 @@ const PageTitle = () => {
           color={showHeaderComments ? "primary" : "secondary"}
           title={
             showHeaderComments
-              ? "Show the header comments"
-              : "Hide the header comments"
+              ? "Hide the header comments"
+              : "Show the header comments"
           }
           content={
             <span className="page-title__toggle-button-content">
