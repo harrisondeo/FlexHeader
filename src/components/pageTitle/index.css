@@ -1,0 +1,89 @@
+.page-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  margin-bottom: 0.5rem;
+  padding-right: 8px;
+}
+
+.app__page-title--editable,
+input.app__page-title.app__page-title--input {
+  display: block;
+  box-sizing: border-box;
+  text-align: left;
+  height: 34px;
+  width: 400px;
+  max-width: 400px;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 0.2rem 0.55rem;
+  margin: 0 0 0 -0.55rem;
+  transition: border-color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.app__page-title--editable {
+  cursor: pointer;
+}
+
+.app__page-title--editable:hover {
+  border-color: var(--background-quaternary);
+}
+
+input.app__page-title.app__page-title--input {
+  background: transparent;
+  color: var(--text-color);
+  border-color: var(--background-senary);
+}
+
+input.app__page-title.app__page-title--input:focus {
+  outline: none;
+  box-shadow: none;
+  border-color: var(--background-senary);
+}
+
+.page-title__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.page-title__toggle-button-content {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.page-title__toggle-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.button.color-primary .page-title__toggle-icon,
+.button.color-secondary .page-title__toggle-icon {
+  color: #ffffff;
+}
+
+.page-title__actions .button.color-secondary {
+  background-color: var(--background-quaternary);
+  color: var(--text-color);
+}
+
+.page-title__actions .button.color-secondary:hover {
+  background-color: var(--background-senary);
+}
+
+.page-title__actions .button.color-secondary .page-title__toggle-icon {
+  color: var(--text-color);
+}
+
+.page-title__actions .button.color-primary {
+  background-color: var(--primary);
+}
+
+.page-title__actions .button.color-primary:hover {
+  background-color: var(--primary-dark);
+}
+

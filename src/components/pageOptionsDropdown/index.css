@@ -7,10 +7,10 @@
   flex-direction: column;
   width: 200px;
   padding: 10px;
-  background-color: var(--background-quaternary);
-  border: 1px solid var(--background-quinary);
-  border-radius: 5px;
-  box-shadow: 0 0 5px var(--background-quaternary);
+  background-color: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
   font-size: 14px;
   color: var(--text-color);
   text-align: left;

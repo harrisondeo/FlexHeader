@@ -4,6 +4,18 @@
   align-items: center;
   flex-direction: row;
   gap: 0.5rem;
+  padding: 0.35rem;
+  background-color: var(--background-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.filter-row:hover,
+.filter-row:focus-within {
+  border-color: var(--background-quaternary);
+  box-shadow: var(--shadow-sm);
 }
 
 .filter-row__checkbox,

@@ -8,6 +8,7 @@ import { ErrorBoundary } from "react-error-boundary";
 import ErrorBoundaryFallback from "../../components/errorBoundary";
 import { clearStoredSettings } from "../../utils/settings";
 import AlertProvider from "../../context/alertContext";
+import { SettingsProvider } from "../../context/settingsContext";
 
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement
@@ -19,7 +20,9 @@ root.render(
       onReset={() => clearStoredSettings()}
     >
       <AlertProvider>
-        <App />
+        <SettingsProvider>
+          <App />
+        </SettingsProvider>
       </AlertProvider>
     </ErrorBoundary>
   </React.StrictMode>

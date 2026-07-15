@@ -23,6 +23,7 @@ The project uses [WXT](https://wxt.dev/) to build, develop and package the brows
 | --- | --- |
 | `bun run start` | Start the WXT development server for Chrome. Builds incrementally and opens the default browser with the extension loaded when possible. |
 | `bun run start:firefox` | Start the WXT development server for Firefox (MV3). |
+| `bun run dev:web` | Run the React UI as a standalone web app with Vite HMR. Useful for rapid UI iteration; extension APIs are mocked. |
 | `bun run build:chrome` | Build a production version of the Chrome extension into `dist/chrome`. |
 | `bun run build:firefox` | Build a production version of the Firefox extension into `dist/firefox`. |
 | `bun run build` | Build both the Chrome and Firefox extensions. |
@@ -40,6 +41,14 @@ The project uses [WXT](https://wxt.dev/) to build, develop and package the brows
 `bun run start` runs the extension in development mode for Chrome. WXT watches source files, rebuilds incrementally and reloads the extension in the browser when possible. This is useful for iterating on UI/logic, but note that some Chrome-extension-specific APIs (e.g. `chrome.declarativeNetRequest`) will only function when the extension is loaded in a real browser.
 
 For Firefox use `bun run start:firefox`.
+
+##### Running the UI in a browser for rapid UI changes
+
+`bun run dev:web` starts a standalone Vite dev server at `http://localhost:5173`. The extension's browser APIs are mocked and storage is backed by `localStorage`, so you get hot-module replacement and can iterate on the React UI without loading the extension into Chrome.
+
+- The default opened URL includes `?flexheader-popup=1`, which forces the popup layout (reusing the same query parameter trick the E2E tests use).
+- Navigate to the root URL without the query parameter to view the full-page options/settings layout.
+- Extension-only features such as `declarativeNetRequest` and the background service worker do not run in this mode, so header modification cannot be tested here. Use `bun run start` or the E2E suite for that.
 
 ##### How to build
 

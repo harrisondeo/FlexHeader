@@ -3,14 +3,10 @@ import { Locator, Page } from "@playwright/test";
 export class PageSection {
   readonly page: Page;
   readonly newPageButton: Locator;
-  readonly duplicatePageButton: Locator;
-  readonly pageOptionsMenuButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.newPageButton = page.getByTestId("new-page");
-    this.duplicatePageButton = page.getByTestId("duplicate-page");
-    this.pageOptionsMenuButton = page.getByTestId("page-options-menu");
   }
 
   get listItems(): Locator {
@@ -19,6 +15,10 @@ export class PageSection {
 
   listItem(name: string): Locator {
     return this.listItems.filter({ hasText: name });
+  }
+
+  get activeItem(): Locator {
+    return this.page.locator(".page-list-item.active");
   }
 
   async selectPage(name: string): Promise<void> {
@@ -48,23 +48,25 @@ export class PageSection {
     await this.addNewPage();
   }
 
-  async duplicateCurrentPage(): Promise<void> {
-    await this.duplicatePageButton.click();
+  async openContextMenu(): Promise<void> {
+    await this.activeItem.click({ button: "right" });
+    await this.page.getByTestId("page-context-menu").waitFor();
   }
 
-  async openOptions(): Promise<void> {
-    await this.pageOptionsMenuButton.click();
+  async duplicateCurrentPage(): Promise<void> {
+    await this.openContextMenu();
+    await this.page.getByTestId("page-context-duplicate").click();
   }
 
   async renamePage(name: string): Promise<void> {
-    await this.openOptions();
-    await this.page.getByTestId("page-name-input").fill(name);
-    // Close the dropdown by pressing Escape so it does not obscure other UI.
-    await this.page.keyboard.press("Escape");
+    await this.page.getByTestId("page-title").click();
+    const input = this.page.getByTestId("page-title-input");
+    await input.fill(name);
+    await input.press("Enter");
   }
 
   async deleteCurrentPage(): Promise<void> {
-    await this.openOptions();
-    await this.page.getByTestId("page-delete").click();
+    await this.openContextMenu();
+    await this.page.getByTestId("page-context-delete").click();
   }
 }

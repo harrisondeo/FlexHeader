@@ -58,7 +58,10 @@ const FilterRow = ({
   return (
     <div className="filter-row" data-testid="filter-row">
       <div className="filter-row__checkbox">
-        <input type="checkbox" checked={enabled} onChange={updateEnabled} data-testid="filter-enabled" />
+        <label className="toggle-switch">
+          <input type="checkbox" checked={enabled} onChange={updateEnabled} data-testid="filter-enabled" />
+          <span className="toggle-switch__slider"></span>
+        </label>
       </div>
       <div className="filter-row__type">
         <select value={type} onChange={updateType} data-testid="filter-type">
@@ -79,7 +82,14 @@ const FilterRow = ({
           value={cachedFilterValue}
           onChange={updateValue}
           onFocus={handleFocus}
-          style={{ backgroundColor: valid ? "white" : "red" }}
+          style={
+            valid
+              ? undefined
+              : {
+                  borderColor: "var(--color-error)",
+                  backgroundColor: "rgba(244, 67, 54, 0.12)",
+                }
+          }
           data-testid="filter-value"
         />
       </div>

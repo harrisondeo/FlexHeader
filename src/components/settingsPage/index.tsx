@@ -2,17 +2,15 @@ import Button from "../button";
 import Divider from "../divider";
 import DragDropFile from "../dragDropFile";
 import ExportPopup from "../exportPopup";
-import { Page } from "../../utils/settings";
+import {
+  useSettingsState,
+  useSettingsActions,
+} from "../../context/settingsContext";
 import "./index.css";
 
-interface SettingsPageProps {
-  pages: Page[];
-  importSettings: (file: File) => Promise<void>;
-  syncEnabled: boolean;
-  toggleSync: () => void;
-}
-
-const SettingsPage = ({ pages, importSettings, syncEnabled, toggleSync }: SettingsPageProps) => {
+const SettingsPage = () => {
+  const { pages, syncEnabled } = useSettingsState();
+  const { importSettings, toggleSync } = useSettingsActions();
   return (
     <div className="settings-page">
       <div className="settings-page__header">

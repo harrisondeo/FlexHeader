@@ -4,12 +4,24 @@
   color: white;
   text-align: center;
   text-decoration: none;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  border-radius: var(--input-radius);
+  border-radius: 7px;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+
+.button:active {
+  transform: scale(0.97);
 }
 
 .button.small {
+  height: 1.75rem;
+  width: 1.75rem;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .button.small img {
@@ -18,8 +30,8 @@
 }
 
 .button.medium {
-  height: 2.4rem;
-  padding: 10px 12px;
+  height: 2.1rem;
+  padding: 6px 12px;
   font-size: small;
 }
 
@@ -41,6 +53,7 @@
 
 .button:hover {
   background-color: var(--primary-dark);
+  box-shadow: var(--shadow-sm);
 }
 
 .button.width-auto {

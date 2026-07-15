@@ -6,6 +6,45 @@
   flex-direction: row;
   gap: 0.5rem;
   margin-bottom: 0.4rem;
+  padding: 0.35rem;
+  background-color: var(--background-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.header-row:last-child {
+  margin-bottom: 0;
+}
+
+.header-row:hover,
+.header-row:focus-within {
+  border-color: var(--background-quaternary);
+  box-shadow: var(--shadow-sm);
+}
+
+.header-row--dragging {
+  opacity: 0.4;
+  box-shadow: var(--shadow-card);
+}
+
+.header-row--drag-over {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-soft);
+}
+
+.header-row--disabled {
+  opacity: 0.55;
+  background-color: var(--background-secondary);
+  border-color: var(--border-color);
+  box-shadow: none;
+}
+
+.header-row--disabled:hover,
+.header-row--disabled:focus-within {
+  border-color: var(--border-color);
+  box-shadow: none;
 }
 
 .header-row__name,
@@ -17,6 +56,42 @@
   flex: 1;
   min-width: 0;
   /* Allow text to be truncated if necessary */
+  position: relative;
+}
+
+.header-row__name--autocomplete {
+  position: relative;
+}
+
+.header-row__suggestions {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  max-height: 160px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  background-color: var(--background-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+.header-row__suggestions li {
+  padding: 5px 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-row__suggestions li:hover,
+.header-row__suggestions li[aria-selected="true"] {
+  background-color: var(--background-tertiary);
 }
 
 /* Optimize input fields for better space usage */
@@ -56,11 +131,18 @@
 .header-row__checkbox {
   display: flex;
   align-items: center;
-  gap: 0.15rem;
+  gap: 0.4rem;
 }
 
 .draggable-icon {
   width: 16px;
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.draggable-icon:active,
+.draggable-icon--dragging {
+  cursor: grabbing;
 }
 
 .header-row__type {
@@ -74,5 +156,5 @@
   padding: 3px 5px;
   font-size: 0.75rem;
   width: 100%;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
 }

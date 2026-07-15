@@ -7,9 +7,10 @@
   margin-right: auto;
   width: 500px;
   height: 400px;
-  background-color: var(--background-quaternary);
-  border: 1px solid var(--background-quinary);
-  border-radius: 5px;
+  background-color: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
   z-index: 100;
   display: flex;
   justify-content: center;

@@ -1,29 +1,17 @@
 .filter-section {
   min-width: 0;
+  background-color: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 0.5rem;
+  box-sizing: border-box;
 }
 
-.filter-section__toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  background: none;
-  border: none;
-  padding: 0;
-  margin: 0 0 0.5rem 0;
-  font: inherit;
+.filter-section__header {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-color);
-  cursor: pointer;
-}
-
-.filter-section__toggle:hover {
-  opacity: 0.8;
-}
-
-.filter-section__toggle__icon {
-  font-size: 0.7rem;
-  line-height: 1;
+  margin-bottom: 0.5rem;
 }
 
 .filter-section__container {
