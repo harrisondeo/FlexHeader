@@ -20,7 +20,6 @@ export const POPULAR_HEADER_NAMES = [
   "Age",
   "Allow",
   "Authorization",
-  "Authorization Bearer",
   "Cache-Control",
   "Connection",
   "Content-Disposition",
