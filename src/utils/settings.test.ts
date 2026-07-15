@@ -8,11 +8,9 @@
  * - Preserving enabled state for existing pages
  */
 
-import { Page, HeaderSetting, HeaderFilter, isValidUrlFilter } from './settings';
-import { normalizePage } from './headers';
 import { vi } from 'vitest';
 
-vi.mock('webextension-polyfill', () => ({
+const browserMock = vi.hoisted(() => ({
   storage: {
     local: { get: vi.fn(), set: vi.fn(), clear: vi.fn(), remove: vi.fn() },
     sync: { get: vi.fn(), set: vi.fn(), clear: vi.fn(), remove: vi.fn() },
@@ -21,6 +19,14 @@ vi.mock('webextension-polyfill', () => ({
     isRegexSupported: vi.fn().mockResolvedValue({ isSupported: true }),
   },
 }));
+
+vi.mock('webextension-polyfill', () => ({
+  default: browserMock,
+  ...browserMock,
+}));
+
+import { Page, HeaderSetting, HeaderFilter, isValidUrlFilter } from './settings';
+import { normalizePage } from './headers';
 
 // Extract the merge logic functions for testing
 // These are pure functions that can be tested independently
