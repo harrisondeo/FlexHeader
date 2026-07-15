@@ -34,20 +34,29 @@ const createStorageArea = (areaName: "local" | "sync") => {
   };
 
   const get = async (key?: StorageKey): Promise<Record<string, any>> => {
+    const safeParse = (raw: string | null, fallback: any) => {
+      if (raw === null) return fallback;
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return raw;
+      }
+    };
+
     if (key === null || key === undefined) {
       return getAll();
     }
 
     if (typeof key === "string") {
       const value = localStorage.getItem(prefixedKey(key));
-      return { [key]: value === null ? undefined : JSON.parse(value) };
+      return { [key]: safeParse(value, undefined) };
     }
 
     if (Array.isArray(key)) {
       const result: Record<string, any> = {};
       for (const k of key) {
         const value = localStorage.getItem(prefixedKey(k));
-        result[k] = value === null ? undefined : JSON.parse(value);
+        result[k] = safeParse(value, undefined);
       }
       return result;
     }
@@ -56,7 +65,7 @@ const createStorageArea = (areaName: "local" | "sync") => {
     const result: Record<string, any> = {};
     for (const k of Object.keys(key)) {
       const value = localStorage.getItem(prefixedKey(k));
-      result[k] = value === null ? key[k] : JSON.parse(value);
+      result[k] = safeParse(value, key[k]);
     }
     return result;
   };
