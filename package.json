@@ -1,46 +1,39 @@
 {
   "name": "flex-headers",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "private": true,
   "dependencies": {
-    "@craco/craco": "^7.1.0",
-    "@testing-library/jest-dom": "^5.17.0",
-    "@testing-library/react": "^13.4.0",
-    "@testing-library/user-event": "^13.5.0",
-    "@types/jest": "^27.5.2",
-    "@types/node": "^16.18.126",
-    "@types/react": "^18.3.28",
-    "@types/react-dom": "^18.3.7",
-    "react": "^18.3.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.7",
     "react-beautiful-dnd": "^13.1.1",
-    "react-dom": "^18.3.1",
-    "react-error-boundary": "^4.1.2",
-    "react-scripts": "5.0.1",
-    "typescript": "^4.9.5",
-    "web-vitals": "^2.1.4",
+    "react-dom": "^19.2.7",
+    "react-error-boundary": "^6.1.2",
+    "typescript": "^5.9.3",
+    "web-vitals": "^5.3.0",
     "webextension-polyfill": "^0.12.0",
-    "zod": "^3.25.0"
+    "zod": "^4.4.3"
   },
   "scripts": {
-    "start": "craco start",
-    "build:chrome": "craco build",
-    "build:firefox": "node scripts/prepare-firefox-build.mjs",
+    "postinstall": "wxt prepare",
+    "start": "wxt",
+    "start:firefox": "wxt -b firefox --mv3",
+    "build:chrome": "wxt build",
+    "build:firefox": "wxt build -b firefox --mv3",
     "build": "bun run build:chrome && bun run build:firefox",
     "package": "node scripts/build-and-package.mjs",
-    "test": "craco test",
-    "test:update-fixtures": "UPDATE_FIXTURES=true craco test --testPathPattern=background.test.ts",
+    "release": "node scripts/ensure-version-bumped.mjs && node scripts/build-and-package.mjs",
+    "test": "vitest run",
+    "test:update-fixtures": "UPDATE_FIXTURES=true vitest run src/background/background.test.ts",
     "test:e2e:install": "playwright install chromium",
     "pretest:e2e": "bun run build:chrome",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "typecheck": "tsc --noEmit",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+    "typecheck": "tsc --noEmit"
   },
   "browserslist": {
     "production": [
@@ -56,8 +49,12 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
-    "@types/chrome": "^0.0.243",
+    "@types/chrome": "^0.2.2",
     "@types/react-beautiful-dnd": "^13.1.8",
-    "@types/webextension-polyfill": "^0.12.5"
+    "@types/webextension-polyfill": "^0.12.5",
+    "@vitejs/plugin-react": "^6.0.3",
+    "jsdom": "^29.1.1",
+    "vitest": "^4.1.10",
+    "wxt": "^0.20.27"
   }
 }

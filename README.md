@@ -61,7 +61,7 @@ And the new version should appear within the app when you open it
 
 ##### Running tests
 
-`bun run test` will run the unit/integration test suite via `craco test`.
+`bun run test` will run the unit/integration test suite via `vitest`.
 
 ##### Running end-to-end tests
 
@@ -83,7 +83,7 @@ The E2E suite uses Playwright to load the real built Chrome extension and drive 
 
 Notes:
 - Chrome extension loading requires a headed browser, so the tests run with `headless: false`.
-- Tests navigate to `chrome-extension://<id>/index.html?flexheader-popup=1` to force the popup layout in a tab.
+- Tests navigate to `chrome-extension://<id>/app.html?flexheader-popup=1` to force the popup layout in a tab.
 - Selectors use `data-testid` attributes; update the attributes in the React components if the UI changes.
 - A local HTTP server (`e2e/server.mjs`) is started automatically for tests that assert headers are really modified by `declarativeNetRequest`.
 

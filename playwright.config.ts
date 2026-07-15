@@ -1,14 +1,14 @@
 import { defineConfig, devices } from "@playwright/test";
 import path from "path";
 
-const pathToExtension = path.join(__dirname, "build");
+const pathToExtension = path.join(__dirname, "dist", "chrome");
 
 /**
  * Playwright end-to-end configuration for the FlexHeader Chrome extension.
  *
- * Tests load the real extension from ./build and navigate to the popup UI
- * via chrome-extension://<id>/index.html?flexheader-popup=1. Chrome extension
- * loading requires a headed browser, so headless is disabled here.
+ * Tests load the real extension from ./dist and navigate to the
+ * popup UI via chrome-extension://<id>/app.html?flexheader-popup=1. Chrome
+ * extension loading requires a headed browser, so headless is disabled here.
  *
  * The extension is built before tests via the `pretest:e2e` npm script, which
  * runs `bun run build:chrome`.

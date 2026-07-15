@@ -132,17 +132,25 @@ export async function syncLocalToRemoteStorage() {
   }
 }
 
-browser.storage.local.onChanged.addListener(function (changes) {
-  // Trigger update if any settings change (v3 meta or any page_* key)
-  if (SETTINGS_V3_META_KEY in changes ||
-    Object.keys(changes).some(key => key.startsWith(PAGE_KEY_PREFIX))) {
-    getAndApplyHeaderRules();
-  }
-});
+/**
+ * Wires up the background service worker's listeners and kicks off the
+ * initial rule application + sync. Called from the WXT background
+ * entrypoint (src/entrypoints/background.ts) so that none of this runs
+ * during the Node-based build step.
+ */
+export function initBackground() {
+  browser.storage.local.onChanged.addListener(function (changes) {
+    // Trigger update if any settings change (v3 meta or any page_* key)
+    if (SETTINGS_V3_META_KEY in changes ||
+      Object.keys(changes).some(key => key.startsWith(PAGE_KEY_PREFIX))) {
+      getAndApplyHeaderRules();
+    }
+  });
 
-// Set up periodic sync from local to remote storage
-setInterval(syncLocalToRemoteStorage, SYNC_INTERVAL);
+  // Set up periodic sync from local to remote storage
+  setInterval(syncLocalToRemoteStorage, SYNC_INTERVAL);
 
-// Initial execution of rules and sync
-getAndApplyHeaderRules();
-syncLocalToRemoteStorage();
+  // Initial execution of rules and sync
+  getAndApplyHeaderRules();
+  syncLocalToRemoteStorage();
+}

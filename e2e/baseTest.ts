@@ -3,7 +3,7 @@ import path from "path";
 import { PopupPage } from "./pages/popupPage";
 import { clearExtensionStorage, getExtensionId, gotoPopup } from "./fixtures/extension";
 
-const pathToExtension = path.join(__dirname, "..", "build");
+const pathToExtension = path.join(__dirname, "..", "dist", "chrome");
 
 /**
  * Shared test fixture for FlexHeader E2E tests.

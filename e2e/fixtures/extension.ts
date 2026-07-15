@@ -1,7 +1,7 @@
 import { BrowserContext, Page } from "@playwright/test";
 import path from "path";
 
-export const pathToExtension = path.join(__dirname, "..", "..", "build");
+export const pathToExtension = path.join(__dirname, "..", "..", "dist", "chrome");
 
 /**
  * Extracts the dynamic extension ID from the loaded extension's background
@@ -39,7 +39,7 @@ export async function getExtensionId(context: BrowserContext): Promise<string> {
  * forces App.tsx to render the popup layout (see isRunningInActionPopup).
  */
 export async function gotoPopup(page: Page, extensionId: string): Promise<void> {
-  await page.goto(`chrome-extension://${extensionId}/index.html?flexheader-popup=1`, {
+  await page.goto(`chrome-extension://${extensionId}/app.html?flexheader-popup=1`, {
     waitUntil: "domcontentloaded",
   });
 }

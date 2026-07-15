@@ -9,24 +9,9 @@ const root = join(__dirname, "..");
 const buildsDir = join(root, "builds");
 
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-const manifest = JSON.parse(
-  readFileSync(join(root, "public", "manifest.json"), "utf8")
-);
-
 const packageVersion = pkg.version;
-const manifestVersion = manifest.version;
-
-if (packageVersion !== manifestVersion) {
-  console.error(
-    `Version mismatch: package.json is ${packageVersion} but public/manifest.json is ${manifestVersion}`
-  );
-  process.exit(1);
-}
 
 console.log(`\nFlexHeader v${packageVersion} — build & package\n`);
-
-// Pull latest main and verify the version has been bumped before releasing.
-run("release-check", "node", ["scripts/ensure-version-bumped.mjs"]);
 
 function run(label, cmd, args, options = {}) {
   console.log(`\n[${label}] $ ${cmd} ${args.join(" ")}`);
@@ -46,7 +31,7 @@ function run(label, cmd, args, options = {}) {
 // 1. Build Chrome extension
 run("build:chrome", "bun", ["run", "build:chrome"]);
 
-// 2. Prepare Firefox extension from Chrome build
+// 2. Build Firefox extension (WXT generates its own manifest, targeting MV3)
 run("build:firefox", "bun", ["run", "build:firefox"]);
 
 // 3. Ensure output directory exists
@@ -58,7 +43,7 @@ run("package:chrome", "rm", ["-f", chromeZip]);
 run(
   "package:chrome",
   "sh",
-  ["-c", `cd build && zip -r "${chromeZip}" . -x '*.DS_Store'`],
+  [`-c`, `cd dist/chrome && zip -r "${chromeZip}" . -x '*.DS_Store'`],
   { cwd: root }
 );
 
@@ -68,10 +53,11 @@ run("package:firefox", "rm", ["-f", firefoxZip]);
 run(
   "package:firefox",
   "sh",
-  ["-c", `cd build-firefox && zip -r "${firefoxZip}" . -x '*.DS_Store'`],
+  [`-c`, `cd dist/firefox && zip -r "${firefoxZip}" . -x '*.DS_Store'`],
   { cwd: root }
 );
 
 console.log(`\nPackaging complete:`);
 console.log(`  ${chromeZip}`);
 console.log(`  ${firefoxZip}\n`);
+
