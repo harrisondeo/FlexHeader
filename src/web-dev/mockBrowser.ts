@@ -63,6 +63,10 @@ const createStorageArea = (areaName: "local" | "sync") => {
 
   const set = async (data: Record<string, any>): Promise<void> => {
     for (const [key, value] of Object.entries(data)) {
+      if (value === undefined) {
+        localStorage.removeItem(prefixedKey(key));
+        continue;
+      }
       localStorage.setItem(prefixedKey(key), JSON.stringify(value));
     }
   };
