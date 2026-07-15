@@ -9,7 +9,7 @@ import {
 import { useAlert } from "../../context/alertContext";
 
 const PageTitle = () => {
-  const { currentPage } = useSettingsState();
+  const { pages, currentPage } = useSettingsState();
   const { updatePage, changePageIndex } = useSettingsActions();
   const alertContext = useAlert();
 
@@ -32,8 +32,13 @@ const PageTitle = () => {
     });
   };
 
-  const onMoveLeft = () => changePageIndex(currentPage.id, currentPage.id - 1);
-  const onMoveRight = () => changePageIndex(currentPage.id, currentPage.id + 1);
+  const onMoveLeft = () =>
+    changePageIndex(currentPage.id, Math.max(0, currentPage.id - 1));
+  const onMoveRight = () =>
+    changePageIndex(
+      currentPage.id,
+      Math.min(pages.length - 1, currentPage.id + 1)
+    );
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(name);
   const inputRef = useRef<HTMLInputElement>(null);
