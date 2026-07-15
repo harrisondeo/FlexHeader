@@ -3,6 +3,11 @@
 
 Thank you for checking out the FlexHeaders Github! This is a personal project that I started both out of curiosity and want to create something better for my everyday use.
 
+Install from the [Chrome Webstore](https://chromewebstore.google.com/detail/gffpeamhhldhibdngenbfciboinanppf?utm_source=item-share-cb) for free
+
+<img width="1400" height="560" alt="marquee" src="https://github.com/user-attachments/assets/ad610565-8ca8-4a01-bcbc-851a5f5dcb89" />
+
+
 #### Getting started
 
 ##### Setup
