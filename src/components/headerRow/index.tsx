@@ -1,4 +1,5 @@
 import { useId, useMemo, useRef, useState } from "react";
+import type * as React from "react";
 import { HeaderSetting } from "../../utils/settings";
 import { POPULAR_HEADER_NAMES } from "../../constants";
 import Button from "../button";
