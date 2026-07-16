@@ -1,7 +1,11 @@
 import browser from "webextension-polyfill";
 import "./index.css";
 import Button from "../button";
-import { openOptionsPageAndClosePopup } from "../../utils/browserContext";
+import {
+  isFirefox,
+  isRunningInActionPopup,
+  openOptionsPageAndClosePopup,
+} from "../../utils/browserContext";
 import ExportPopup from "../exportPopup";
 import ImportPopup from "../importPopup";
 import {
@@ -13,6 +17,7 @@ const AppHeader = () => {
   const { darkModeEnabled, pages } = useSettingsState();
   const { toggleDarkMode, importSettings } = useSettingsActions();
   const manifest = browser.runtime.getManifest();
+  const isFirefoxPopup = isRunningInActionPopup() && isFirefox();
 
   return (
     <div className="app-header">
@@ -91,7 +96,32 @@ const AppHeader = () => {
         )}
       </button>
       <div className="app-header__actions">
-        <ImportPopup importSettings={importSettings} />
+        {isFirefoxPopup ? (
+          <Button
+            content={
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                }}
+              >
+                <img
+                  src="/icons/import.svg"
+                  alt="Import Settings"
+                  width={16}
+                  height={16}
+                />
+                <span>Import</span>
+              </div>
+            }
+            onClick={openOptionsPageAndClosePopup}
+            testId="import-button"
+            title="Open settings to import pages"
+          />
+        ) : (
+          <ImportPopup importSettings={importSettings} />
+        )}
         <ExportPopup pages={pages} />
       </div>
       <button
