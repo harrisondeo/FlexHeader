@@ -1,52 +1,41 @@
 import { useState } from "react";
 import { FilterMode, FilterType, HeaderFilter } from "../../utils/settings";
+import {
+  useSettingsState,
+  useSettingsActions,
+} from "../../context/settingsContext";
 import Button from "../button";
 import "./index.css";
 
-const FilterRow = ({
-  id,
-  enabled,
-  type,
-  mode,
-  value,
-  valid,
-  onRemove,
-  onUpdate,
-}: HeaderFilter & {
-  onRemove: (id: string) => void;
-  onUpdate: (filter: Omit<HeaderFilter, "valid">) => void;
-}) => {
+const FilterRow = ({ filter }: { filter: HeaderFilter }) => {
+  const { currentPage } = useSettingsState();
+  const { updateFilter, removeFilter } = useSettingsActions();
+
+  const { id, enabled, type, mode, value, valid } = filter;
   const [cachedFilterValue, setCachedFilterValue] = useState(value);
 
-  const updateFilter = (patch: Partial<HeaderFilter>) => {
-    onUpdate({
-      id,
-      enabled,
-      type,
-      mode,
-      value,
-      ...patch,
-    });
+  const handleUpdateFilter = (patch: Partial<HeaderFilter>) => {
+    updateFilter(currentPage.id, { ...filter, ...patch });
   };
 
   const updateType = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const type: FilterType = e.target.value as FilterType;
-    updateFilter({ type });
+    handleUpdateFilter({ type });
   };
 
   const updateMode = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const mode: FilterMode = e.target.value as FilterMode;
-    updateFilter({ mode });
+    handleUpdateFilter({ mode });
   };
 
   const updateValue = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCachedFilterValue(e.target.value);
-    updateFilter({ value: e.target.value });
+    handleUpdateFilter({ value: e.target.value });
   };
 
   const updateEnabled = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
-    updateFilter({ enabled: e.target.checked });
+    handleUpdateFilter({ enabled: e.target.checked });
   };
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -93,7 +82,7 @@ const FilterRow = ({
           data-testid="filter-value"
         />
       </div>
-      <div className="filter-row__remove" onClick={() => onRemove(id)}>
+      <div className="filter-row__remove" onClick={() => removeFilter(currentPage.id, id)}>
         <Button
           content={<img src="/icons/basket.svg" alt="Remove Filter" />}
           style={{ height: "28px", padding: "6px 8px" }}

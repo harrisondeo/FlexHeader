@@ -2,19 +2,15 @@ import { useId, useMemo, useRef, useState } from "react";
 import type * as React from "react";
 import { HeaderSetting } from "../../utils/settings";
 import { POPULAR_HEADER_NAMES } from "../../constants";
+import {
+  useSettingsState,
+  useSettingsActions,
+} from "../../context/settingsContext";
 import Button from "../button";
 import "./index.css";
 
 const HeaderRow = ({
-  id,
-  headerName,
-  headerValue,
-  headerComment,
-  headerEnabled,
-  headerType,
-  onRemove,
-  onUpdate,
-  showComment,
+  header,
   index,
   isDragging,
   isDragOver,
@@ -22,10 +18,8 @@ const HeaderRow = ({
   onDragEnter,
   onDragEnd,
   onDrop,
-}: HeaderSetting & {
-  showComment: boolean;
-  onRemove: (id: string) => void;
-  onUpdate: (header: HeaderSetting) => void;
+}: {
+  header: HeaderSetting;
   index: number;
   isDragging: boolean;
   isDragOver: boolean;
@@ -34,36 +28,34 @@ const HeaderRow = ({
   onDragEnd: () => void;
   onDrop: () => void;
 }) => {
-  const updateHeader = (patch: Partial<HeaderSetting>) => {
-    onUpdate({
-      id,
-      headerName,
-      headerValue,
-      headerComment,
-      headerEnabled,
-      headerType,
-      ...patch,
-    });
+  const { currentPage } = useSettingsState();
+  const { removeHeader, updateHeader } = useSettingsActions();
+
+  const { id, headerName, headerValue, headerComment, headerEnabled, headerType } = header;
+  const showComment = currentPage.showHeaderComments;
+
+  const handleUpdateHeader = (patch: Partial<HeaderSetting>) => {
+    updateHeader(currentPage.id, { ...header, ...patch });
   };
 
   const updateName = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateHeader({ headerName: e.target.value });
+    handleUpdateHeader({ headerName: e.target.value });
   };
 
   const updateValue = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateHeader({ headerValue: e.target.value });
+    handleUpdateHeader({ headerValue: e.target.value });
   };
 
   const updateComment = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateHeader({ headerComment: e.target.value });
+    handleUpdateHeader({ headerComment: e.target.value });
   };
 
   const updateEnabled = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateHeader({ headerEnabled: e.target.checked });
+    handleUpdateHeader({ headerEnabled: e.target.checked });
   };
 
   const updateType = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    updateHeader({ headerType: e.target.value as "request" | "response" });
+    handleUpdateHeader({ headerType: e.target.value as "request" | "response" });
   };
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -88,7 +80,7 @@ const HeaderRow = ({
   };
 
   const selectSuggestion = (suggestion: string) => {
-    updateHeader({ headerName: suggestion });
+    handleUpdateHeader({ headerName: suggestion });
     setIsDropdownOpen(false);
     nameInputRef.current?.focus();
   };
@@ -228,7 +220,7 @@ const HeaderRow = ({
           <option value="response">Res</option>
         </select>
       </div>
-      <div className="header-row__remove" onClick={() => onRemove(id)}>
+      <div className="header-row__remove" onClick={() => removeHeader(currentPage.id, id)}>
         <Button
           content={<img src="/icons/basket.svg" alt="Remove Header" />}
           style={{ height: "28px", padding: "6px 8px" }}
