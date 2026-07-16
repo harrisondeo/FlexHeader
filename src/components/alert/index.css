@@ -16,10 +16,10 @@
 }
 
 .alert-bottom {
+  left: 50%;
+  transform: translateX(-50%);
   top: auto;
   bottom: 5rem;
-  left: 50%;
-  transform: translate(-50%, 0);
 }
 
 .alert-left {
@@ -33,10 +33,10 @@
 }
 
 .alert-top {
+  left: 50%;
+  transform: translateX(-50%);
   top: 1rem;
   bottom: auto;
-  left: 50%;
-  transform: translate(-50%, 0);
 }
 
 .alert-success {

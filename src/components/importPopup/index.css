@@ -3,8 +3,7 @@
   left: 0;
   right: 0;
   top: calc(50vh - 200px);
-  margin-left: auto;
-  margin-right: auto;
+  margin: 0 auto;
   width: 500px;
   height: 400px;
   background-color: var(--background-secondary);
@@ -17,7 +16,6 @@
   align-items: center;
   flex-direction: column;
   padding: 0.5rem;
-  box-sizing: border-box;
   visibility: hidden;
   opacity: 0;
   transition: all 0.2s ease-in-out;
@@ -25,12 +23,9 @@
 
 .import-popup__backdrop {
   position: fixed;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
+  inset: 0;
   backdrop-filter: blur(1px);
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--overlay-color);
   z-index: 99;
   visibility: hidden;
   opacity: 0;
@@ -60,22 +55,4 @@
 .import-popup__body {
   flex-grow: 1;
   width: 100%;
-}
-
-.import-popup__page {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  height: 2rem;
-  font-size: large;
-  background-color: var(--background-quinary);
-  border-bottom: 1px solid var(--background-quaternary);
-}
-
-.import-popup__page__name {
-  width: 50%;
-  text-align: left;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 }

@@ -1,7 +1,6 @@
 .app-header {
   text-align: left;
   display: flex;
-  justify-content: flex-start;
   gap: 0.6rem;
   padding-bottom: 0.65rem;
   border-bottom: 1px solid var(--border-color);
@@ -29,27 +28,16 @@
   margin: 0;
 }
 
-.app-header__meta {
+.app-header__meta,
+.app-header__credit {
   font-size: 0.7rem;
   color: var(--text-muted);
   line-height: 1;
 }
 
 .app-header__meta a,
-.app-header__meta a:visited,
-.app-header__meta a:hover,
-.app-header__meta a:active,
-.app-header__credit a,
-.app-header__credit a:visited,
-.app-header__credit a:hover,
-.app-header__credit a:active {
+.app-header__credit a {
   color: var(--text-muted);
-}
-
-.app-header__credit {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  line-height: 1;
 }
 
 .app-header__icon-button {

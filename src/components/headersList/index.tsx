@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { HeaderSetting } from "../../utils/settings";
 import HeaderRow from "../headerRow";
-import "./index.css";
 import {
   useSettingsState,
   useSettingsActions,

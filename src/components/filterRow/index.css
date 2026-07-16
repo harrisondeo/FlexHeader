@@ -2,13 +2,11 @@
   display: flex;
   width: 100%;
   align-items: center;
-  flex-direction: row;
   gap: 0.5rem;
   padding: 0.35rem;
   background-color: var(--background-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  box-sizing: border-box;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -44,7 +42,6 @@
 .filter-row__value input {
   width: 100%;
   min-width: 0;
-  box-sizing: border-box;
 }
 
 .filter-row__remove {

@@ -5,17 +5,15 @@
   gap: 0.75rem;
   width: 100%;
   margin-bottom: 0.5rem;
-  padding-right: 8px;
+  padding-right: 0.5rem;
 }
 
 .app__page-title--editable,
 input.app__page-title.app__page-title--input {
   display: block;
-  box-sizing: border-box;
   text-align: left;
   height: 34px;
   width: 400px;
-  max-width: 400px;
   border: 1.5px solid transparent;
   border-radius: var(--radius-md);
   padding: 0.2rem 0.55rem;
@@ -61,8 +59,7 @@ input.app__page-title.app__page-title--input:focus {
   height: 1rem;
 }
 
-.button.color-primary .page-title__toggle-icon,
-.button.color-secondary .page-title__toggle-icon {
+.button.color-primary .page-title__toggle-icon {
   color: #ffffff;
 }
 
@@ -78,12 +75,3 @@ input.app__page-title.app__page-title--input:focus {
 .page-title__actions .button.color-secondary .page-title__toggle-icon {
   color: var(--text-color);
 }
-
-.page-title__actions .button.color-primary {
-  background-color: var(--primary);
-}
-
-.page-title__actions .button.color-primary:hover {
-  background-color: var(--primary-dark);
-}
-

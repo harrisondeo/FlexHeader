@@ -134,6 +134,7 @@ code {
   --background-senary: #919191;
 
   --border-color: #e2e2e2;
+  --overlay-color: rgba(0, 0, 0, 0.5);
 
   --color-success: #00a82e;
   --color-warning: #ff9800;
@@ -170,6 +171,7 @@ code {
   --background-senary: #626870;
 
   --border-color: #2a2e35;
+  --overlay-color: rgba(0, 0, 0, 0.5);
 
   --color-success: #00a82e;
   --color-warning: #ff9800;

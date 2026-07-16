@@ -53,9 +53,6 @@
   flex-shrink: 0;
 }
 
-.page-context-menu__button--background {
-  color: var(--text-color);
-}
 
 .page-context-menu__button--background-active {
   background-color: var(--primary-soft);
@@ -69,14 +66,14 @@
 }
 
 .page-context-menu__button--duplicate {
-  background-color: rgba(33, 150, 243, 0.08);
-  border-color: rgba(33, 150, 243, 0.15);
+  background-color: rgba(var(--color-info-rgb), 0.08);
+  border-color: rgba(var(--color-info-rgb), 0.15);
   color: var(--color-info);
 }
 
 .page-context-menu__button--duplicate:hover {
-  background-color: rgba(33, 150, 243, 0.15);
-  border-color: rgba(33, 150, 243, 0.3);
+  background-color: rgba(var(--color-info-rgb), 0.15);
+  border-color: rgba(var(--color-info-rgb), 0.3);
 }
 
 .page-context-menu__button--delete {

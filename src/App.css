@@ -11,14 +11,9 @@
   padding-top: 1rem;
 }
 
-.app .app-header,
-.app__container > .app__page-title {
+.app .app-header {
   padding-left: 0.5rem;
   padding-right: 0.5rem;
-}
-
-.app__body {
-  padding-right: 6px;
 }
 
 .app:not(.darkmode) img[src$="import.svg"],
@@ -91,7 +86,6 @@
   font-weight: 500;
 }
 
-
 .app__body__contents {
   overflow-y: auto;
   padding-right: 8px;
@@ -106,5 +100,4 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: 0.5rem;
-  box-sizing: border-box;
 }

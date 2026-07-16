@@ -1,13 +1,15 @@
-.divider.horizontal {
+.divider.horizontal,
+.divider.thin {
   border-top: 1px solid var(--border-color);
-  margin: 0.5rem 0;
   width: 100%;
 }
 
+.divider.horizontal {
+  margin: 0.5rem 0;
+}
+
 .divider.thin {
-  border-top: 1px solid var(--border-color);
   margin: 0.2rem 0;
-  width: 100%;
 }
 
 .divider.vertical {

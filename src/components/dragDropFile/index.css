@@ -4,7 +4,6 @@
 
 .drag-drop-file {
   height: 38px;
-  width: auto;
   min-width: 110px;
   max-width: 100%;
   text-align: center;
@@ -27,7 +26,7 @@
 }
 
 .upload-button:hover {
-  text-decoration-line: underline;
+  text-decoration: underline;
 }
 
 .drag-drop-file__input {
@@ -40,10 +39,8 @@
   align-items: center;
   cursor: pointer;
   justify-content: center;
-  border-width: 2px;
-  border-radius: 1rem;
-  border-style: dashed;
-  border-color: var(--background-quaternary);
+  border: 2px dashed var(--background-quaternary);
+  border-radius: var(--radius-lg);
   background-color: var(--background-senary);
   padding: 0 0.75rem;
   transition: border-color 0.15s ease, background-color 0.15s ease;

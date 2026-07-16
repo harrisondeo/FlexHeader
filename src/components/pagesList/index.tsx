@@ -10,7 +10,7 @@ import {
 
 export const PagesList = () => {
   const { pages, currentPage } = useSettingsState();
-  const { addPage, changeSelectedPage } = useSettingsActions();
+  const { addPage } = useSettingsActions();
   const [collapsed, setCollapsed] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
     page: Page;
@@ -87,9 +87,6 @@ export const PagesList = () => {
           key={page.id}
           page={page}
           collapsed={collapsed}
-          active={page.id === currentPage.id}
-          backgroundActive={page.keepEnabled}
-          onClick={changeSelectedPage}
           onContextMenu={(event) => {
             event.preventDefault();
             setContextMenu({ page, x: event.clientX, y: event.clientY });
@@ -110,18 +107,16 @@ export const PagesList = () => {
 const PageListItem = ({
   page,
   collapsed,
-  active,
-  backgroundActive,
-  onClick,
   onContextMenu,
 }: {
   page: Page;
   collapsed: boolean;
-  active: boolean;
-  backgroundActive: boolean;
-  onClick: (id: number) => void;
   onContextMenu: MouseEventHandler<HTMLDivElement>;
 }) => {
+  const { currentPage } = useSettingsState();
+  const { changeSelectedPage } = useSettingsActions();
+  const active = page.id === currentPage.id;
+  const backgroundActive = page.keepEnabled;
   const initial = page.name.charAt(0).toUpperCase();
 
   return (
@@ -129,7 +124,7 @@ const PageListItem = ({
       className={`page-list-item ${backgroundActive ? "background" : ""} ${
         active ? "active" : ""
       } ${collapsed ? "page-list-item--collapsed" : ""}`}
-      onClick={() => onClick(page.id)}
+      onClick={() => changeSelectedPage(page.id)}
       onContextMenu={onContextMenu}
       data-testid="page-list-item"
       data-page-id={page.id}
