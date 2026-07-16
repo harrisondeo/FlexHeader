@@ -12,10 +12,11 @@ import {
   useSettingsState,
   useSettingsActions,
 } from "../../context/settingsContext";
+import ErrorsIcon from "../errorsIcon";
 
 const AppHeader = () => {
-  const { darkModeEnabled, pages } = useSettingsState();
-  const { toggleDarkMode, importSettings } = useSettingsActions();
+  const { darkModeEnabled, pages, errors } = useSettingsState();
+  const { toggleDarkMode, importSettings, clearErrors } = useSettingsActions();
   const manifest = browser.runtime.getManifest();
   const isFirefoxPopup = isRunningInActionPopup() && isFirefox();
 
@@ -96,6 +97,7 @@ const AppHeader = () => {
         )}
       </button>
       <div className="app-header__actions">
+        <ErrorsIcon errors={errors} clearErrors={clearErrors} />
         {isFirefoxPopup ? (
           <Button
             content={

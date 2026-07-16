@@ -10,7 +10,7 @@ import "./index.css";
 
 const SettingsPage = () => {
   const { pages, syncEnabled } = useSettingsState();
-  const { importSettings, toggleSync } = useSettingsActions();
+  const { importSettings, toggleSync, injectError, clearErrors } = useSettingsActions();
   return (
     <div className="settings-page">
       <div className="settings-page__header">
@@ -70,6 +70,22 @@ const SettingsPage = () => {
           }
         />
       </div>
+
+      {import.meta.env.DEV && (
+        <>
+          <Divider />
+          <div className="settings-page__section">
+            <h2>Developer Tools</h2>
+            <p>Inject and clear test errors to verify the error reporting UI.</p>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <Button onClick={() => injectError("save")} content="Inject Save Error" />
+              <Button onClick={() => injectError("apply")} content="Inject Apply Error" />
+              <Button onClick={() => injectError("sync")} content="Inject Sync Error" />
+              <Button onClick={() => clearErrors()} content="Clear Errors" />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

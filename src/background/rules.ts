@@ -24,6 +24,35 @@ export const allResourceTypes: browser.DeclarativeNetRequest.ResourceType[] = [
   "other",
 ];
 
+const MAX_REGEX_FILTER_LENGTH = 1500;
+
+/**
+ * Groups filter values into chunks whose joined ("|"-separated) length stays
+ * under `maxLength`, so each chunk can safely become its own regexFilter.
+ */
+function chunkFilterValues(values: string[], maxLength: number): string[][] {
+  const chunks: string[][] = [];
+  let current: string[] = [];
+  let currentLength = 0;
+
+  values.forEach((value) => {
+    const separatorLength = current.length > 0 ? 1 : 0; // account for the "|" join
+    if (current.length > 0 && currentLength + separatorLength + value.length > maxLength) {
+      chunks.push(current);
+      current = [];
+      currentLength = 0;
+    }
+    current.push(value);
+    currentLength += (current.length > 1 ? 1 : 0) + value.length;
+  });
+
+  if (current.length > 0) {
+    chunks.push(current);
+  }
+
+  return chunks;
+}
+
 /**
  * Builds the DNR rules for a single enabled header within a page.
  */
@@ -95,17 +124,17 @@ export function buildHeaderRules(
 
   const rules: browser.DeclarativeNetRequest.Rule[] = [];
 
-  if (regexIncludes.length > 0) {
+  chunkFilterValues(regexIncludes, MAX_REGEX_FILTER_LENGTH).forEach((chunk) => {
     rules.push({
       id: getRuleId(),
       priority: 1,
       action: modifyHeadersAction,
       condition: {
-        regexFilter: regexIncludes.join("|"),
+        regexFilter: chunk.join("|"),
         resourceTypes: allResourceTypes,
       },
     });
-  }
+  });
 
   urlIncludes.forEach((urlFilter) => {
     rules.push({
@@ -133,14 +162,16 @@ export function buildHeaderRules(
   }
 
   if (regexExcludes.length > 0) {
-    rules.push({
-      id: getRuleId(),
-      priority: 2,
-      action: removeHeadersAction,
-      condition: {
-        regexFilter: regexExcludes.join("|"),
-        resourceTypes: allResourceTypes,
-      },
+    chunkFilterValues(regexExcludes, MAX_REGEX_FILTER_LENGTH).forEach((chunk) => {
+      rules.push({
+        id: getRuleId(),
+        priority: 2,
+        action: removeHeadersAction,
+        condition: {
+          regexFilter: chunk.join("|"),
+          resourceTypes: allResourceTypes,
+        },
+      });
     });
   }
 

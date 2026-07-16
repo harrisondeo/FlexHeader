@@ -9,6 +9,7 @@ import useFlexHeaderSettings, {
   HeaderSetting,
   Page,
 } from "../utils/settings";
+import { AppError, ErrorCategory } from "../utils/errors";
 
 type SettingsStateContextValue = {
   pages: Page[];
@@ -16,6 +17,7 @@ type SettingsStateContextValue = {
   currentPage: Page;
   darkModeEnabled: boolean;
   syncEnabled: boolean;
+  errors: AppError[];
 };
 
 type SettingsActionsContextValue = {
@@ -46,6 +48,8 @@ type SettingsActionsContextValue = {
   importSettings: (file: File) => Promise<void>;
   toggleDarkMode: () => Promise<void>;
   toggleSync: () => Promise<void>;
+  clearErrors: (category?: AppError["category"]) => Promise<void>;
+  injectError: (category?: ErrorCategory) => Promise<void>;
 };
 
 const SettingsStateContext = createContext<SettingsStateContextValue | null>(
@@ -72,6 +76,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       currentPage,
       darkModeEnabled: settings.darkModeEnabled,
       syncEnabled: settings.syncEnabled,
+      errors: settings.errors,
     }),
     [
       settings.pages,
@@ -79,6 +84,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       currentPage,
       settings.darkModeEnabled,
       settings.syncEnabled,
+      settings.errors,
     ]
   );
 
@@ -99,6 +105,8 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       importSettings: settings.importSettings,
       toggleDarkMode: settings.toggleDarkMode,
       toggleSync: settings.toggleSync,
+      clearErrors: settings.clearErrors,
+      injectError: settings.injectError,
     }),
     [
       settings.addHeader,
@@ -116,6 +124,8 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       settings.importSettings,
       settings.toggleDarkMode,
       settings.toggleSync,
+      settings.clearErrors,
+      settings.injectError,
     ]
   );
 
