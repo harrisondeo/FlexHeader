@@ -1,9 +1,10 @@
-import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, SYNC_INTERVAL, LAST_SYNC_TIME_KEY, SELECTED_PAGE_KEY, SYNC_ENABLED_KEY } from "../constants";
+import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, SYNC_INTERVAL, LAST_SYNC_TIME_KEY, SELECTED_PAGE_KEY, SYNC_ENABLED_KEY, ERRORS_STATE_KEY } from "../constants";
 import type { Page, SettingsV3Meta } from "../utils/settings";
 import browser from "webextension-polyfill";
 import { getAllFromStorage, saveToStorage, getDataSizeInBytes, loadFromStorage } from "../utils/storage";
 import { log } from "../utils/log";
 import { normalizePage } from "../utils/headers";
+import { addStoredError, clearStoredErrors } from "../utils/errors";
 
 import { buildRulesFromPages } from "./rules";
 
@@ -17,14 +18,8 @@ export async function getAndApplyHeaderRules() {
     const oldRules = await browser.declarativeNetRequest.getDynamicRules();
     const oldRuleIds = oldRules ? oldRules.map((rule) => rule.id) : [];
 
-    // Generate unique rule ID
-    const getUniqueRuleID = () => {
-      let id = Math.floor(Math.random() * 1000000000);
-      while (oldRuleIds.includes(id)) {
-        id = Math.floor(Math.random() * 1000000000);
-      }
-      return id;
-    };
+    let nextRuleId = 1;
+    const getUniqueRuleID = () => nextRuleId++;
 
     let pages: Page[] = [];
 
@@ -53,12 +48,21 @@ export async function getAndApplyHeaderRules() {
     );
     const headers = buildRulesFromPages(pages, getUniqueRuleID);
 
-    browser.declarativeNetRequest.updateDynamicRules({
+    await browser.declarativeNetRequest.updateDynamicRules({
       removeRuleIds: oldRuleIds,
       addRules: headers,
-    })
+    });
+
+    // Clear apply errors once rules have been successfully updated
+    await clearStoredErrors("apply");
   } catch (error) {
     console.error("Error in getAndApplyHeaderRules", error);
+    const message = error instanceof Error ? error.message : "Failed to apply header rules";
+    await addStoredError(
+      "apply",
+      message,
+      error instanceof Error ? error.stack : undefined
+    );
   }
 }
 
@@ -129,6 +133,12 @@ export async function syncLocalToRemoteStorage() {
   } catch (error) {
     console.error("Failed to sync to remote storage:", error);
     log("BACKGROUND: Failed to sync to remote storage", "error");
+    const message = error instanceof Error ? error.message : "Failed to sync settings to remote storage";
+    await addStoredError(
+      "sync",
+      message,
+      error instanceof Error ? error.stack : undefined
+    );
   }
 }
 

@@ -8,6 +8,8 @@ export const SYNC_ENABLED_KEY = "syncEnabled"; // Whether to sync settings acros
 export const MIGRATION_COMPLETE_KEY = "migrationComplete"; // Tracks if merge migration was done
 export const REVIEW_PROMPT_KEY = "reviewPrompt";
 export const REVIEWS_URL = "https://chromewebstore.google.com/detail/flexheaders-modify-http-h/gffpeamhhldhibdngenbfciboinanppf/reviews?utm_source=in-extension";
+export const ISSUES_URL = "https://github.com/harrisondeo/FlexHeader/issues";
+export const ERRORS_STATE_KEY = "flexheader_errors";
 
 export const POPULAR_HEADER_NAMES = [
   "Accept",

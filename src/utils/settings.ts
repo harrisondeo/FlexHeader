@@ -2,10 +2,11 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
 import { z } from "zod";
-import { SELECTED_PAGE_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, SYNC_ENABLED_KEY, MIGRATION_COMPLETE_KEY } from "../constants";
+import { SELECTED_PAGE_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, SYNC_ENABLED_KEY, MIGRATION_COMPLETE_KEY, ERRORS_STATE_KEY } from "../constants";
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage";
 import { log } from "./log";
 import { normalizePage } from "./headers";
+import { AppError, addStoredError, clearStoredErrors, getStoredErrors, injectTestError, ErrorCategory } from "./errors";
 
 export enum SettingsErrorType {
   None = "None",
@@ -158,9 +159,9 @@ function useFlexHeaderSettings() {
   const [syncEnabled, setSyncEnabled] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [saveVersion, setSaveVersion] = useState(0);
+  const [errors, setErrors] = useState<AppError[]>([]);
   const isSavingRef = useRef<boolean>(false);
   const hasPendingSaveRef = useRef<boolean>(false);
-
   const alertContext = useAlert();
 
   /**
@@ -180,8 +181,12 @@ function useFlexHeaderSettings() {
       try {
         log(`SETTINGS: Saving to local storage`, "warning");
 
-        // Save all pages in parallel
-        const savePromises = settings.pages.map((page, index) => {
+        const dataToWrite: Record<string, unknown> = {
+          [SETTINGS_V3_META_KEY]: metadata,
+          localModifiedTime: Date.now(),
+        };
+
+        settings.pages.forEach((page, index) => {
           const pageKey = `${PAGE_KEY_PREFIX}${index}`;
           const sizeInBytes = getDataSizeInBytes(page);
           const STORAGE_LIMIT = 5242880; // 5MB for local storage
@@ -195,14 +200,13 @@ function useFlexHeaderSettings() {
             throw new Error(`Page ${index} exceeds storage limit: ${sizeInBytes} bytes > ${STORAGE_LIMIT} bytes`);
           }
 
-          return saveToStorage(pageKey, page, 'local');
+          dataToWrite[pageKey] = page;
         });
 
-        // Save metadata alongside pages
-        const metadataPromise = saveToStorage(SETTINGS_V3_META_KEY, metadata, 'local');
+        await browser.storage.local.set(dataToWrite);
 
-        // Wait for all saves to complete
-        await Promise.all([...savePromises, metadataPromise]);
+        // Clear save errors once a successful save has completed
+        await clearStoredErrors("save");
 
         // Clean up any extra pages from storage
         try {
@@ -223,9 +227,6 @@ function useFlexHeaderSettings() {
           // Don't fail the whole operation for cleanup errors
         }
 
-        // Update timestamps for local changes
-        await saveToStorage('localModifiedTime', Date.now(), 'local');
-
       } catch (error) {
         console.error(`Failed to save to local storage:`, error);
         throw error; // Re-throw for local storage errors
@@ -238,6 +239,12 @@ function useFlexHeaderSettings() {
     } catch (error) {
       console.error(`Failed to save settings:`, error);
       setLastError({ type: SettingsErrorType.SaveError, time: Date.now() });
+      const message = error instanceof Error ? error.message : "Failed to save settings";
+      await addStoredError(
+        "save",
+        message,
+        error instanceof Error ? error.stack : undefined
+      );
       alertContext.setAlert({
         alertType: "error",
         alertText: "Failed to save settings. Please try again.",
@@ -382,7 +389,8 @@ function useFlexHeaderSettings() {
           setPagesData({
             pages,
             selectedPage: meta.selectedPage,
-          });      // If loaded from sync, save a copy to local storage
+          });
+          // If loaded from sync, save a copy to local storage
           if (storageType === 'sync') {
             log("SETTINGS: Saving sync data to local storage", "info");
             // Save to local storage
@@ -1013,12 +1021,46 @@ function useFlexHeaderSettings() {
       .catch(err => console.error("Failed to save selected page to local storage:", err));
   }, [pagesData.selectedPage]);
 
+  // Keep errors in sync with local storage so they can be surfaced in the UI
+  useEffect(() => {
+    const loadErrors = async () => {
+      const stored = await getStoredErrors();
+      setErrors(stored);
+    };
+    loadErrors();
+
+    const listener = (changes: Record<string, browser.Storage.StorageChange>) => {
+      if (ERRORS_STATE_KEY in changes) {
+        const newState = changes[ERRORS_STATE_KEY].newValue as { errors: AppError[] } | undefined;
+        setErrors(newState?.errors ?? []);
+      }
+    };
+
+    browser.storage.local.onChanged.addListener(listener);
+    return () => browser.storage.local.onChanged.removeListener(listener);
+  }, []);
+
+  const clearErrors = useCallback(async (category?: AppError["category"]) => {
+    await clearStoredErrors(category);
+    const stored = await getStoredErrors();
+    setErrors(stored);
+  }, []);
+
+  const injectError = useCallback(async (category?: ErrorCategory) => {
+    await injectTestError(category);
+    const stored = await getStoredErrors();
+    setErrors(stored);
+  }, []);
+
   return {
     pages: pagesData.pages,
     selectedPage: pagesData.selectedPage,
     darkModeEnabled,
     syncEnabled,
     isSaving: isSavingRef.current,
+    errors,
+    clearErrors,
+    injectError,
     addPage,
     removePage,
     updatePage,

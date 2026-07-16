@@ -65,6 +65,27 @@ describe('buildHeaderRules', () => {
     expect(rules[0].condition.regexFilter).toBe('https://a\\.com/.*|https://b\\.com/.*');
   });
 
+  it('splits include filters into multiple rules once the joined regexFilter would exceed the safe length budget', () => {
+    const header = createHeader();
+    // Each pattern is ~80 chars; enough of them will exceed the 1500-char
+    // per-rule budget and must be split across more than one rule so Chrome
+    // doesn't skip the rule for exceeding its 2KB compiled regex limit.
+    const longValue = `https://${"a".repeat(70)}\\.com/.*`;
+    const filters = Array.from({ length: 30 }, (_, i) =>
+      createFilter({ id: `${i}`, value: longValue })
+    );
+
+    const rules = buildHeaderRules(header, filters, getNextId);
+
+    expect(rules.length).toBeGreaterThan(1);
+    rules.forEach((rule) => {
+      expect((rule.condition.regexFilter ?? '').length).toBeLessThanOrEqual(1500);
+    });
+    // Every filter value should still be represented somewhere across the rules
+    const allJoined = rules.map((r) => r.condition.regexFilter).join('|');
+    expect(allJoined.split('|').filter(Boolean).length).toBe(30);
+  });
+
   it('ignores disabled filters', () => {
     const header = createHeader();
     const filters = [
