@@ -44,7 +44,38 @@
       ]
     },
     "condition": {
-      "regexFilter": "https://a\\.com/.*|https://b\\.com/.*",
+      "regexFilter": "https://a\\.com/.*",
+      "resourceTypes": [
+        "main_frame",
+        "sub_frame",
+        "stylesheet",
+        "script",
+        "image",
+        "font",
+        "object",
+        "xmlhttprequest",
+        "ping",
+        "csp_report",
+        "media",
+        "websocket",
+        "other"
+      ]
+    }
+  },
+  {
+    "id": 103,
+    "priority": 2,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "X-Test",
+          "operation": "remove"
+        }
+      ]
+    },
+    "condition": {
+      "regexFilter": "https://b\\.com/.*",
       "resourceTypes": [
         "main_frame",
         "sub_frame",

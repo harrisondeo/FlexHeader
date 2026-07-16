@@ -52,7 +52,7 @@ describe('buildHeaderRules', () => {
     expect(rules[0].condition.resourceTypes).toEqual(allResourceTypes);
   });
 
-  it('joins include filters with a pipe into one regexFilter', () => {
+  it('creates a separate rule for each regex include filter', () => {
     const header = createHeader();
     const filters = [
       createFilter({ id: '1', value: 'https://a\\.com/.*' }),
@@ -61,29 +61,9 @@ describe('buildHeaderRules', () => {
 
     const rules = buildHeaderRules(header, filters, getNextId);
 
-    expect(rules).toHaveLength(1);
-    expect(rules[0].condition.regexFilter).toBe('https://a\\.com/.*|https://b\\.com/.*');
-  });
-
-  it('splits include filters into multiple rules once the joined regexFilter would exceed the safe length budget', () => {
-    const header = createHeader();
-    // Each pattern is ~80 chars; enough of them will exceed the 1500-char
-    // per-rule budget and must be split across more than one rule so Chrome
-    // doesn't skip the rule for exceeding its 2KB compiled regex limit.
-    const longValue = `https://${"a".repeat(70)}\\.com/.*`;
-    const filters = Array.from({ length: 30 }, (_, i) =>
-      createFilter({ id: `${i}`, value: longValue })
-    );
-
-    const rules = buildHeaderRules(header, filters, getNextId);
-
-    expect(rules.length).toBeGreaterThan(1);
-    rules.forEach((rule) => {
-      expect((rule.condition.regexFilter ?? '').length).toBeLessThanOrEqual(1500);
-    });
-    // Every filter value should still be represented somewhere across the rules
-    const allJoined = rules.map((r) => r.condition.regexFilter).join('|');
-    expect(allJoined.split('|').filter(Boolean).length).toBe(30);
+    expect(rules).toHaveLength(2);
+    expect(rules[0].condition.regexFilter).toBe('https://a\\.com/.*');
+    expect(rules[1].condition.regexFilter).toBe('https://b\\.com/.*');
   });
 
   it('ignores disabled filters', () => {
@@ -134,7 +114,7 @@ describe('buildHeaderRules', () => {
     expect(action.requestHeaders).toEqual([{ header: 'X-Test', operation: 'remove' }]);
   });
 
-  it('joins multiple exclude filters with a pipe into one remove rule', () => {
+  it('creates separate remove rules for each regex exclude filter', () => {
     const header = createHeader();
     const filters = [
       createFilter({ id: '1', value: 'https://a\\.com/.*', type: 'exclude' }),
@@ -143,9 +123,10 @@ describe('buildHeaderRules', () => {
 
     const rules = buildHeaderRules(header, filters, getNextId);
 
-    expect(rules).toHaveLength(2);
+    expect(rules).toHaveLength(3);
     expect(rules[1].action.type).toBe('modifyHeaders');
-    expect(rules[1].condition.regexFilter).toBe('https://a\\.com/.*|https://b\\.com/.*');
+    expect(rules[1].condition.regexFilter).toBe('https://a\\.com/.*');
+    expect(rules[2].condition.regexFilter).toBe('https://b\\.com/.*');
   });
 
   it('combines include and exclude filters into separate rules', () => {
@@ -347,7 +328,8 @@ describe('buildHeaderRules fixtures', () => {
       createFilter({ id: '2', value: 'https://b\\.com/.*' }),
     ];
     compareWithFixture(buildHeaderRules(header, filters, getNextFixtureId), 'regex-includes', [
-      { headerName: 'X-Test', operation: 'set', priority: 1, conditionType: 'regexFilter', conditionValue: 'https://a\\.com/.*|https://b\\.com/.*', shouldBePresent: true },
+      { headerName: 'X-Test', operation: 'set', priority: 1, conditionType: 'regexFilter', conditionValue: 'https://a\\.com/.*', shouldBePresent: true },
+      { headerName: 'X-Test', operation: 'set', priority: 1, conditionType: 'regexFilter', conditionValue: 'https://b\\.com/.*', shouldBePresent: true },
       { headerName: 'X-Test', operation: 'set', priority: 1, conditionType: 'regexFilter', conditionValue: '|http*', shouldBePresent: false },
     ]);
   });
@@ -386,7 +368,8 @@ describe('buildHeaderRules fixtures', () => {
     ];
     compareWithFixture(buildHeaderRules(header, filters, getNextFixtureId), 'regex-excludes', [
       { headerName: 'X-Test', operation: 'set', priority: 1, conditionType: 'regexFilter', conditionValue: '|http*', shouldBePresent: true },
-      { headerName: 'X-Test', operation: 'remove', priority: 2, conditionType: 'regexFilter', conditionValue: 'https://a\\.com/.*|https://b\\.com/.*', shouldBePresent: true },
+      { headerName: 'X-Test', operation: 'remove', priority: 2, conditionType: 'regexFilter', conditionValue: 'https://a\\.com/.*', shouldBePresent: true },
+      { headerName: 'X-Test', operation: 'remove', priority: 2, conditionType: 'regexFilter', conditionValue: 'https://b\\.com/.*', shouldBePresent: true },
     ]);
   });
 
