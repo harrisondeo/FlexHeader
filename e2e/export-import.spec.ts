@@ -113,9 +113,10 @@ test.describe("Export / Import", () => {
     expect(exported[0].name).toBe("Round Trip");
     expect(exported[0].headers).toHaveLength(1);
 
+    // Wait for any pending React state updates and asynchronous storage saves to settle
+    await page.waitForTimeout(300);
     await clearExtensionStorage(page);
     await gotoPopup(page, extensionId);
-    await page.reload({ waitUntil: "domcontentloaded" });
     await expect(popupPage.pages.listItems.first()).toBeVisible();
 
     const initialNames = await popupPage.pages.getPageNames();

@@ -43,6 +43,7 @@ export const pageSchema = z.object({
   filtersExpanded: z.boolean().default(true),
   filters: z.array(headerFilterSchema).default([]),
   headers: z.array(headerSettingSchema).default([]),
+  lastModified: z.number().optional(),
 });
 
 export const pagesDataSchema = z.object({
@@ -151,10 +152,38 @@ export const clearStoredSettings = async () => {
 
 function useFlexHeaderSettings() {
   const [lastError, setLastError] = useState<{ type: SettingsErrorType; time: number }>({ type: SettingsErrorType.None, time: 0 });
-  const [pagesData, setPagesData] = useState<PagesData>({
+  const [pagesData, _setPagesData] = useState<PagesData>({
     pages: [defaultPage],
     selectedPage: defaultPage.id,
   });
+
+  const setPagesData = useCallback((value: PagesData | ((prev: PagesData) => PagesData)) => {
+    _setPagesData((prev) => {
+      const next = typeof value === 'function' ? value(prev) : value;
+
+      // Update page timestamps if page has been edited
+      const updatedPages = next.pages.map((nextPage) => {
+        const prevPage = prev.pages.find((p) => p.id === nextPage.id);
+        if (!prevPage) {
+          return { ...nextPage, lastModified: nextPage.lastModified ?? Date.now() };
+        }
+
+        const { lastModified: _, ...nextPageRest } = nextPage;
+        const { lastModified: __, ...prevPageRest } = prevPage;
+
+        if (JSON.stringify(nextPageRest) !== JSON.stringify(prevPageRest)) {
+          return { ...nextPage, lastModified: Date.now() };
+        }
+
+        return nextPage;
+      });
+
+      return {
+        ...next,
+        pages: updatedPages,
+      };
+    });
+  }, []);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const [syncEnabled, setSyncEnabled] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -189,15 +218,16 @@ function useFlexHeaderSettings() {
         settings.pages.forEach((page, index) => {
           const pageKey = `${PAGE_KEY_PREFIX}${index}`;
           const sizeInBytes = getDataSizeInBytes(page);
-          const STORAGE_LIMIT = 5242880; // 5MB for local storage
+          const limit = syncEnabled ? 8192 : 5242880; // 8KB if sync enabled, 5MB otherwise
+          const limitLabel = syncEnabled ? "8KB sync storage limit" : "5MB local storage limit";
 
-          if (sizeInBytes > STORAGE_LIMIT) {
+          if (sizeInBytes > limit) {
             alertContext.setAlert({
               alertType: "error",
-              alertText: `Page too large (${(sizeInBytes / 1024).toFixed(1)}KB > ${STORAGE_LIMIT / 1024}KB). Please reduce the number of headers.`,
+              alertText: `Page "${page.name}" too large (${(sizeInBytes / 1024).toFixed(1)}KB > ${(limit / 1024).toFixed(1)}KB). Please reduce the number of headers or comments.`,
               location: "bottom",
             });
-            throw new Error(`Page ${index} exceeds storage limit: ${sizeInBytes} bytes > ${STORAGE_LIMIT} bytes`);
+            throw new Error(`Page ${index} "${page.name}" exceeds ${limitLabel}: ${sizeInBytes} bytes > ${limit} bytes`);
           }
 
           dataToWrite[pageKey] = page;
@@ -251,7 +281,7 @@ function useFlexHeaderSettings() {
         location: "bottom",
       });
     }
-  }, [alertContext]);
+  }, [alertContext, syncEnabled]);
 
   useEffect(() => {
     const selectedPage = pagesData.pages.find((page) => page.enabled);
@@ -325,6 +355,80 @@ function useFlexHeaderSettings() {
   }, [pagesData, hasInitialized, lastError, saveToStorages, alertContext, saveVersion]);
 
   /**
+   * Loads pages from sync storage
+   * @returns The pages from sync storage or null if none found
+   */
+  const loadPagesFromSync = async (): Promise<Page[] | null> => {
+    try {
+      // Check for v3 format in sync storage
+      const syncMeta = await browser.storage.sync.get(SETTINGS_V3_META_KEY);
+      const meta = syncMeta[SETTINGS_V3_META_KEY] as SettingsV3Meta | undefined;
+
+      if (meta) {
+        const pagePromises = [];
+        for (let i = 0; i < meta.pageCount; i++) {
+          pagePromises.push(browser.storage.sync.get(`${PAGE_KEY_PREFIX}${i}`));
+        }
+        const pageResults = await Promise.all(pagePromises);
+        const pages = pageResults
+          .map((result, index) => result[`${PAGE_KEY_PREFIX}${index}`] as Page)
+          .filter(Boolean)
+          .map(normalizePage);
+        return pages.length > 0 ? pages : null;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Failed to load pages from sync storage:", error);
+      return null;
+    }
+  };
+
+  /**
+   * Merges pages from sync storage with local pages, avoiding duplicates and resolving conflicts with timestamps
+   */
+  const mergePages = (localPages: Page[], syncPages: Page[]): Page[] => {
+    const localPagesMap = new Map<string, Page>();
+    localPages.forEach(page => {
+      localPagesMap.set(page.name, page);
+    });
+
+    const mergedPagesList = [...localPages];
+
+    syncPages.forEach((syncPage) => {
+      const localPage = localPagesMap.get(syncPage.name);
+      if (!localPage) {
+        // Completely new page
+        mergedPagesList.push({
+          ...syncPage,
+          enabled: false,
+        });
+      } else {
+        const localTime = localPage.lastModified ?? 0;
+        const syncTime = syncPage.lastModified ?? 0;
+
+        if (syncTime > localTime) {
+          log(`SETTINGS: Merging remote sync updates for page "${syncPage.name}" (remote is newer: ${syncTime} > ${localTime})`, "info");
+          const index = mergedPagesList.findIndex(p => p.name === syncPage.name);
+          if (index !== -1) {
+            mergedPagesList[index] = {
+              ...syncPage,
+              enabled: localPage.enabled,
+            };
+          }
+        } else if (localTime > syncTime) {
+          log(`SETTINGS: Local page "${syncPage.name}" is newer than remote sync copy (${localTime} > ${syncTime}), keeping local`, "info");
+        }
+      }
+    });
+
+    return mergedPagesList.map((page, index) => ({
+      ...page,
+      id: index,
+    }));
+  };
+
+  /**
    * Loads the settings from storage and sets the state
    */
   const retrieveSettings = useCallback(async () => {
@@ -342,8 +446,9 @@ function useFlexHeaderSettings() {
     }
 
     // Load sync preference
+    let syncEnabledValue = false;
     try {
-      const syncEnabledValue = await loadFromStorage(SYNC_ENABLED_KEY, false, ['local']);
+      syncEnabledValue = await loadFromStorage(SYNC_ENABLED_KEY, false, ['local']);
       setSyncEnabled(syncEnabledValue);
     } catch (error) {
       console.error("Failed to load sync preference:", error);
@@ -375,21 +480,49 @@ function useFlexHeaderSettings() {
         }
 
         const pagesWithNulls = await Promise.all(pagePromises);
-        const pages: Page[] = pagesWithNulls
-          .filter((page): page is Page => page !== null) // Remove any null/undefined pages with type guard
+        if (pagesWithNulls.includes(null)) {
+          throw new Error(`Incomplete page data: expected ${meta.pageCount} pages, but some were missing or null in storage.`);
+        }
+        let pages: Page[] = pagesWithNulls
+          .map((page) => page!)
           .map(normalizePage);
+
+        // If sync is enabled, check remote sync storage for any updates or edits
+        if (syncEnabledValue && storageType === 'local') {
+          try {
+            const syncPages = await loadPagesFromSync();
+            if (syncPages && syncPages.length > 0) {
+              const merged = mergePages(pages, syncPages);
+              if (JSON.stringify(merged) !== JSON.stringify(pages)) {
+                log("SETTINGS: Found remote sync updates, merging into local configuration", "info");
+                pages = merged;
+                // Save merged pages to local storage copy
+                await saveToStorages({
+                  pages,
+                  selectedPage: meta.selectedPage,
+                });
+              }
+            }
+          } catch (syncLoadError) {
+            console.error("Failed to merge remote sync settings during load:", syncLoadError);
+          }
+        }
 
         if (pages.length === 0) {
           // No pages found, use default
-          setPagesData({
+          const initialData = {
             pages: [defaultPage],
             selectedPage: defaultPage.id,
-          });
+          };
+          prevPagesDataRef.current = JSON.stringify(initialData);
+          setPagesData(initialData);
         } else {
-          setPagesData({
+          const initialData = {
             pages,
             selectedPage: meta.selectedPage,
-          });
+          };
+          prevPagesDataRef.current = JSON.stringify(initialData);
+          setPagesData(initialData);
           // If loaded from sync, save a copy to local storage
           if (storageType === 'sync') {
             log("SETTINGS: Saving sync data to local storage", "info");
@@ -406,10 +539,12 @@ function useFlexHeaderSettings() {
       }
 
       // No existing settings found, use default
-      setPagesData({
+      const initialData = {
         pages: [defaultPage],
         selectedPage: defaultPage.id,
-      });
+      };
+      prevPagesDataRef.current = JSON.stringify(initialData);
+      setPagesData(initialData);
       setHasInitialized(true);
 
     } catch (error) {
@@ -420,14 +555,16 @@ function useFlexHeaderSettings() {
         location: "bottom",
       });
 
-      setPagesData({
+      const initialData = {
         pages: [defaultPage],
         selectedPage: defaultPage.id,
-      });
+      };
+      prevPagesDataRef.current = JSON.stringify(initialData);
+      setPagesData(initialData);
       setHasInitialized(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saveToStorages]);
+  }, [saveToStorages, syncEnabled]);
 
   /**
    * Clears the storage and sets the state to the default page
@@ -754,99 +891,7 @@ function useFlexHeaderSettings() {
     }
   };
 
-  /**
-   * Merges pages from sync storage with local pages, avoiding duplicates.
-   * Deduplication is based on page name, sorted headers (by headerName and headerValue),
-   * and sorted filters (by type and value). The comparison uses these sorted properties
-   * to generate a unique key for each page.
-   * @param localPages The current local pages
-   * @param syncPages The pages from sync storage
-   * @returns The merged pages array
-   */
-  const mergePages = (localPages: Page[], syncPages: Page[]): Page[] => {
-    // Helper function to create unique key for page comparison
-    const getPageKey = (page: Page): string => {
-      // Sort headers and filters for stable key
-      const sortedHeaders = [...page.headers].sort((a, b) => {
-        if (a.headerName !== b.headerName) return a.headerName.localeCompare(b.headerName);
-        if (a.headerValue !== b.headerValue) return a.headerValue.localeCompare(b.headerValue);
-        return 0;
-      });
-      const sortedFilters = [...page.filters].sort((a, b) => {
-        if (a.type !== b.type) return a.type.localeCompare(b.type);
-        if (a.mode !== b.mode) return a.mode.localeCompare(b.mode);
-        if (a.value !== b.value) return String(a.value).localeCompare(String(b.value));
-        return 0;
-      });
-      return `${page.name}_${JSON.stringify({
-        headers: sortedHeaders,
-        filters: sortedFilters,
-      })}`;
-    };
 
-    // Create a map of local pages for comparison
-    const localPagesMap = new Map<string, Page>();
-    localPages.forEach(page => {
-      localPagesMap.set(getPageKey(page), page);
-    });
-
-    // Find sync pages that don't exist in local storage
-    const newPagesFromSync: Page[] = [];
-    syncPages.forEach(syncPage => {
-      if (!localPagesMap.has(getPageKey(syncPage))) {
-        newPagesFromSync.push(syncPage);
-      }
-    });
-
-    if (newPagesFromSync.length === 0) {
-      return localPages;
-    }
-
-    // Merge the pages and re-index, preserving enabled state for local pages
-    const mergedPages = [
-      ...localPages.map((page, index) => ({
-        ...page,
-        id: index,
-      })),
-      ...newPagesFromSync.map((page, index) => ({
-        ...page,
-        id: localPages.length + index,
-        enabled: false, // New pages from sync are disabled by default
-      }))
-    ];
-
-    return mergedPages;
-  };
-
-  /**
-   * Loads pages from sync storage
-   * @returns The pages from sync storage or null if none found
-   */
-  const loadPagesFromSync = async (): Promise<Page[] | null> => {
-    try {
-      // Check for v3 format in sync storage
-      const syncMeta = await browser.storage.sync.get(SETTINGS_V3_META_KEY);
-      const meta = syncMeta[SETTINGS_V3_META_KEY] as SettingsV3Meta | undefined;
-
-      if (meta) {
-        const pagePromises = [];
-        for (let i = 0; i < meta.pageCount; i++) {
-          pagePromises.push(browser.storage.sync.get(`${PAGE_KEY_PREFIX}${i}`));
-        }
-        const pageResults = await Promise.all(pagePromises);
-        const pages = pageResults
-          .map((result, index) => result[`${PAGE_KEY_PREFIX}${index}`] as Page)
-          .filter(Boolean)
-          .map(normalizePage);
-        return pages.length > 0 ? pages : null;
-      }
-
-      return null;
-    } catch (error) {
-      console.error("Failed to load pages from sync storage:", error);
-      return null;
-    }
-  };
 
   /**
    * Toggle sync feature
@@ -855,6 +900,21 @@ function useFlexHeaderSettings() {
   const toggleSync = async () => {
     try {
       const newSyncEnabled = !syncEnabled;
+
+      if (newSyncEnabled) {
+        // Enforce 8KB limit on all existing local pages before enabling sync
+        for (const page of pagesData.pages) {
+          const sizeInBytes = getDataSizeInBytes(page);
+          if (sizeInBytes > 8192) {
+            alertContext.setAlert({
+              alertType: "error",
+              alertText: `Cannot enable sync: Page "${page.name}" is too large (${(sizeInBytes / 1024).toFixed(1)}KB > 8.0KB). Please reduce its size (e.g. remove comments or headers) first.`,
+              location: "bottom",
+            });
+            return;
+          }
+        }
+      }
 
       // Save sync preference first to avoid race conditions with auto-save
       await saveToStorage(SYNC_ENABLED_KEY, newSyncEnabled, 'local');
@@ -1020,6 +1080,51 @@ function useFlexHeaderSettings() {
     saveToStorage(SELECTED_PAGE_KEY, pagesData.selectedPage, 'local')
       .catch(err => console.error("Failed to save selected page to local storage:", err));
   }, [pagesData.selectedPage]);
+
+  // Save latest pagesData on beforeunload if there are unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const currentDataString = JSON.stringify(pagesData);
+      if (prevPagesDataRef.current !== currentDataString) {
+        log("SETTINGS: Unload detected with unsaved changes. Flushing save to local storage.", "warning");
+        
+        // Prepare metadata
+        const metadata: SettingsV3Meta = {
+          version: 3,
+          selectedPage: pagesData.selectedPage,
+          pageCount: pagesData.pages.length,
+        };
+
+        const dataToWrite: Record<string, unknown> = {
+          [SETTINGS_V3_META_KEY]: metadata,
+          localModifiedTime: Date.now(),
+        };
+
+        let sizeError = false;
+        const limit = syncEnabled ? 8192 : 5242880;
+
+        pagesData.pages.forEach((page, index) => {
+          const pageKey = `${PAGE_KEY_PREFIX}${index}`;
+          const sizeInBytes = getDataSizeInBytes(page);
+          if (sizeInBytes > limit) {
+            sizeError = true;
+          }
+          dataToWrite[pageKey] = page;
+        });
+
+        if (!sizeError) {
+          // Since browser.storage.local.set is asynchronous, we invoke it without awaiting.
+          // In an unload event, the browser extension runtime will still process this pending call.
+          browser.storage.local.set(dataToWrite);
+        }
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [pagesData, syncEnabled]);
 
   // Keep errors in sync with local storage so they can be surfaced in the UI
   useEffect(() => {

@@ -30,4 +30,5 @@ export const normalizePage = (page: any): Page => ({
   filtersExpanded: page.filtersExpanded ?? true,
   headers: page.headers?.map(normalizeHeader) || [],
   filters: page.filters?.map(normalizeFilter) || [],
+  lastModified: page.lastModified ?? Date.now(),
 });
