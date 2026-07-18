@@ -4,6 +4,7 @@ export const SELECTED_PAGE_KEY = "selectedPage";
 export const SETTINGS_SAVE_DEBOUNCE_TIME = 1000;
 export const SYNC_INTERVAL = 30000; // Sync from local to sync storage every 30 seconds
 export const LAST_SYNC_TIME_KEY = "last_sync_time"; // Track when we last synced to sync storage
+export const LAST_MERGE_TIME_KEY = "last_merge_time"; // Set only when the background script merges remote pages into local storage
 export const SYNC_ENABLED_KEY = "syncEnabled"; // Whether to sync settings across browsers
 export const MIGRATION_COMPLETE_KEY = "migrationComplete"; // Tracks if merge migration was done
 export const REVIEW_PROMPT_KEY = "reviewPrompt";

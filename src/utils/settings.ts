@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
 import { z } from "zod";
-import { SELECTED_PAGE_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, SYNC_ENABLED_KEY, MIGRATION_COMPLETE_KEY, ERRORS_STATE_KEY } from "../constants";
+import { SELECTED_PAGE_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, SYNC_ENABLED_KEY, MIGRATION_COMPLETE_KEY, ERRORS_STATE_KEY, LAST_MERGE_TIME_KEY } from "../constants";
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage";
 import { log } from "./log";
 import { normalizePage } from "./headers";
@@ -37,6 +37,11 @@ export const headerFilterSchema = z.object({
 
 export const pageSchema = z.object({
   id: z.number(),
+  // Stable identity so mergePages can match "the same page" across browsers
+  // even after an edit changes its content. Optional (not zod-defaulted)
+  // because a default here would fabricate a fresh id on every parse -
+  // legacy pages are backfilled once instead, in retrieveSettings.
+  pageId: z.string().optional(),
   name: z.string().min(1),
   enabled: z.boolean(),
   keepEnabled: z.boolean(),
@@ -44,6 +49,10 @@ export const pageSchema = z.object({
   filtersExpanded: z.boolean().default(true),
   filters: z.array(headerFilterSchema).default([]),
   headers: z.array(headerSettingSchema).default([]),
+  // Resolves which side wins when the same page is edited on two synced
+  // browsers. Optional rather than defaulted so legacy pages don't need one -
+  // readers treat a missing value as 0, the oldest possible timestamp.
+  lastModified: z.number().optional(),
 });
 
 export const pagesDataSchema = z.object({
@@ -72,12 +81,17 @@ export type SettingsV3Meta = z.infer<typeof settingsV3MetaSchema>;
 
 const defaultPage: Page = {
   id: 0,
+  // Fixed (not random) so that two fresh installs on the same sync account
+  // recognize each other's untouched default page as the same page instead
+  // of forking into a duplicate the first time they sync.
+  pageId: "default",
   name: "Default",
   enabled: true,
   keepEnabled: false,
   showHeaderComments: true,
   filtersExpanded: true,
   filters: [],
+  lastModified: 0,
   headers: [
     {
       id: "default-1",
@@ -378,7 +392,12 @@ function useFlexHeaderSettings() {
         const pagesWithNulls = await Promise.all(pagePromises);
         const pages: Page[] = pagesWithNulls
           .filter((page): page is Page => page !== null) // Remove any null/undefined pages with type guard
-          .map(normalizePage);
+          .map(normalizePage)
+          // Backfilled here (not in normalizePage) so it happens once and gets
+          // persisted by the save effect below - normalizePage also runs on
+          // background.ts's non-persisting reads, which would otherwise
+          // re-fabricate a throwaway id every time.
+          .map((page) => ({ ...page, pageId: page.pageId || crypto.randomUUID() }));
 
         if (pages.length === 0) {
           // No pages found, use default
@@ -454,7 +473,13 @@ function useFlexHeaderSettings() {
   const addPage = (page: Page) => {
     const newPages = [
       ...pagesData.pages.map((p) => ({ ...p, enabled: false })),
-      { ...page, id: pagesData.pages.length, enabled: true },
+      {
+        ...page,
+        id: pagesData.pages.length,
+        enabled: true,
+        pageId: page.pageId || crypto.randomUUID(),
+        lastModified: Date.now(),
+      },
     ];
 
     const testData = {
@@ -503,7 +528,7 @@ function useFlexHeaderSettings() {
    * @param page The page object to update
    */
   const updatePage = (page: Page) => {
-    const newPages = pagesData.pages.map((p) => (p.id === page.id ? page : p));
+    const newPages = pagesData.pages.map((p) => (p.id === page.id ? { ...page, lastModified: Date.now() } : p));
 
     setPagesData((prev) => ({
       ...prev,
@@ -578,6 +603,7 @@ function useFlexHeaderSettings() {
       page.id === pageId
         ? {
           ...page,
+          lastModified: Date.now(),
           headers: [
             ...page.headers,
             {
@@ -609,6 +635,7 @@ function useFlexHeaderSettings() {
       page.id === pageId
         ? {
           ...page,
+          lastModified: Date.now(),
           headers: _reIndexHeaders(
             page.headers.filter((header) => header.id !== id)
           ),
@@ -632,7 +659,7 @@ function useFlexHeaderSettings() {
     const reIndexedHeaders = _reIndexHeaders(newHeaders);
 
     const newPages = pagesData.pages.map((page) =>
-      page.id === pageId ? { ...page, headers: reIndexedHeaders } : page
+      page.id === pageId ? { ...page, headers: reIndexedHeaders, lastModified: Date.now() } : page
     );
 
     setPagesData((prev) => ({
@@ -651,6 +678,7 @@ function useFlexHeaderSettings() {
       page.id === pageId
         ? {
           ...page,
+          lastModified: Date.now(),
           headers: page.headers.map((h) => (h.id === header.id ? header : h)),
         }
         : page
@@ -676,6 +704,7 @@ function useFlexHeaderSettings() {
       page.id === pageId
         ? {
           ...page,
+          lastModified: Date.now(),
           filters: [
             ...page.filters,
             { ...filter, id: `${pageId}-${page.filters.length + 1}` },
@@ -700,6 +729,7 @@ function useFlexHeaderSettings() {
       page.id === pageId
         ? {
           ...page,
+          lastModified: Date.now(),
           filters: page.filters.filter((filter) => filter.id !== filterId),
         }
         : page
@@ -725,6 +755,7 @@ function useFlexHeaderSettings() {
         page.id === pageId
           ? {
             ...page,
+            lastModified: Date.now(),
             filters: page.filters.map((f) =>
               f.id === filter.id ? { ...filter, valid: result } : f
             ),
@@ -818,11 +849,10 @@ function useFlexHeaderSettings() {
         if (syncPages && syncPages.length > 0) {
           // There is existing sync data, perform merge
           const mergedPages = mergePages(pagesData.pages, syncPages);
-          
-          if (mergedPages.length > pagesData.pages.length) {
-            // New pages were added from sync
+
+          if (mergedPages !== pagesData.pages) {
             const newPagesCount = mergedPages.length - pagesData.pages.length;
-            log(`SETTINGS: Merged ${newPagesCount} pages from sync storage`, "info");
+            log(`SETTINGS: Merged ${newPagesCount} page(s) from sync storage`, "info");
             
             // Try to preserve the selected page, or select the first enabled page
             const currentSelectedPage = pagesData.pages[pagesData.selectedPage];
@@ -844,7 +874,9 @@ function useFlexHeaderSettings() {
             
             alertContext.setAlert({
               alertType: "info",
-              alertText: `Sync enabled! ${newPagesCount} page(s) merged from other browsers.`,
+              alertText: newPagesCount > 0
+                ? `Sync enabled! ${newPagesCount} page(s) merged from other browsers.`
+                : "Sync enabled! Existing pages were updated from other browsers.",
               location: "bottom",
             });
           } else {
@@ -906,7 +938,14 @@ function useFlexHeaderSettings() {
 
           // remap the ids to avoid conflicts
           setPagesData((prev) => {
-            const combinedPages = [...prev.pages, ...parsed.map(normalizePage)];
+            const importedPages = parsed.map(normalizePage).map((page) => ({
+              ...page,
+              // A fresh id if the file has none, so an imported page never
+              // merge-matches an unrelated existing page by coincidence.
+              pageId: page.pageId || crypto.randomUUID(),
+              lastModified: page.lastModified || Date.now(),
+            }));
+            const combinedPages = [...prev.pages, ...importedPages];
             const newPages = combinedPages.map((page, index) => ({
               ...page,
               id: index,
@@ -977,24 +1016,13 @@ function useFlexHeaderSettings() {
     return () => browser.storage.local.onChanged.removeListener(listener);
   }, []);
 
-  // Track the current page count so the listener below can tell a background
-  // merge (more pages than we know about) apart from our own writes.
-  const pageCountRef = useRef(pagesData.pages.length);
-  useEffect(() => {
-    pageCountRef.current = pagesData.pages.length;
-  }, [pagesData.pages.length]);
-
-  // The background service worker can merge new pages in from sync storage
-  // at any time (not just on load). If that happens while this page is open,
-  // pick up the change immediately instead of waiting for a reload.
+  // LAST_MERGE_TIME_KEY is stamped only by the background worker's merge
+  // writes, never by this hook's own saves - an unambiguous "reload" signal
+  // that a page-count comparison couldn't give us (it misses in-place edits).
   useEffect(() => {
     const listener = (changes: Record<string, browser.Storage.StorageChange>) => {
-      const metaChange = changes[SETTINGS_V3_META_KEY];
-      if (!metaChange) return;
-
-      const newMeta = metaChange.newValue as SettingsV3Meta | undefined;
-      if (newMeta && newMeta.pageCount > pageCountRef.current) {
-        log("SETTINGS: Detected pages merged in from sync storage, reloading", "info");
+      if (LAST_MERGE_TIME_KEY in changes) {
+        log("SETTINGS: Detected changes merged in from sync storage, reloading", "info");
         retrieveSettings();
       }
     };

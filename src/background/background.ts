@@ -1,4 +1,4 @@
-import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, SYNC_INTERVAL, LAST_SYNC_TIME_KEY, SELECTED_PAGE_KEY, SYNC_ENABLED_KEY, ERRORS_STATE_KEY } from "../constants";
+import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, SYNC_INTERVAL, LAST_SYNC_TIME_KEY, LAST_MERGE_TIME_KEY, SELECTED_PAGE_KEY, SYNC_ENABLED_KEY, ERRORS_STATE_KEY } from "../constants";
 import type { Page, SettingsV3Meta } from "../utils/settings";
 import browser from "webextension-polyfill";
 import { getAllFromStorage, saveToStorage, getDataSizeInBytes, loadFromStorage } from "../utils/storage";
@@ -143,9 +143,6 @@ export async function syncLocalToRemoteStorage() {
   }
 }
 
-/**
- * Reads the full v3-format settings (meta + pages) out of a given storage area.
- */
 async function readV3Settings(area: browser.Storage.StorageArea): Promise<{ meta: SettingsV3Meta; pages: Page[] } | null> {
   const metaResult = await area.get(SETTINGS_V3_META_KEY);
   const meta = metaResult[SETTINGS_V3_META_KEY] as SettingsV3Meta | undefined;
@@ -168,11 +165,6 @@ async function readV3Settings(area: browser.Storage.StorageArea): Promise<{ meta
   return { meta, pages };
 }
 
-/**
- * Writes a full set of pages to local storage as v3-format settings, keeping
- * the current selected page. Also removes any now-stale page_* keys beyond
- * the new page count.
- */
 async function writePagesToLocalStorage(pages: Page[], selectedPage: number): Promise<void> {
   const existingLocal = await getAllFromStorage('local');
 
@@ -185,6 +177,7 @@ async function writePagesToLocalStorage(pages: Page[], selectedPage: number): Pr
   const dataToWrite: Record<string, unknown> = {
     [SETTINGS_V3_META_KEY]: metadata,
     localModifiedTime: Date.now(),
+    [LAST_MERGE_TIME_KEY]: Date.now(),
   };
   pages.forEach((page, index) => {
     dataToWrite[`${PAGE_KEY_PREFIX}${index}`] = page;
@@ -192,7 +185,8 @@ async function writePagesToLocalStorage(pages: Page[], selectedPage: number): Pr
 
   await browser.storage.local.set(dataToWrite);
 
-  // Clean up any now-stale page keys left over from a smaller page count
+  // Guards against leftover page_N keys if this is ever called with fewer
+  // pages than are currently stored - stale keys would otherwise linger.
   const stalePageKeys = Object.keys(existingLocal)
     .filter(key => key.startsWith(PAGE_KEY_PREFIX))
     .filter(key => parseInt(key.replace(PAGE_KEY_PREFIX, '')) >= pages.length);
@@ -203,14 +197,9 @@ async function writePagesToLocalStorage(pages: Page[], selectedPage: number): Pr
 }
 
 /**
- * Pulls data from sync storage into local storage.
- * This runs periodically and whenever sync storage changes (e.g. another
- * synced browser pushed an update), so pages/headers added elsewhere show up
- * without requiring the extension to be reloaded.
- *
- * Merging is strictly additive: existing local pages are never removed or
- * overwritten by this function, only pages that don't already exist locally
- * are appended (disabled), so a sync pull can never lose local data.
+ * Runs on an interval and on storage.sync.onChanged so pages/edits from
+ * another browser show up without a reload. mergePages guarantees this can
+ * never drop a local page, only add or update in place.
  */
 export async function syncRemoteToLocalStorage() {
   try {
@@ -224,14 +213,12 @@ export async function syncRemoteToLocalStorage() {
 
     const syncSettings = await readV3Settings(browser.storage.sync);
     if (!syncSettings || syncSettings.pages.length === 0) {
-      // Nothing in sync storage yet to pull down
       return;
     }
 
     const localSettings = await readV3Settings(browser.storage.local);
 
     if (!localSettings || localSettings.pages.length === 0) {
-      // No local data at all - bootstrap straight from sync
       log("BACKGROUND: No local data found, bootstrapping from remote storage", "info");
       await writePagesToLocalStorage(syncSettings.pages, syncSettings.meta.selectedPage);
       return;
@@ -239,8 +226,17 @@ export async function syncRemoteToLocalStorage() {
 
     const mergedPages = mergePages(localSettings.pages, syncSettings.pages);
 
-    if (mergedPages.length > localSettings.pages.length) {
-      log(`BACKGROUND: Merging ${mergedPages.length - localSettings.pages.length} page(s) from remote storage`, "success");
+    // mergePages returns the exact same array reference when nothing needed
+    // to change, so this also catches in-place edits (e.g. a header value
+    // changed on the newer side), not just newly-added pages.
+    if (mergedPages !== localSettings.pages) {
+      const addedCount = mergedPages.length - localSettings.pages.length;
+      log(
+        addedCount > 0
+          ? `BACKGROUND: Merging ${addedCount} new page(s) and applying any newer edits from remote storage`
+          : "BACKGROUND: Applying newer edits from remote storage",
+        "success"
+      );
       await writePagesToLocalStorage(mergedPages, localSettings.meta.selectedPage);
     }
   } catch (error) {
@@ -270,22 +266,18 @@ export function initBackground() {
     }
   });
 
-  // Pull immediately whenever sync storage changes - e.g. Chrome/Firefox
-  // propagating an update pushed by another signed-in browser - rather than
-  // waiting for this browser to reload or the periodic interval to fire.
+  // React to another signed-in browser's push immediately, rather than
+  // waiting on this browser's own reload or the periodic interval.
   browser.storage.sync.onChanged.addListener(function () {
     syncRemoteToLocalStorage();
   });
 
-  // Periodically pull from remote storage, then push local state back up so
-  // any newly-merged pages are reflected in sync storage too.
   setInterval(function () {
     syncRemoteToLocalStorage().finally(syncLocalToRemoteStorage);
   }, SYNC_INTERVAL);
 
-  // Initial execution: pull down any remote updates first so we don't push a
-  // smaller/stale local page set over what's already in sync storage, then
-  // apply rules and push local state back up.
+  // Pull before pushing so we never push a stale local page set over
+  // what's already in sync storage.
   syncRemoteToLocalStorage().finally(() => {
     getAndApplyHeaderRules();
     syncLocalToRemoteStorage();

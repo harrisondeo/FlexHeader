@@ -314,6 +314,101 @@ describe('Page Merging', () => {
   });
 });
 
+describe('Identity-based merge (pageId + lastModified)', () => {
+  const withIdentity = (page: Page, pageId: string, lastModified: number): Page => ({
+    ...page,
+    pageId,
+    lastModified,
+  });
+
+  it('updates an existing page in place when the incoming version is newer, instead of forking a duplicate', () => {
+    // Regression test: the old content-based dedup key changed along with
+    // the edited value, so this used to fork a duplicate instead of updating.
+    const localPage = withIdentity(
+      createPage(0, 'Work', true, [createHeader('X-Auth', 'old-token')]),
+      'page-1',
+      1000
+    );
+    const editedIncoming = withIdentity(
+      createPage(0, 'Work', false, [createHeader('X-Auth', 'new-token')]),
+      'page-1',
+      2000
+    );
+
+    const result = mergePages([localPage], [editedIncoming]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].headers[0].headerValue).toBe('new-token');
+    // Local-only state must survive the update
+    expect(result[0].enabled).toBe(true);
+    expect(result[0].id).toBe(0);
+  });
+
+  it('keeps the local version when it is newer than the incoming one', () => {
+    const localPage = withIdentity(
+      createPage(0, 'Work', true, [createHeader('X-Auth', 'newer-token')]),
+      'page-1',
+      5000
+    );
+    const staleIncoming = withIdentity(
+      createPage(0, 'Work', false, [createHeader('X-Auth', 'older-token')]),
+      'page-1',
+      1000
+    );
+
+    const result = mergePages([localPage], [staleIncoming]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].headers[0].headerValue).toBe('newer-token');
+  });
+
+  it('is a no-op (same reference) when both sides are identical', () => {
+    const localPage = withIdentity(createPage(0, 'Work', true, [createHeader('X-Auth', 'token')]), 'page-1', 1000);
+    const incoming = withIdentity(createPage(0, 'Work', false, [createHeader('X-Auth', 'token')]), 'page-1', 1000);
+
+    const localPages = [localPage];
+    const result = mergePages(localPages, [incoming]);
+
+    expect(result).toBe(localPages);
+  });
+
+  it('never collapses two distinct pages that happen to share identical content once both have their own pageId', () => {
+    // Regression guard: once pages carry a real identity, content equality
+    // alone must never be used to merge them - only a matching pageId can.
+    const localPageA = withIdentity(createPage(0, 'Profile A', true, [createHeader('X-Shared', 'same-value')]), 'page-a', 1000);
+    const incomingPageB = withIdentity(createPage(0, 'Profile B', false, [createHeader('X-Shared', 'same-value')]), 'page-b', 2000);
+
+    const result = mergePages([localPageA], [incomingPageB]);
+
+    expect(result).toHaveLength(2);
+    expect(result.map(p => p.pageId)).toEqual(['page-a', 'page-b']);
+  });
+
+  it('adds a page with a new pageId as a new (disabled) page', () => {
+    const localPage = withIdentity(createPage(0, 'Work', true, []), 'page-1', 1000);
+    const newIncoming = withIdentity(createPage(0, 'Personal', false, [createHeader('X-New', 'value')]), 'page-2', 1000);
+
+    const result = mergePages([localPage], [newIncoming]);
+
+    expect(result).toHaveLength(2);
+    expect(result[1].name).toBe('Personal');
+    expect(result[1].enabled).toBe(false);
+  });
+
+  it('links a legacy local page (no pageId yet) to the incoming pageId via content match without discarding local edits made since', () => {
+    // Simulates the upgrade window: this browser hasn't opened its popup
+    // since the pageId field shipped, so its stored page still has none.
+    const legacyLocal = createPage(0, 'Work', true, [createHeader('X-Auth', 'token')]);
+    const incoming = withIdentity(createPage(0, 'Work', false, [createHeader('X-Auth', 'token')]), 'page-1', 500);
+
+    const result = mergePages([legacyLocal], [incoming]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].pageId).toBe('page-1'); // now linked for future merges
+    expect(result[0].enabled).toBe(true); // local state preserved
+  });
+});
+
 describe('URL filter validation', () => {
   it('accepts common valid URL patterns', () => {
     expect(isValidUrlFilter('||example.com/')).toBe(true);

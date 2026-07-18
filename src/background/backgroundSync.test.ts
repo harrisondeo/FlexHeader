@@ -1,10 +1,7 @@
 /**
- * Tests for the background service worker's sync -> local pull.
- *
- * Previously, data from sync storage was only ever pulled into local storage
- * on initial load / the one-time "enable sync" migration. These tests cover
- * syncRemoteToLocalStorage(), which pulls continuously (on an interval and
- * whenever sync storage changes) and must never drop an existing local page.
+ * syncRemoteToLocalStorage() pulls continuously (interval + storage.sync
+ * onChanged), replacing the old load-only/one-time-migration pull - these
+ * tests guard that it can never drop an existing local page.
  */
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
@@ -70,9 +67,14 @@ vi.mock('webextension-polyfill', () => ({
 }));
 
 import { syncRemoteToLocalStorage } from './background';
-import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, SYNC_ENABLED_KEY } from '../constants';
+import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, SYNC_ENABLED_KEY, LAST_MERGE_TIME_KEY } from '../constants';
 
-const createPage = (id: number, name: string, headerValue = 'value'): Page => ({
+const createPage = (
+  id: number,
+  name: string,
+  headerValue = 'value',
+  identity?: { pageId: string; lastModified: number }
+): Page => ({
   id,
   name,
   enabled: id === 0,
@@ -80,6 +82,7 @@ const createPage = (id: number, name: string, headerValue = 'value'): Page => ({
   showHeaderComments: true,
   filtersExpanded: true,
   filters: [],
+  ...identity,
   headers: [
     {
       id: `${id}-1`,
@@ -118,7 +121,6 @@ describe('syncRemoteToLocalStorage', () => {
     localArea = createMockArea();
     syncArea = createMockArea();
 
-    // Wire the shared browser.storage mock to whichever area this test seeded
     browserMock.storage.local.get.mockImplementation(localArea.get);
     browserMock.storage.local.set.mockImplementation(localArea.set);
     browserMock.storage.local.remove.mockImplementation(localArea.remove);
@@ -192,5 +194,43 @@ describe('syncRemoteToLocalStorage', () => {
     expect(localArea.set).not.toHaveBeenCalled();
     const meta = localArea.store[SETTINGS_V3_META_KEY] as SettingsV3Meta;
     expect(meta.selectedPage).toBe(1); // untouched
+  });
+
+  it('updates an existing page in place instead of forking a duplicate when its header value was edited elsewhere', async () => {
+    // Regression test: the old content-based dedup key changed along with
+    // the edited value, so this used to fork a duplicate instead of updating.
+    localArea.store[SYNC_ENABLED_KEY] = true;
+    seedArea(localArea, [
+      createPage(0, 'Shared Page', 'old-value', { pageId: 'shared-1', lastModified: 1000 }),
+    ], 0);
+    seedArea(syncArea, [
+      createPage(0, 'Shared Page', 'new-value', { pageId: 'shared-1', lastModified: 2000 }),
+    ], 0);
+
+    await syncRemoteToLocalStorage();
+
+    const pages = readLocalPages(localArea);
+    expect(pages).toHaveLength(1); // no duplicate page created
+    expect(pages[0].headers[0].headerValue).toBe('new-value');
+    expect(pages[0].enabled).toBe(true); // local enabled/selection state preserved
+
+    expect(localArea.store[LAST_MERGE_TIME_KEY]).toBeDefined();
+  });
+
+  it('does not overwrite a local edit with a stale remote version of the same page', async () => {
+    localArea.store[SYNC_ENABLED_KEY] = true;
+    seedArea(localArea, [
+      createPage(0, 'Shared Page', 'newer-value', { pageId: 'shared-1', lastModified: 5000 }),
+    ], 0);
+    seedArea(syncArea, [
+      createPage(0, 'Shared Page', 'stale-value', { pageId: 'shared-1', lastModified: 1000 }),
+    ], 0);
+
+    await syncRemoteToLocalStorage();
+
+    const pages = readLocalPages(localArea);
+    expect(pages).toHaveLength(1);
+    expect(pages[0].headers[0].headerValue).toBe('newer-value');
+    expect(localArea.set).not.toHaveBeenCalled();
   });
 });

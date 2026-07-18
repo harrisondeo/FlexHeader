@@ -1,13 +1,9 @@
 import type { Page } from "./settings";
 
 /**
- * Creates a unique key for a page based on its name, headers, and filters.
- * Used for deduplication when merging pages from another storage source.
- * Sorted so that header/filter ordering doesn't affect the key, and limited
- * to the fields that describe a header/filter's meaning (not its id or
- * enabled state) so the same page created independently on two browsers -
- * where ids are assigned per-position and won't match - is still recognized
- * as a duplicate instead of merging in as a redundant copy.
+ * Fallback match for pages with no persisted `pageId` yet (see mergePages).
+ * Sorted so ordering doesn't affect the key, and limited to fields that
+ * describe meaning rather than incidental id/enabled state.
  */
 export const getPageKey = (page: Page): string => {
   const sortedHeaders = [...page.headers].sort((a, b) => {
@@ -28,39 +24,72 @@ export const getPageKey = (page: Page): string => {
 };
 
 /**
- * Merges pages from another storage source (e.g. sync storage) into a set of
- * local pages, without ever dropping an existing local page. Only pages that
- * don't already exist locally (by name/headers/filters) are appended, always
- * disabled, so incoming data can never silently take over the active page.
- * @param localPages The current local pages
- * @param incomingPages The pages to merge in (e.g. from sync storage)
- * @returns The merged pages array
+ * Matches pages by `pageId` (newer `lastModified` wins, local `id`/`enabled`
+ * always kept) so an edit updates the existing page in place instead of
+ * forking a duplicate. Content-key matching is only a one-time fallback for
+ * pre-pageId pages - never used once both sides have real ids, so two
+ * distinct pages with coincidentally identical content are never collapsed.
+ * Unmatched incoming pages are appended disabled; local pages are never
+ * removed.
  */
 export const mergePages = (localPages: Page[], incomingPages: Page[]): Page[] => {
-  const localPagesMap = new Map<string, Page>();
+  const localByPageId = new Map<string, Page>();
+  const legacyLocalByContentKey = new Map<string, Page>();
+  const allLocalByContentKey = new Map<string, Page>();
+
   localPages.forEach(page => {
-    localPagesMap.set(getPageKey(page), page);
+    if (page.pageId) {
+      localByPageId.set(page.pageId, page);
+    } else {
+      legacyLocalByContentKey.set(getPageKey(page), page);
+    }
+    allLocalByContentKey.set(getPageKey(page), page);
   });
 
+  const resultPages: Page[] = [...localPages];
   const newPages: Page[] = [];
+  let changed = false;
+
   incomingPages.forEach(incomingPage => {
-    if (!localPagesMap.has(getPageKey(incomingPage))) {
+    const matchedLocal = incomingPage.pageId
+      ? localByPageId.get(incomingPage.pageId) ?? legacyLocalByContentKey.get(getPageKey(incomingPage))
+      : allLocalByContentKey.get(getPageKey(incomingPage));
+
+    if (!matchedLocal) {
       newPages.push(incomingPage);
+      return;
+    }
+
+    const incomingIsNewer = (incomingPage.lastModified ?? 0) > (matchedLocal.lastModified ?? 0);
+    const index = resultPages.indexOf(matchedLocal);
+
+    if (incomingIsNewer) {
+      resultPages[index] = {
+        ...incomingPage,
+        id: matchedLocal.id,
+        enabled: matchedLocal.enabled,
+      };
+      changed = true;
+    } else if (!matchedLocal.pageId && incomingPage.pageId) {
+      // Adopt the incoming id so future merges match directly, not via
+      // the content fallback again.
+      resultPages[index] = { ...matchedLocal, pageId: incomingPage.pageId };
+      changed = true;
     }
   });
 
-  if (newPages.length === 0) {
+  if (newPages.length === 0 && !changed) {
     return localPages;
   }
 
   return [
-    ...localPages.map((page, index) => ({
+    ...resultPages.map((page, index) => ({
       ...page,
       id: index,
     })),
     ...newPages.map((page, index) => ({
       ...page,
-      id: localPages.length + index,
+      id: resultPages.length + index,
       enabled: false, // Incoming pages are disabled by default
     })),
   ];
