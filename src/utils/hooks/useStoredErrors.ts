@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import browser from "webextension-polyfill";
-import { ERRORS_STATE_KEY } from "../constants";
-import { AppError, clearStoredErrors, getStoredErrors, injectTestError, ErrorCategory } from "./errors";
+import { ERRORS_STATE_KEY } from "../../constants";
+import { AppError, clearStoredErrors, getStoredErrors, injectTestError, ErrorCategory } from "../storage/errors";
 
 /**
  * Owns the persisted error list surfaced in the errors panel - loading it on

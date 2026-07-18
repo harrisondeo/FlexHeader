@@ -31,7 +31,7 @@ vi.mock('webextension-polyfill', () => ({
 }));
 
 import { renderHook, act, waitFor } from '@testing-library/react';
-import useFlexHeaderSettings from './settings';
+import useFlexHeaderSettings from '../settings';
 
 // Regression coverage for a real bug: duplicating a page carried over its
 // source pageId, so mergePages (which matches by pageId) treated the

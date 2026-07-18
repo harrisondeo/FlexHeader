@@ -2,22 +2,22 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
 import { SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, LAST_MERGE_TIME_KEY, LOCAL_MODIFIED_TIME_KEY, HISTORY_ENABLED_KEY } from "../constants";
-import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage";
+import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage/storage";
 import { log } from "./log";
-import { normalizePage } from "./headers";
-import { applyTombstones, pruneExpiredTombstones, type PageTombstone } from "./pageMerge";
-import { addStoredError, clearStoredErrors } from "./errors";
-import usePageHistory from "./usePageHistory";
-import useStoredErrors from "./useStoredErrors";
-import useSyncStatus from "./useSyncStatus";
-import useFilterOperations from "./useFilterOperations";
-import useHeaderOperations from "./useHeaderOperations";
-import usePageOperations from "./usePageOperations";
-import useSyncToggle from "./useSyncToggle";
-import { importSettingsFile } from "./importSettings";
-import type { Page, PagesData, SettingsV3Meta } from "./schemas";
+import { normalizePage } from "./domain/headers";
+import { applyTombstones, pruneExpiredTombstones, type PageTombstone } from "./domain/pageMerge";
+import { addStoredError, clearStoredErrors } from "./storage/errors";
+import usePageHistory from "./hooks/usePageHistory";
+import useStoredErrors from "./hooks/useStoredErrors";
+import useSyncStatus from "./hooks/useSyncStatus";
+import useFilterOperations from "./hooks/useFilterOperations";
+import useHeaderOperations from "./hooks/useHeaderOperations";
+import usePageOperations from "./hooks/usePageOperations";
+import useSyncToggle from "./hooks/useSyncToggle";
+import { importSettingsFile } from "./io/importSettings";
+import type { Page, PagesData, SettingsV3Meta } from "./domain/schemas";
 
-export * from "./schemas";
+export * from "./domain/schemas";
 
 export enum SettingsErrorType {
   None = "None",

@@ -1,5 +1,5 @@
 import browser from "webextension-polyfill";
-import { ERRORS_STATE_KEY } from "../constants";
+import { ERRORS_STATE_KEY } from "../../constants";
 
 export type ErrorCategory = "save" | "apply" | "sync";
 

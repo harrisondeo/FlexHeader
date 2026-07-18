@@ -68,7 +68,7 @@ vi.mock('webextension-polyfill', () => ({
 
 import { syncRemoteToLocalStorage, syncLocalToRemoteStorage, initBackground } from './background';
 import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, LAST_MERGE_TIME_KEY, SELECTED_PAGE_KEY, SETTINGS_SAVE_DEBOUNCE_TIME } from '../constants';
-import type { PageTombstone } from '../utils/pageMerge';
+import type { PageTombstone } from '../utils/domain/pageMerge';
 
 const createPage = (
   id: number,

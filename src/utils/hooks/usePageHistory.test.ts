@@ -31,9 +31,9 @@ vi.mock('webextension-polyfill', () => ({
 }));
 
 import { renderHook, act, waitFor } from '@testing-library/react';
-import useFlexHeaderSettings from './settings';
-import { mergePages } from './pageMerge';
-import { HISTORY_ENABLED_KEY } from '../constants';
+import useFlexHeaderSettings from '../settings';
+import { mergePages } from '../domain/pageMerge';
+import { HISTORY_ENABLED_KEY } from '../../constants';
 
 const createStorageArea = () => {
   const store: Record<string, any> = {};

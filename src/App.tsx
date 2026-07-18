@@ -7,7 +7,7 @@ import Alert from "./components/alert";
 import SettingsPage from "./components/settingsPage";
 import { PagesList } from "./components/pagesList";
 import ReviewPrompt from "./components/reviewPrompt";
-import useReviewPrompt from "./utils/useReviewPrompt";
+import useReviewPrompt from "./utils/hooks/useReviewPrompt";
 import { isRunningInActionPopup } from "./utils/browserContext";
 import HeadersList from "./components/headersList";
 import PageTitle from "./components/pageTitle";

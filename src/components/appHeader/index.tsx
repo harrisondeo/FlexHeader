@@ -14,7 +14,7 @@ import {
 } from "../../context/settingsContext";
 import ErrorsIcon from "../errorsIcon";
 import SyncToggleButton from "../syncToggleButton";
-import { getSyncStatus } from "../../utils/syncStatus";
+import { getSyncStatus } from "../../utils/sync/syncStatus";
 
 const AppHeader = () => {
   const { darkModeEnabled, syncEnabled, pages, errors, lastSyncTime, localModifiedTime, canUndo, canRedo } =

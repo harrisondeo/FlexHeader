@@ -19,7 +19,7 @@ import {
   reconcileHistoryAfterMerge,
   type PageTombstone,
 } from './pageMerge';
-import { TOMBSTONE_RETENTION_MS } from '../constants';
+import { TOMBSTONE_RETENTION_MS } from '../../constants';
 import type { Page, HeaderSetting, HeaderFilter } from './schemas';
 
 // Helper functions to create test data

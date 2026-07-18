@@ -9,7 +9,7 @@ import useFlexHeaderSettings, {
   HeaderSetting,
   Page,
 } from "../utils/settings";
-import { AppError, ErrorCategory } from "../utils/errors";
+import { AppError, ErrorCategory } from "../utils/storage/errors";
 
 type SettingsStateContextValue = {
   pages: Page[];

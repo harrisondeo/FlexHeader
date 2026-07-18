@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
-import type { PagesData, HeaderFilter } from "./schemas";
-import { filterIsValid } from "./filterValidation";
+import type { PagesData, HeaderFilter } from "../domain/schemas";
+import { filterIsValid } from "../domain/filterValidation";
 
 interface UseFilterOperationsParams {
   pagesData: PagesData;

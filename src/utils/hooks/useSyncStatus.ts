@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import browser from "webextension-polyfill";
-import { LAST_SYNC_TIME_KEY, LOCAL_MODIFIED_TIME_KEY } from "../constants";
-import { loadFromStorage } from "./storage";
+import { LAST_SYNC_TIME_KEY, LOCAL_MODIFIED_TIME_KEY } from "../../constants";
+import { loadFromStorage } from "../storage/storage";
 
 /**
  * Comparing localModifiedTime (bumped on every local write, by this hook and

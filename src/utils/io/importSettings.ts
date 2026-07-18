@@ -1,8 +1,8 @@
 import { z } from "zod";
 import type { Dispatch, SetStateAction } from "react";
-import type { AlertContextType } from "../context/alertContext";
-import { pageSchema, type PagesData } from "./schemas";
-import { normalizePage } from "./headers";
+import type { AlertContextType } from "../../context/alertContext";
+import { pageSchema, type PagesData } from "../domain/schemas";
+import { normalizePage } from "../domain/headers";
 
 const importedPayloadSchema = z
   .array(pageSchema)

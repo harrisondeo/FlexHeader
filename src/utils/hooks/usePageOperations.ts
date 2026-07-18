@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
-import type { AlertContextType } from "../context/alertContext";
-import type { Page, PagesData } from "./schemas";
-import { createTombstone, synthesizeFallbackPage, type PageTombstone } from "./pageMerge";
+import type { AlertContextType } from "../../context/alertContext";
+import type { Page, PagesData } from "../domain/schemas";
+import { createTombstone, synthesizeFallbackPage, type PageTombstone } from "../domain/pageMerge";
 
 interface UsePageOperationsParams {
   pagesData: PagesData;

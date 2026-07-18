@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
-import type { PagesData, HeaderSetting } from "./schemas";
+import type { PagesData, HeaderSetting } from "../domain/schemas";
 
 interface UseHeaderOperationsParams {
   pagesData: PagesData;

@@ -1,13 +1,13 @@
 import type { Dispatch, SetStateAction } from "react";
 import browser from "webextension-polyfill";
-import type { AlertContextType } from "../context/alertContext";
-import { SYNC_ENABLED_KEY } from "../constants";
-import { saveToStorage } from "./storage";
-import { log } from "./log";
-import { addStoredError } from "./errors";
-import { mergeSyncState, type PageTombstone } from "./pageMerge";
-import { readPageStorage } from "./pageStorage";
-import type { Page, PagesData } from "./schemas";
+import type { AlertContextType } from "../../context/alertContext";
+import { SYNC_ENABLED_KEY } from "../../constants";
+import { saveToStorage } from "../storage/storage";
+import { log } from "../log";
+import { addStoredError } from "../storage/errors";
+import { mergeSyncState, type PageTombstone } from "../domain/pageMerge";
+import { readPageStorage } from "../storage/pageStorage";
+import type { Page, PagesData } from "../domain/schemas";
 
 interface UseSyncToggleParams {
   pagesData: PagesData;

@@ -1,8 +1,8 @@
 import { vi } from 'vitest';
 import type { Dispatch, SetStateAction } from 'react';
 import { importSettingsFile } from './importSettings';
-import type { Page, PagesData } from './schemas';
-import type { AlertContextType } from '../context/alertContext';
+import type { Page, PagesData } from '../domain/schemas';
+import type { AlertContextType } from '../../context/alertContext';
 
 // Regression coverage for a real bug: duplicating/importing a page carried
 // over its source pageId, so mergePages (which matches by pageId) treated
