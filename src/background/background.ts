@@ -1,4 +1,4 @@
-import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, PAGE_TOMBSTONES_KEY, SYNC_INTERVAL, LAST_SYNC_TIME_KEY, LAST_MERGE_TIME_KEY, LOCAL_MODIFIED_TIME_KEY, SYNC_ENABLED_KEY, ERRORS_STATE_KEY, SETTINGS_SAVE_DEBOUNCE_TIME } from "../constants";
+import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, PAGE_TOMBSTONES_KEY, SYNC_INTERVAL, LAST_SYNC_TIME_KEY, LAST_MERGE_TIME_KEY, LOCAL_MODIFIED_TIME_KEY, SYNC_ENABLED_KEY, ERRORS_STATE_KEY, SETTINGS_SAVE_DEBOUNCE_TIME, SYNC_ITEM_BYTE_LIMIT } from "../constants";
 import type { Page, SettingsV3Meta } from "../utils/settings";
 import { defaultPage } from "../utils/settings";
 import browser from "webextension-polyfill";
@@ -6,16 +6,13 @@ import { getAllFromStorage, saveToStorage, getDataSizeInBytes, loadFromStorage }
 import { log } from "../utils/log";
 import { normalizePage } from "../utils/headers";
 import { mergeSyncState, mergeTombstones, applyTombstones, synthesizeFallbackPage, pruneExpiredTombstones, type PageTombstone } from "../utils/pageMerge";
+import { readPageStorage } from "../utils/pageStorage";
 import { addStoredError, clearStoredErrors } from "../utils/errors";
 
 import { buildRulesFromPages } from "./rules";
 
 export async function getAndApplyHeaderRules() {
   try {
-    // First try to get metadata from the v3 format
-    const metaResult = await browser.storage.local.get(SETTINGS_V3_META_KEY);
-    const meta = metaResult[SETTINGS_V3_META_KEY] as SettingsV3Meta | undefined;
-
     // Get existing rules
     const oldRules = await browser.declarativeNetRequest.getDynamicRules();
     const oldRuleIds = oldRules ? oldRules.map((rule) => rule.id) : [];
@@ -23,26 +20,11 @@ export async function getAndApplyHeaderRules() {
     let nextRuleId = 1;
     const getUniqueRuleID = () => nextRuleId++;
 
-    let pages: Page[] = [];
-
-    if (!meta) {
+    const localSettings = await readPageStorage(browser.storage.local);
+    if (!localSettings) {
       console.log("FlexHeader: No settings metadata found, applying empty rules");
-    } else {
-      // Fetch all pages using the distributed storage format
-      const pagePromises = [];
-      for (let i = 0; i < meta.pageCount; i++) {
-        pagePromises.push(browser.storage.local.get(`${PAGE_KEY_PREFIX}${i}`));
-      }
-
-      const pageResults = await Promise.all(pagePromises);
-      pages = pageResults
-        .map((result, index) => {
-          const pageKey = `${PAGE_KEY_PREFIX}${index}`;
-          return result[pageKey] as Page;
-        })
-        .filter(Boolean) // Filter out any undefined/null pages
-        .map(normalizePage);
     }
+    const pages: Page[] = localSettings?.pages ?? [];
 
     console.log(
       "%cBACKGROUND: Pages loaded",
@@ -68,20 +50,18 @@ export async function getAndApplyHeaderRules() {
   }
 }
 
-const TOMBSTONES_SYNC_LIMIT = 8192; // 8KB for sync storage
-
 /**
  * Drops the oldest tombstones (least likely to still be needed by a device
  * that hasn't synced in a while) until the list fits sync storage's per-item
  * limit, so a burst of deletions can't silently break the entire sync push.
  */
 function fitTombstonesToSyncLimit(tombstones: PageTombstone[]): PageTombstone[] {
-  if (getDataSizeInBytes(tombstones) <= TOMBSTONES_SYNC_LIMIT) {
+  if (getDataSizeInBytes(tombstones) <= SYNC_ITEM_BYTE_LIMIT) {
     return tombstones;
   }
 
   const newestFirst = [...tombstones].sort((a, b) => b.deletedAt - a.deletedAt);
-  while (newestFirst.length > 0 && getDataSizeInBytes(newestFirst) > TOMBSTONES_SYNC_LIMIT) {
+  while (newestFirst.length > 0 && getDataSizeInBytes(newestFirst) > SYNC_ITEM_BYTE_LIMIT) {
     newestFirst.pop();
   }
 
@@ -114,13 +94,13 @@ export async function syncLocalToRemoteStorage() {
 
     log("BACKGROUND: Starting sync from local to remote storage", "info");
 
-    const localSettings = await readV3Settings(browser.storage.local);
+    const localSettings = await readPageStorage(browser.storage.local);
     if (!localSettings) {
       log("BACKGROUND: No metadata found in local storage, skipping sync", "warning");
       return;
     }
 
-    const remoteSettings = await readV3Settings(browser.storage.sync);
+    const remoteSettings = await readPageStorage(browser.storage.sync);
     const merged = remoteSettings
       ? mergeSyncState(
         { pages: localSettings.pages, tombstones: localSettings.tombstones },
@@ -149,10 +129,9 @@ export async function syncLocalToRemoteStorage() {
     merged.pages.forEach((page, index) => {
       const normalized = normalizePage(page);
       const sizeInBytes = getDataSizeInBytes(normalized);
-      const STORAGE_LIMIT = 8192; // 8KB for sync storage
 
-      if (sizeInBytes > STORAGE_LIMIT) {
-        log(`BACKGROUND: Page ${index} too large for sync storage (${sizeInBytes} bytes > ${STORAGE_LIMIT} bytes)`, "error");
+      if (sizeInBytes > SYNC_ITEM_BYTE_LIMIT) {
+        log(`BACKGROUND: Page ${index} too large for sync storage (${sizeInBytes} bytes > ${SYNC_ITEM_BYTE_LIMIT} bytes)`, "error");
         return;
       }
 
@@ -201,32 +180,6 @@ export async function syncLocalToRemoteStorage() {
       error instanceof Error ? error.stack : undefined
     );
   }
-}
-
-async function readV3Settings(area: browser.Storage.StorageArea): Promise<{ meta: SettingsV3Meta; pages: Page[]; tombstones: PageTombstone[] } | null> {
-  const metaResult = await area.get(SETTINGS_V3_META_KEY);
-  const meta = metaResult[SETTINGS_V3_META_KEY] as SettingsV3Meta | undefined;
-
-  if (!meta) {
-    return null;
-  }
-
-  const pagePromises = [];
-  for (let i = 0; i < meta.pageCount; i++) {
-    pagePromises.push(area.get(`${PAGE_KEY_PREFIX}${i}`));
-  }
-
-  const [pageResults, tombstonesResult] = await Promise.all([
-    Promise.all(pagePromises),
-    area.get(PAGE_TOMBSTONES_KEY),
-  ]);
-  const pages = pageResults
-    .map((result, index) => result[`${PAGE_KEY_PREFIX}${index}`] as Page)
-    .filter(Boolean)
-    .map(normalizePage);
-  const tombstones = (tombstonesResult[PAGE_TOMBSTONES_KEY] as PageTombstone[] | undefined) ?? [];
-
-  return { meta, pages, tombstones };
 }
 
 async function writePagesToLocalStorage(pages: Page[], selectedPage: number, tombstones: PageTombstone[]): Promise<void> {
@@ -295,7 +248,7 @@ export async function syncRemoteToLocalStorage() {
 
     log("BACKGROUND: Checking remote storage for updates", "info");
 
-    const syncSettings = await readV3Settings(browser.storage.sync);
+    const syncSettings = await readPageStorage(browser.storage.sync);
     if (!syncSettings) {
       return;
     }
@@ -305,7 +258,7 @@ export async function syncRemoteToLocalStorage() {
       return;
     }
 
-    const localSettings = await readV3Settings(browser.storage.local);
+    const localSettings = await readPageStorage(browser.storage.local);
 
     if (!localSettings || localSettings.pages.length === 0) {
       // No local pages to protect - adopt remote directly rather than

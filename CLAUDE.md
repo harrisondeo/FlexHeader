@@ -32,6 +32,12 @@ changed" rot the moment the PR merges.
   `src/context/settingsContext.tsx` to the popup/options UI.
 - `src/background/rules.ts` — turns pages/headers/filters into
   `declarativeNetRequest` rules (`buildRulesFromPages`).
+- `src/utils/pageStorage.ts` — `readPageStorage(area)`, the one place that
+  knows how to read the v3 distributed page format (`settings_v3_meta` +
+  `page_N` keys + tombstones) out of a storage area. Used by both
+  `background.ts` (push/pull) and `settings.ts` (`toggleSync`'s enable-sync
+  merge) — add any new read path here rather than re-writing the `page_N`
+  fetch loop, which used to exist three times across the two files.
 - `src/utils/pageMerge.ts` — the sync/local merge logic, shared by both the
   background worker's continuous pull and the UI's one-time "enable sync"
   migration. Keep merge logic here, not duplicated in both callers.

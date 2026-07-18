@@ -2,11 +2,12 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
 import { z } from "zod";
-import { SELECTED_PAGE_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, ERRORS_STATE_KEY, LAST_MERGE_TIME_KEY, LAST_SYNC_TIME_KEY, LOCAL_MODIFIED_TIME_KEY } from "../constants";
+import { SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, ERRORS_STATE_KEY, LAST_MERGE_TIME_KEY, LAST_SYNC_TIME_KEY, LOCAL_MODIFIED_TIME_KEY } from "../constants";
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage";
 import { log } from "./log";
 import { normalizePage } from "./headers";
 import { mergeSyncState, createTombstone, synthesizeFallbackPage, applyTombstones, pruneExpiredTombstones, type PageTombstone } from "./pageMerge";
+import { readPageStorage } from "./pageStorage";
 import { AppError, addStoredError, clearStoredErrors, getStoredErrors, injectTestError, ErrorCategory } from "./errors";
 
 export enum SettingsErrorType {
@@ -831,36 +832,6 @@ function useFlexHeaderSettings() {
   };
 
   /**
-   * Loads pages from sync storage
-   * @returns The pages from sync storage or null if none found
-   */
-  const loadPagesFromSync = async (): Promise<Page[] | null> => {
-    try {
-      // Check for v3 format in sync storage
-      const syncMeta = await browser.storage.sync.get(SETTINGS_V3_META_KEY);
-      const meta = syncMeta[SETTINGS_V3_META_KEY] as SettingsV3Meta | undefined;
-
-      if (meta) {
-        const pagePromises = [];
-        for (let i = 0; i < meta.pageCount; i++) {
-          pagePromises.push(browser.storage.sync.get(`${PAGE_KEY_PREFIX}${i}`));
-        }
-        const pageResults = await Promise.all(pagePromises);
-        const pages = pageResults
-          .map((result, index) => result[`${PAGE_KEY_PREFIX}${index}`] as Page)
-          .filter(Boolean)
-          .map(normalizePage);
-        return pages.length > 0 ? pages : null;
-      }
-
-      return null;
-    } catch (error) {
-      console.error("Failed to load pages from sync storage:", error);
-      return null;
-    }
-  };
-
-  /**
    * Toggle sync feature
    * When enabling sync, merges sync data with local data to avoid data loss
    */
@@ -880,14 +851,11 @@ function useFlexHeaderSettings() {
         // immediately on re-enable instead of waiting for the next interval.
         log("SETTINGS: Enabling sync, checking for existing sync data to merge", "info");
 
-        const [syncPages, syncTombstones] = await Promise.all([
-          loadPagesFromSync(),
-          loadFromStorage<PageTombstone[]>(PAGE_TOMBSTONES_KEY, [], ['sync']),
-        ]);
+        const syncSettings = await readPageStorage(browser.storage.sync);
 
         const merged = mergeSyncState(
           { pages: pagesData.pages, tombstones },
-          { pages: syncPages ?? [], tombstones: syncTombstones },
+          { pages: syncSettings?.pages ?? [], tombstones: syncSettings?.tombstones ?? [] },
           defaultPage
         );
 
@@ -1040,12 +1008,6 @@ function useFlexHeaderSettings() {
   useEffect(() => {
     retrieveSettings();
   }, [retrieveSettings]);
-
-  useEffect(() => {
-    // Only save to local storage, background service worker will handle syncing
-    saveToStorage(SELECTED_PAGE_KEY, pagesData.selectedPage, 'local')
-      .catch(err => console.error("Failed to save selected page to local storage:", err));
-  }, [pagesData.selectedPage]);
 
   // Keep errors in sync with local storage so they can be surfaced in the UI
   useEffect(() => {

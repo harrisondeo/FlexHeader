@@ -470,7 +470,7 @@ describe('writePagesToLocalStorage race protection (via syncRemoteToLocalStorage
     browserMock.storage.local.get.mockImplementation(async (key?: any) => {
       if (key === PAGE_TOMBSTONES_KEY) {
         tombstoneGetCount++;
-        // The 1st read is readV3Settings' own read for the outer merge; the
+        // The 1st read is readPageStorage's own read for the outer merge; the
         // 2nd is writePagesToLocalStorage's fresh re-check right before
         // committing - that's the one we want to stall.
         if (tombstoneGetCount === 2) {
