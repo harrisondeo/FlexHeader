@@ -2,11 +2,11 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
 import { z } from "zod";
-import { SELECTED_PAGE_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, SYNC_ENABLED_KEY, MIGRATION_COMPLETE_KEY, ERRORS_STATE_KEY, LAST_MERGE_TIME_KEY } from "../constants";
+import { SELECTED_PAGE_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, ERRORS_STATE_KEY, LAST_MERGE_TIME_KEY } from "../constants";
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage";
 import { log } from "./log";
 import { normalizePage } from "./headers";
-import { mergePages } from "./pageMerge";
+import { mergeSyncState, createTombstone, synthesizeFallbackPage, applyTombstones, pruneExpiredTombstones, type PageTombstone } from "./pageMerge";
 import { AppError, addStoredError, clearStoredErrors, getStoredErrors, injectTestError, ErrorCategory } from "./errors";
 
 export enum SettingsErrorType {
@@ -79,7 +79,7 @@ export type SettingsV3Meta = z.infer<typeof settingsV3MetaSchema>;
  * for handling window unload events
  */
 
-const defaultPage: Page = {
+export const defaultPage: Page = {
   id: 0,
   // Fixed (not random) so that two fresh installs on the same sync account
   // recognize each other's untouched default page as the same page instead
@@ -170,6 +170,7 @@ function useFlexHeaderSettings() {
     pages: [defaultPage],
     selectedPage: defaultPage.id,
   });
+  const [tombstones, setTombstones] = useState<PageTombstone[]>([]);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const [syncEnabled, setSyncEnabled] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -183,8 +184,9 @@ function useFlexHeaderSettings() {
    * Handles saving data to local storage and manages cleanup of extra pages
    * Syncing to remote storage is now handled by the background service worker
    * @param settings The complete settings data
+   * @param tombstonesToSave The current delete tombstones, saved alongside pages
    */
-  const saveToStorages = useCallback(async (settings: PagesData) => {
+  const saveToStorages = useCallback(async (settings: PagesData, tombstonesToSave: PageTombstone[]) => {
     try {
       // Create metadata
       const metadata: SettingsV3Meta = {
@@ -198,6 +200,7 @@ function useFlexHeaderSettings() {
 
         const dataToWrite: Record<string, unknown> = {
           [SETTINGS_V3_META_KEY]: metadata,
+          [PAGE_TOMBSTONES_KEY]: pruneExpiredTombstones(tombstonesToSave),
           localModifiedTime: Date.now(),
         };
 
@@ -326,7 +329,7 @@ function useFlexHeaderSettings() {
     const settingsToSave = JSON.parse(JSON.stringify(pagesData));
 
     // Save to local storage immediately
-    saveToStorages(settingsToSave)
+    saveToStorages(settingsToSave, tombstones)
       .finally(() => {
         setTimeout(() => {
           isSavingRef.current = false;
@@ -337,7 +340,7 @@ function useFlexHeaderSettings() {
           }
         }, 0);
       });
-  }, [pagesData, hasInitialized, lastError, saveToStorages, alertContext, saveVersion]);
+  }, [pagesData, tombstones, hasInitialized, lastError, saveToStorages, alertContext, saveVersion]);
 
   /**
    * Loads the settings from storage and sets the state
@@ -389,8 +392,11 @@ function useFlexHeaderSettings() {
           pagePromises.push(loadFromStorage<Page | null>(pageKey, null, [storageType]));
         }
 
-        const pagesWithNulls = await Promise.all(pagePromises);
-        const pages: Page[] = pagesWithNulls
+        const [pagesWithNulls, loadedTombstones] = await Promise.all([
+          Promise.all(pagePromises),
+          loadFromStorage<PageTombstone[]>(PAGE_TOMBSTONES_KEY, [], [storageType]),
+        ]);
+        let pages: Page[] = pagesWithNulls
           .filter((page): page is Page => page !== null) // Remove any null/undefined pages with type guard
           .map(normalizePage)
           // Backfilled here (not in normalizePage) so it happens once and gets
@@ -398,6 +404,16 @@ function useFlexHeaderSettings() {
           // background.ts's non-persisting reads, which would otherwise
           // re-fabricate a throwaway id every time.
           .map((page) => ({ ...page, pageId: page.pageId || crypto.randomUUID() }));
+
+        // This device has no local data yet and is bootstrapping straight from
+        // sync - apply tombstones directly (not the full mergeSyncState/
+        // mergePages path, which would mark every incoming page disabled;
+        // there's no existing local selection to protect here).
+        if (storageType === 'sync') {
+          pages = applyTombstones(pages, loadedTombstones);
+        }
+
+        setTombstones(loadedTombstones);
 
         if (pages.length === 0) {
           // No pages found, use default
@@ -417,7 +433,7 @@ function useFlexHeaderSettings() {
             await saveToStorages({
               pages,
               selectedPage: meta.selectedPage,
-            });
+            }, loadedTombstones);
           }
         }
 
@@ -430,6 +446,7 @@ function useFlexHeaderSettings() {
         pages: [defaultPage],
         selectedPage: defaultPage.id,
       });
+      setTombstones([]);
       setHasInitialized(true);
 
     } catch (error) {
@@ -444,6 +461,7 @@ function useFlexHeaderSettings() {
         pages: [defaultPage],
         selectedPage: defaultPage.id,
       });
+      setTombstones([]);
       setHasInitialized(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -460,6 +478,7 @@ function useFlexHeaderSettings() {
       pages: [defaultPage],
       selectedPage: defaultPage.id,
     });
+    setTombstones([]);
   };
 
   /**
@@ -496,11 +515,15 @@ function useFlexHeaderSettings() {
    * @param autoSelectPage Whether to automatically select the next page after removing the current one
    */
   const removePage = (id: number, autoSelectPage: boolean) => {
+    const removedPage = pagesData.pages.find((page) => page.id === id);
     let newPages = pagesData.pages.filter((page) => page.id !== id);
 
-    // if there are no pages left after removing the page, add the default page
+    // if there are no pages left after removing the page, add a fresh default
+    // page - NOT the defaultPage constant itself, since it shares its fixed
+    // pageId with the page we may have just tombstoned below, which would
+    // make the very next sync merge immediately re-exclude it.
     if (newPages.length === 0) {
-      newPages.push(defaultPage);
+      newPages.push(synthesizeFallbackPage(defaultPage));
     }
 
     newPages = newPages.map((page, index) => ({ ...page, id: index }));
@@ -515,6 +538,11 @@ function useFlexHeaderSettings() {
       pages: newPages,
       selectedPage: newPageId,
     });
+
+    const tombstone = removedPage && createTombstone(removedPage);
+    if (tombstone) {
+      setTombstones((prev) => [...prev, tombstone]);
+    }
 
     alertContext.setAlert({
       alertType: "info",
@@ -829,63 +857,61 @@ function useFlexHeaderSettings() {
       setSyncEnabled(newSyncEnabled);
 
       if (newSyncEnabled) {
-        // Enabling sync - check for existing sync data and merge if needed
+        // Enabling sync - merge with whatever already exists in sync storage.
+        // Runs unconditionally (no one-shot "already migrated" gate) since
+        // mergeSyncState is idempotent - a no-op merge is cheap and this way
+        // any tombstones/edits made while sync was off still reconcile
+        // immediately on re-enable instead of waiting for the next interval.
         log("SETTINGS: Enabling sync, checking for existing sync data to merge", "info");
-        
-        // Check if migration has already been completed to avoid re-merging
-        const migrationComplete = await loadFromStorage(MIGRATION_COMPLETE_KEY, false, ['local']);
-        if (migrationComplete) {
-          log("SETTINGS: Migration already complete, skipping merge", "info");
-          alertContext.setAlert({
-            alertType: "success",
-            alertText: "Sync enabled! Your settings will now sync across browsers.",
-            location: "bottom",
-          });
-          return;
+
+        const [syncPages, syncTombstones] = await Promise.all([
+          loadPagesFromSync(),
+          loadFromStorage<PageTombstone[]>(PAGE_TOMBSTONES_KEY, [], ['sync']),
+        ]);
+
+        const merged = mergeSyncState(
+          { pages: pagesData.pages, tombstones },
+          { pages: syncPages ?? [], tombstones: syncTombstones },
+          defaultPage
+        );
+
+        const pagesChanged = merged.pages !== pagesData.pages;
+        const tombstonesChanged = merged.tombstones !== tombstones;
+        let selectedPage = pagesData.selectedPage;
+
+        if (pagesChanged) {
+          // Try to preserve the selected page, or select the first enabled page
+          const currentSelectedPage = pagesData.pages[pagesData.selectedPage];
+          let newSelectedPage = currentSelectedPage
+            ? merged.pages.findIndex((p) => p.name === currentSelectedPage.name)
+            : -1;
+          if (newSelectedPage === -1) {
+            newSelectedPage = merged.pages.findIndex((p) => p.enabled);
+          }
+          if (newSelectedPage === -1) {
+            newSelectedPage = 0; // fallback
+          }
+          selectedPage = newSelectedPage;
+
+          setPagesData({ pages: merged.pages, selectedPage });
         }
 
-        const syncPages = await loadPagesFromSync();
-        
-        if (syncPages && syncPages.length > 0) {
-          // There is existing sync data, perform merge
-          const mergedPages = mergePages(pagesData.pages, syncPages);
+        if (tombstonesChanged) {
+          setTombstones(merged.tombstones);
+        }
 
-          if (mergedPages !== pagesData.pages) {
-            const newPagesCount = mergedPages.length - pagesData.pages.length;
-            log(`SETTINGS: Merged ${newPagesCount} page(s) from sync storage`, "info");
-            
-            // Try to preserve the selected page, or select the first enabled page
-            const currentSelectedPage = pagesData.pages[pagesData.selectedPage];
-            let newSelectedPage = currentSelectedPage 
-              ? mergedPages.findIndex((p) => p.name === currentSelectedPage.name)
-              : -1;
-            if (newSelectedPage === -1) {
-              newSelectedPage = mergedPages.findIndex((p) => p.enabled);
-            }
-            if (newSelectedPage === -1) {
-              newSelectedPage = 0; // fallback
-            }
-            
-            // Update state with merged pages
-            setPagesData({
-              pages: mergedPages,
-              selectedPage: newSelectedPage,
-            });
-            
-            alertContext.setAlert({
-              alertType: "info",
-              alertText: newPagesCount > 0
-                ? `Sync enabled! ${newPagesCount} page(s) merged from other browsers.`
-                : "Sync enabled! Existing pages were updated from other browsers.",
-              location: "bottom",
-            });
-          } else {
-            alertContext.setAlert({
-              alertType: "success",
-              alertText: "Sync enabled! Your settings will now sync across browsers.",
-              location: "bottom",
-            });
-          }
+        if (pagesChanged || tombstonesChanged) {
+          const newPagesCount = merged.pages.length - pagesData.pages.length;
+          log(`SETTINGS: Merged sync storage data (${Math.max(newPagesCount, 0)} new page(s))`, "info");
+          await saveToStorages({ pages: merged.pages, selectedPage }, merged.tombstones);
+
+          alertContext.setAlert({
+            alertType: "info",
+            alertText: newPagesCount > 0
+              ? `Sync enabled! ${newPagesCount} page(s) merged from other browsers.`
+              : "Sync enabled! Existing pages were updated from other browsers.",
+            location: "bottom",
+          });
         } else {
           alertContext.setAlert({
             alertType: "success",
@@ -893,9 +919,6 @@ function useFlexHeaderSettings() {
             location: "bottom",
           });
         }
-
-        // Mark migration as complete for all successful sync enable paths
-        await saveToStorage(MIGRATION_COMPLETE_KEY, true, 'local');
       } else {
         // Disabling sync
         alertContext.setAlert({

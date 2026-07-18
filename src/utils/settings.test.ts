@@ -27,7 +27,18 @@ vi.mock('webextension-polyfill', () => ({
 
 import { Page, HeaderSetting, HeaderFilter, isValidUrlFilter } from './settings';
 import { normalizePage } from './headers';
-import { getPageKey, mergePages } from './pageMerge';
+import {
+  getPageKey,
+  mergePages,
+  mergeSyncState,
+  mergeTombstones,
+  applyTombstones,
+  pruneExpiredTombstones,
+  createTombstone,
+  synthesizeFallbackPage,
+  type PageTombstone,
+} from './pageMerge';
+import { TOMBSTONE_RETENTION_MS } from '../constants';
 
 // Helper functions to create test data
 const createHeader = (name: string, value: string, enabled = true): HeaderSetting => ({
@@ -406,6 +417,145 @@ describe('Identity-based merge (pageId + lastModified)', () => {
     expect(result).toHaveLength(1);
     expect(result[0].pageId).toBe('page-1'); // now linked for future merges
     expect(result[0].enabled).toBe(true); // local state preserved
+  });
+});
+
+describe('Tombstone-aware merge (mergeSyncState)', () => {
+  const withIdentity = (page: Page, pageId: string, lastModified: number): Page => ({
+    ...page,
+    pageId,
+    lastModified,
+  });
+  const tombstone = (pageId: string, deletedAt: number): PageTombstone => ({ pageId, deletedAt });
+  const defaultPageTemplate = createPage(0, 'Default', true);
+  // mergeSyncState prunes tombstones older than the retention window against
+  // the real clock, so fixtures used through it must be recent, not small
+  // relative integers like 1000/2000 (those look ancient vs. Date.now() and
+  // get pruned before ever being applied).
+  const recently = (msAgo: number) => Date.now() - msAgo;
+
+  it('createTombstone returns null for a page with no pageId', () => {
+    expect(createTombstone(createPage(0, 'Work', true))).toBeNull();
+  });
+
+  it('createTombstone stamps the page\'s pageId with the current time', () => {
+    const result = createTombstone(withIdentity(createPage(0, 'Work', true), 'page-1', 1000));
+    expect(result?.pageId).toBe('page-1');
+    expect(result?.deletedAt).toBeGreaterThan(0);
+  });
+
+  it('synthesizeFallbackPage mints a fresh identity distinct from the template', () => {
+    const template = withIdentity(createPage(0, 'Default', true), 'default', 0);
+    const result = synthesizeFallbackPage(template);
+    expect(result.pageId).not.toBe('default');
+    expect(result.name).toBe('Default');
+    expect(result.lastModified).toBeGreaterThan(0);
+  });
+
+  it('applyTombstones excludes a page whose tombstone is newer than its lastModified', () => {
+    const page = withIdentity(createPage(0, 'Work', true), 'page-1', 1000);
+    expect(applyTombstones([page], [tombstone('page-1', 2000)])).toHaveLength(0);
+  });
+
+  it('applyTombstones keeps a page whose lastModified is newer than its tombstone (an edit resurrects a delete)', () => {
+    const page = withIdentity(createPage(0, 'Work', true), 'page-1', 3000);
+    expect(applyTombstones([page], [tombstone('page-1', 2000)])).toHaveLength(1);
+  });
+
+  it('applyTombstones is a no-op (same reference) when no page matches any tombstone', () => {
+    const pages = [withIdentity(createPage(0, 'Work', true), 'page-1', 1000)];
+    expect(applyTombstones(pages, [tombstone('unrelated', 5000)])).toBe(pages);
+  });
+
+  it('mergeTombstones unions two lists, keeping the newest deletedAt per pageId', () => {
+    const result = mergeTombstones([tombstone('page-1', 1000)], [tombstone('page-1', 2000), tombstone('page-2', 500)]);
+    expect(result).toHaveLength(2);
+    expect(result.find(t => t.pageId === 'page-1')?.deletedAt).toBe(2000);
+  });
+
+  it('mergeTombstones is a no-op (same reference) when incoming has nothing newer', () => {
+    const local = [tombstone('page-1', 2000)];
+    expect(mergeTombstones(local, [tombstone('page-1', 1000)])).toBe(local);
+  });
+
+  it('pruneExpiredTombstones drops entries past the retention window', () => {
+    const now = Date.now();
+    const tombstones = [tombstone('old', now - TOMBSTONE_RETENTION_MS - 1), tombstone('recent', now)];
+    expect(pruneExpiredTombstones(tombstones, now).map(t => t.pageId)).toEqual(['recent']);
+  });
+
+  it('pruneExpiredTombstones is a no-op (same reference) when nothing is expired', () => {
+    const tombstones = [tombstone('recent', Date.now())];
+    expect(pruneExpiredTombstones(tombstones, Date.now())).toBe(tombstones);
+  });
+
+  it('reproduces the reported bug: does not resurrect a page deleted locally when a stale, larger remote set is pulled', () => {
+    // Local already deleted "Old Page" and recorded a tombstone for it, but
+    // remote sync storage still has the old, larger page set (push hasn't
+    // run yet) - this is exactly the ordering that caused the reported bug.
+    const survivor = withIdentity(createPage(0, 'Work', true, [createHeader('X-Auth', 'token')]), 'page-1', recently(60000));
+    const deletedButStillRemote = withIdentity(createPage(1, 'Old Page', false), 'page-2', recently(20000));
+
+    const result = mergeSyncState(
+      { pages: [survivor], tombstones: [tombstone('page-2', recently(5000))] },
+      { pages: [survivor, deletedButStillRemote], tombstones: [] },
+      defaultPageTemplate
+    );
+
+    expect(result.pages).toHaveLength(1);
+    expect(result.pages[0].pageId).toBe('page-1');
+  });
+
+  it('propagates a remote delete to a local-only page even with no matching incoming page at all (third device)', () => {
+    const localOnly = withIdentity(createPage(0, 'Shared', true, [createHeader('X-Shared', 'v')]), 'shared-1', recently(20000));
+
+    const result = mergeSyncState(
+      { pages: [localOnly], tombstones: [] },
+      { pages: [], tombstones: [tombstone('shared-1', recently(5000))] },
+      defaultPageTemplate
+    );
+
+    expect(result.pages.map(p => p.pageId)).not.toContain('shared-1');
+  });
+
+  it('lets a newer edit win over an older tombstone for the same page (resurrection)', () => {
+    const editedAfterDelete = withIdentity(createPage(0, 'Work', true, [createHeader('X-Auth', 'new')]), 'page-1', recently(2000));
+
+    const result = mergeSyncState(
+      { pages: [editedAfterDelete], tombstones: [] },
+      { pages: [], tombstones: [tombstone('page-1', recently(20000))] },
+      defaultPageTemplate
+    );
+
+    expect(result.pages.map(p => p.pageId)).toContain('page-1');
+  });
+
+  it('is a no-op (same references) when neither side has anything new', () => {
+    const page = withIdentity(createPage(0, 'Work', true), 'page-1', 1000);
+    const localPages = [page];
+    const localTombstones: PageTombstone[] = [];
+
+    const result = mergeSyncState(
+      { pages: localPages, tombstones: localTombstones },
+      { pages: [page], tombstones: [] },
+      defaultPageTemplate
+    );
+
+    expect(result.pages).toBe(localPages);
+    expect(result.tombstones).toBe(localTombstones);
+  });
+
+  it('never returns an empty page list, and the synthesized fallback is not immediately re-excluded by the tombstone that emptied the list', () => {
+    const onlyPage = withIdentity(createPage(0, 'Default', true), 'default', 0);
+
+    const result = mergeSyncState(
+      { pages: [onlyPage], tombstones: [] },
+      { pages: [], tombstones: [tombstone('default', recently(5000))] },
+      onlyPage
+    );
+
+    expect(result.pages).toHaveLength(1);
+    expect(result.pages[0].pageId).not.toBe('default');
   });
 });
 

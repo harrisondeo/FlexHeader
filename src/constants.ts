@@ -6,7 +6,8 @@ export const SYNC_INTERVAL = 30000; // Sync from local to sync storage every 30 
 export const LAST_SYNC_TIME_KEY = "last_sync_time"; // Track when we last synced to sync storage
 export const LAST_MERGE_TIME_KEY = "last_merge_time"; // Set only when the background script merges remote pages into local storage
 export const SYNC_ENABLED_KEY = "syncEnabled"; // Whether to sync settings across browsers
-export const MIGRATION_COMPLETE_KEY = "migrationComplete"; // Tracks if merge migration was done
+export const PAGE_TOMBSTONES_KEY = "page_tombstones"; // Records deleted pageIds so deletions can propagate through the additive page merge
+export const TOMBSTONE_RETENTION_MS = 90 * 24 * 60 * 60 * 1000; // How long a tombstone is kept before being pruned
 export const REVIEW_PROMPT_KEY = "reviewPrompt";
 export const REVIEWS_URL = "https://chromewebstore.google.com/detail/flexheaders-modify-http-h/gffpeamhhldhibdngenbfciboinanppf/reviews?utm_source=in-extension";
 export const ISSUES_URL = "https://github.com/harrisondeo/FlexHeader/issues";

@@ -1,4 +1,15 @@
 import type { Page } from "./settings";
+import { TOMBSTONE_RETENTION_MS } from "../constants";
+
+export interface PageTombstone {
+  pageId: string;
+  deletedAt: number;
+}
+
+export interface SyncState {
+  pages: Page[];
+  tombstones: PageTombstone[];
+}
 
 /**
  * Fallback match for pages with no persisted `pageId` yet (see mergePages).
@@ -93,4 +104,113 @@ export const mergePages = (localPages: Page[], incomingPages: Page[]): Page[] =>
       enabled: false, // Incoming pages are disabled by default
     })),
   ];
+};
+
+/**
+ * A page's absence can't be trusted by an additive merge - it's
+ * indistinguishable from "not synced yet". A tombstone gives deletion the
+ * same timestamped signal an edit already gets from `lastModified`, so
+ * mergeSyncState can resolve edit-vs-delete the same way it resolves
+ * edit-vs-edit: newest timestamp wins.
+ */
+export const createTombstone = (page: Page): PageTombstone | null =>
+  page.pageId ? { pageId: page.pageId, deletedAt: Date.now() } : null;
+
+/**
+ * Copies a page under a brand-new identity. Used when a page must be
+ * recreated (e.g. the last page was deleted) - reusing the template's own
+ * pageId/lastModified would let the tombstone that was just created for it
+ * immediately re-exclude the recreated copy on the next merge.
+ */
+export const synthesizeFallbackPage = (template: Page): Page => ({
+  ...template,
+  id: 0,
+  pageId: crypto.randomUUID(),
+  enabled: true,
+  lastModified: Date.now(),
+});
+
+export const pruneExpiredTombstones = (
+  tombstones: PageTombstone[],
+  now: number = Date.now(),
+  retentionMs: number = TOMBSTONE_RETENTION_MS
+): PageTombstone[] => {
+  const pruned = tombstones.filter((t) => now - t.deletedAt <= retentionMs);
+  return pruned.length === tombstones.length ? tombstones : pruned;
+};
+
+/** Unions two tombstone lists, keeping the newest `deletedAt` per pageId. */
+export const mergeTombstones = (
+  localTombstones: PageTombstone[],
+  incomingTombstones: PageTombstone[]
+): PageTombstone[] => {
+  const byPageId = new Map<string, PageTombstone>();
+  localTombstones.forEach((t) => byPageId.set(t.pageId, t));
+
+  let changed = false;
+  incomingTombstones.forEach((t) => {
+    const existing = byPageId.get(t.pageId);
+    if (!existing || t.deletedAt > existing.deletedAt) {
+      byPageId.set(t.pageId, t);
+      changed = true;
+    }
+  });
+
+  return changed ? Array.from(byPageId.values()) : localTombstones;
+};
+
+/**
+ * Excludes any page whose tombstone is newer than the page's own
+ * `lastModified` - strictly newer, so a tie doesn't resurrect a page and an
+ * edit made after the delete (lastModified > deletedAt) keeps it alive.
+ */
+export const applyTombstones = (pages: Page[], tombstones: PageTombstone[]): Page[] => {
+  if (tombstones.length === 0) return pages;
+
+  const deletedAtByPageId = new Map(tombstones.map((t) => [t.pageId, t.deletedAt]));
+  const surviving = pages.filter((page) => {
+    if (!page.pageId) return true;
+    const deletedAt = deletedAtByPageId.get(page.pageId);
+    return deletedAt === undefined || deletedAt <= (page.lastModified ?? 0);
+  });
+
+  return surviving.length === pages.length ? pages : surviving;
+};
+
+/**
+ * The single entry point every "combine a local view with a remote view"
+ * call site should use (background's continuous sync, and settings.ts's
+ * enable-sync / bootstrap-from-sync paths) so tombstone handling can never
+ * be bypassed. Tombstones are unioned and applied to *both* sides before the
+ * survivors go through the existing pageId/content-key/last-write-wins
+ * mergePages, so a page tombstoned on one device is also dropped from a
+ * third device that independently still holds it.
+ *
+ * Never returns an empty page list - a merge can legitimately tombstone
+ * every page a device has (e.g. two untouched installs share the pristine
+ * default page's fixed pageId, and one of them deletes it), and background.ts
+ * has no popup open to run the UI's own empty-pages safety net.
+ * `fallbackTemplate` supplies the content (e.g. the built-in Default page) to
+ * recreate in that case, under a fresh identity via synthesizeFallbackPage.
+ *
+ * Returns the same `pages`/`tombstones` references as `local` when nothing
+ * changed, so callers can keep using cheap `!==` no-op checks.
+ */
+export const mergeSyncState = (
+  local: SyncState,
+  incoming: SyncState,
+  fallbackTemplate: Page
+): SyncState => {
+  const mergedTombstones = pruneExpiredTombstones(mergeTombstones(local.tombstones, incoming.tombstones));
+
+  const survivingLocalPages = applyTombstones(local.pages, mergedTombstones);
+  const survivingIncomingPages = applyTombstones(incoming.pages, mergedTombstones);
+
+  const mergedPages = mergePages(survivingLocalPages, survivingIncomingPages);
+  const finalPages = mergedPages.length > 0 ? mergedPages : [synthesizeFallbackPage(fallbackTemplate)];
+
+  return {
+    pages: finalPages,
+    tombstones: mergedTombstones,
+  };
 };

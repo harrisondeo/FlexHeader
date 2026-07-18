@@ -66,8 +66,9 @@ vi.mock('webextension-polyfill', () => ({
   ...browserMock,
 }));
 
-import { syncRemoteToLocalStorage } from './background';
-import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, SYNC_ENABLED_KEY, LAST_MERGE_TIME_KEY } from '../constants';
+import { syncRemoteToLocalStorage, syncLocalToRemoteStorage } from './background';
+import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, LAST_MERGE_TIME_KEY } from '../constants';
+import type { PageTombstone } from '../utils/pageMerge';
 
 const createPage = (
   id: number,
@@ -111,6 +112,12 @@ const readLocalPages = (area: MockArea): Page[] => {
   }
   return pages;
 };
+
+const seedTombstones = (area: MockArea, tombstones: PageTombstone[]) => {
+  area.store[PAGE_TOMBSTONES_KEY] = tombstones;
+};
+
+const readTombstones = (area: MockArea): PageTombstone[] => area.store[PAGE_TOMBSTONES_KEY] ?? [];
 
 describe('syncRemoteToLocalStorage', () => {
   let localArea: MockArea;
@@ -232,5 +239,123 @@ describe('syncRemoteToLocalStorage', () => {
     expect(pages).toHaveLength(1);
     expect(pages[0].headers[0].headerValue).toBe('newer-value');
     expect(localArea.set).not.toHaveBeenCalled();
+  });
+
+  it('does not resurrect a page deleted locally when the pull runs before the delete has been pushed', async () => {
+    // The exact reported bug: the periodic tick pulls before it pushes, so a
+    // local delete can see sync storage's still-larger, pre-delete page set.
+    localArea.store[SYNC_ENABLED_KEY] = true;
+    seedArea(localArea, [
+      createPage(0, 'Survivor', 'value', { pageId: 'page-1', lastModified: Date.now() - 60000 }),
+    ], 0);
+    seedTombstones(localArea, [{ pageId: 'page-2', deletedAt: Date.now() - 5000 }]);
+
+    seedArea(syncArea, [
+      createPage(0, 'Survivor', 'value', { pageId: 'page-1', lastModified: Date.now() - 60000 }),
+      createPage(1, 'Deleted Page', 'value', { pageId: 'page-2', lastModified: Date.now() - 20000 }),
+    ], 0);
+
+    await syncRemoteToLocalStorage();
+
+    const pages = readLocalPages(localArea);
+    expect(pages).toHaveLength(1);
+    expect(pages[0].pageId).toBe('page-1');
+  });
+
+  it('applies a remote tombstone to remove a page that only exists locally', async () => {
+    localArea.store[SYNC_ENABLED_KEY] = true;
+    seedArea(localArea, [
+      createPage(0, 'Shared', 'value', { pageId: 'shared-1', lastModified: Date.now() - 20000 }),
+    ], 0);
+    seedArea(syncArea, [], 0);
+    seedTombstones(syncArea, [{ pageId: 'shared-1', deletedAt: Date.now() - 5000 }]);
+
+    await syncRemoteToLocalStorage();
+
+    const pages = readLocalPages(localArea);
+    expect(pages.map((p) => p.pageId)).not.toContain('shared-1');
+  });
+
+  it('lets a local edit override an older remote tombstone (resurrection)', async () => {
+    localArea.store[SYNC_ENABLED_KEY] = true;
+    seedArea(localArea, [
+      createPage(0, 'Shared', 'edited-value', { pageId: 'shared-1', lastModified: Date.now() - 2000 }),
+    ], 0);
+    seedArea(syncArea, [], 0);
+    seedTombstones(syncArea, [{ pageId: 'shared-1', deletedAt: Date.now() - 20000 }]);
+
+    await syncRemoteToLocalStorage();
+
+    const pages = readLocalPages(localArea);
+    expect(pages.map((p) => p.pageId)).toContain('shared-1');
+    expect(pages[0].headers[0].headerValue).toBe('edited-value');
+  });
+
+  it('lets a remote edit override an older local tombstone (resurrection from the other side)', async () => {
+    localArea.store[SYNC_ENABLED_KEY] = true;
+    seedArea(localArea, [
+      createPage(0, 'Anchor', 'value', { pageId: 'anchor', lastModified: Date.now() - 60000 }),
+    ], 0);
+    seedTombstones(localArea, [{ pageId: 'shared-1', deletedAt: Date.now() - 20000 }]);
+
+    seedArea(syncArea, [
+      createPage(0, 'Anchor', 'value', { pageId: 'anchor', lastModified: Date.now() - 60000 }),
+      createPage(1, 'Shared', 'edited-remotely', { pageId: 'shared-1', lastModified: Date.now() - 2000 }),
+    ], 0);
+
+    await syncRemoteToLocalStorage();
+
+    const pages = readLocalPages(localArea);
+    expect(pages.map((p) => p.pageId)).toContain('shared-1');
+  });
+
+  it('seeds local tombstones from sync when bootstrapping from empty local storage', async () => {
+    localArea.store[SYNC_ENABLED_KEY] = true;
+    seedArea(syncArea, [createPage(0, 'Remote Page')], 0);
+    seedTombstones(syncArea, [{ pageId: 'already-deleted', deletedAt: Date.now() - 5000 }]);
+
+    await syncRemoteToLocalStorage();
+
+    expect(readTombstones(localArea)).toHaveLength(1);
+    expect(readTombstones(localArea)[0].pageId).toBe('already-deleted');
+  });
+});
+
+describe('syncLocalToRemoteStorage', () => {
+  let localArea: MockArea;
+  let syncArea: MockArea;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localArea = createMockArea();
+    syncArea = createMockArea();
+
+    browserMock.storage.local.get.mockImplementation(localArea.get);
+    browserMock.storage.local.set.mockImplementation(localArea.set);
+    browserMock.storage.local.remove.mockImplementation(localArea.remove);
+    browserMock.storage.sync.get.mockImplementation(syncArea.get);
+    browserMock.storage.sync.set.mockImplementation(syncArea.set);
+    browserMock.storage.sync.remove.mockImplementation(syncArea.remove);
+  });
+
+  it('removes stale page_N keys from sync storage when local pages shrink', async () => {
+    localArea.store[SYNC_ENABLED_KEY] = true;
+    seedArea(localArea, [createPage(0, 'Only Page')], 0);
+    // Left over in sync storage from before a page was deleted locally.
+    seedArea(syncArea, [createPage(0, 'Only Page'), createPage(1, 'Deleted Page')], 0);
+
+    await syncLocalToRemoteStorage();
+
+    expect(syncArea.store[`${PAGE_KEY_PREFIX}1`]).toBeUndefined();
+  });
+
+  it('writes current local tombstones to sync storage', async () => {
+    localArea.store[SYNC_ENABLED_KEY] = true;
+    seedArea(localArea, [createPage(0, 'Only Page')], 0);
+    seedTombstones(localArea, [{ pageId: 'deleted-1', deletedAt: Date.now() - 1000 }]);
+
+    await syncLocalToRemoteStorage();
+
+    expect(readTombstones(syncArea)).toEqual([{ pageId: 'deleted-1', deletedAt: expect.any(Number) }]);
   });
 });

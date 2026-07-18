@@ -47,9 +47,8 @@ uses the same layout for consistency between the two.
 
 Sync is not "on load" — the background worker pulls continuously via
 `storage.sync.onChanged`, a periodic interval (`SYNC_INTERVAL`), and on
-startup. A pull is *always additive*: local pages are only ever appended to
-or updated in place, never dropped, even if sync storage is temporarily
-smaller than local (e.g. a stale/partial write from another browser).
+startup. A pull never drops a page just because it's absent from one side —
+see "Deletion needs tombstones" below for why absence alone is never trusted.
 
 ## Backward compatibility: normalize, not zod
 
@@ -90,6 +89,40 @@ comparison would miss. Preserve this contract if you touch the function.
 The built-in default page has a hardcoded `pageId: "default"` (not random) so
 two fresh installs' untouched default pages recognize each other on first
 sync instead of forking a duplicate immediately.
+
+## Deletion needs tombstones
+
+An additive merge can't represent "this page was deleted" - a page's absence
+looks identical to "haven't synced it yet," so an early version of this merge
+would resurrect a page deleted on one browser as soon as it pulled a
+not-yet-updated remote snapshot (this reproduced even on a single browser,
+from the background worker's pull-before-push ordering within one tick).
+
+Fix: deletion gets the same kind of signal an edit already has via
+`lastModified` - a tombstone (`{pageId, deletedAt}`, `PAGE_TOMBSTONES_KEY`).
+`mergeSyncState` (not `mergePages` directly) is the one entry point every
+"combine a local view with a remote view" call site must use, so tombstone
+handling can't be bypassed: it unions tombstones (newest `deletedAt` per
+`pageId` wins), excludes any page whose tombstone is newer than its own
+`lastModified` from *both* sides, then hands the survivors to `mergePages`.
+An edit newer than a delete un-deletes the page - deliberate, symmetric with
+the existing edit-vs-edit last-write-wins rule, not a bug.
+
+Old tombstones are pruned (`TOMBSTONE_RETENTION_MS`, 90 days) whenever
+they're written, to bound growth - accepted trade-off: a device offline
+longer than that could see a very old delete resurrected.
+
+Two non-obvious consequences worth knowing before touching this code:
+- The "if no pages left, recreate a default page" fallback (`removePage`,
+  and `mergeSyncState` itself for the no-UI background path) must mint a
+  *fresh* `pageId`/`lastModified` (`synthesizeFallbackPage`), never reuse the
+  deleted page's own identity - otherwise the tombstone that was just
+  created would immediately re-exclude the page it recreated.
+- `mergeSyncState` must never return an empty page array. A merge (not just
+  `removePage`) can legitimately tombstone every page a device has (two
+  untouched installs share the pristine default page's fixed `"default"`
+  id; one of them deletes it), and `background.ts` has no popup open to run
+  the UI's own empty-pages safety net.
 
 ## Testing conventions
 
