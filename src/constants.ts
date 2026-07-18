@@ -17,6 +17,7 @@ export const ERRORS_STATE_KEY = "flexheader_errors";
 export const UNDO_STACK_KEY = "undo_stack"; // Local only - a per-device history, not shared truth
 export const REDO_STACK_KEY = "redo_stack";
 export const HISTORY_ENABLED_KEY = "history_enabled"; // Local only - per-device preference for the undo/redo feature
+export const LOG_LEVEL_KEY = "log_level"; // Local only - per-device preference for console log verbosity
 
 export const POPULAR_HEADER_NAMES = [
   "Accept",

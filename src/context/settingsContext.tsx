@@ -10,6 +10,7 @@ import useFlexHeaderSettings, {
   Page,
 } from "../utils/settings";
 import { AppError, ErrorCategory } from "../utils/storage/errors";
+import { LogLevel } from "../utils/log";
 
 type SettingsStateContextValue = {
   pages: Page[];
@@ -23,6 +24,7 @@ type SettingsStateContextValue = {
   canUndo: boolean;
   canRedo: boolean;
   historyEnabled: boolean;
+  logLevel: LogLevel;
 };
 
 type SettingsActionsContextValue = {
@@ -58,6 +60,7 @@ type SettingsActionsContextValue = {
   undo: () => void;
   redo: () => void;
   toggleHistoryEnabled: () => Promise<void>;
+  changeLogLevel: (level: LogLevel) => Promise<void>;
 };
 
 const SettingsStateContext = createContext<SettingsStateContextValue | null>(
@@ -90,6 +93,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       canUndo: settings.canUndo,
       canRedo: settings.canRedo,
       historyEnabled: settings.historyEnabled,
+      logLevel: settings.logLevel,
     }),
     [
       settings.pages,
@@ -103,6 +107,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       settings.canUndo,
       settings.canRedo,
       settings.historyEnabled,
+      settings.logLevel,
     ]
   );
 
@@ -128,6 +133,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       undo: settings.undo,
       redo: settings.redo,
       toggleHistoryEnabled: settings.toggleHistoryEnabled,
+      changeLogLevel: settings.changeLogLevel,
     }),
     [
       settings.addHeader,
@@ -150,6 +156,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       settings.undo,
       settings.redo,
       settings.toggleHistoryEnabled,
+      settings.changeLogLevel,
     ]
   );
 

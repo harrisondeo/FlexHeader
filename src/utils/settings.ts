@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
-import { SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, LAST_MERGE_TIME_KEY, LOCAL_MODIFIED_TIME_KEY, HISTORY_ENABLED_KEY } from "../constants";
+import { SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, LAST_MERGE_TIME_KEY, LOCAL_MODIFIED_TIME_KEY, HISTORY_ENABLED_KEY, LOG_LEVEL_KEY } from "../constants";
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage/storage";
-import { log } from "./log";
+import { log, setLogLevel, DEFAULT_LOG_LEVEL, type LogLevel } from "./log";
 import { normalizePage } from "./domain/headers";
 import { applyTombstones, pruneExpiredTombstones, type PageTombstone } from "./domain/pageMerge";
 import { addStoredError, clearStoredErrors } from "./storage/errors";
@@ -72,6 +72,7 @@ function useFlexHeaderSettings() {
   const isSavingRef = useRef<boolean>(false);
   const hasPendingSaveRef = useRef<boolean>(false);
   const [historyEnabled, setHistoryEnabled] = useState(true);
+  const [logLevel, setLogLevelState] = useState<LogLevel>(DEFAULT_LOG_LEVEL);
   const alertContext = useAlert();
 
   const {
@@ -116,8 +117,6 @@ function useFlexHeaderSettings() {
       };
 
       try {
-        log(`SETTINGS: Saving to local storage`, "warning");
-
         const dataToWrite: Record<string, unknown> = {
           [SETTINGS_V3_META_KEY]: metadata,
           [PAGE_TOMBSTONES_KEY]: pruneExpiredTombstones(tombstonesToSave),
@@ -166,16 +165,14 @@ function useFlexHeaderSettings() {
         }
 
       } catch (error) {
-        console.error(`Failed to save to local storage:`, error);
+        log(`Failed to save to local storage`, "error", error);
         throw error; // Re-throw for local storage errors
-      } finally {
-        log(`SETTINGS: Finished saving to local storage`, "success");
       }
 
       // On success, clear error state
       setLastError({ type: SettingsErrorType.None, time: 0 });
     } catch (error) {
-      console.error(`Failed to save settings:`, error);
+      log(`Failed to save settings`, "error", error);
       setLastError({ type: SettingsErrorType.SaveError, time: Date.now() });
       const message = error instanceof Error ? error.message : "Failed to save settings";
       await addStoredError(
@@ -242,7 +239,7 @@ function useFlexHeaderSettings() {
 
     // Block recent saves after errors to prevent infinite error loops
     if (lastError.type === SettingsErrorType.SaveError && Date.now() - lastError.time < 60 * 1000) {
-      console.warn("Skipping save: recent save error within last minute.");
+      log("Skipping save: recent save error within last minute", "warning");
       alertContext.setAlert({
         alertType: "error",
         alertText: "Changes not saved due to recent error. Please try again later.",
@@ -256,7 +253,6 @@ function useFlexHeaderSettings() {
 
     // Start save operation
     isSavingRef.current = true;
-    log("SETTINGS: Saving changes to storage", "warning");
 
     // Make a deep copy to avoid mutation issues
     const settingsToSave = JSON.parse(JSON.stringify(pagesData));
@@ -309,7 +305,7 @@ function useFlexHeaderSettings() {
         await saveToStorage("darkMode", false, 'local');
       }
     } catch (error) {
-      console.error("Failed to load dark mode setting:", error);
+      log("Failed to load dark mode setting", "error", error);
     }
 
     // Load sync preference
@@ -317,7 +313,7 @@ function useFlexHeaderSettings() {
       const syncEnabledValue = await loadFromStorage(SYNC_ENABLED_KEY, false, ['local']);
       setSyncEnabled(syncEnabledValue);
     } catch (error) {
-      console.error("Failed to load sync preference:", error);
+      log("Failed to load sync preference", "error", error);
     }
 
     // Load undo/redo feature preference - local only, per-device.
@@ -325,7 +321,19 @@ function useFlexHeaderSettings() {
       const historyEnabledValue = await loadFromStorage(HISTORY_ENABLED_KEY, true, ['local']);
       setHistoryEnabled(historyEnabledValue);
     } catch (error) {
-      console.error("Failed to load undo/redo history preference:", error);
+      log("Failed to load undo/redo history preference", "error", error);
+    }
+
+    // Load console log verbosity preference - local only, per-device. Set on
+    // log.ts's module-level state too, since that's what log() actually
+    // reads from (background.ts loads its own copy independently - see
+    // initBackground).
+    try {
+      const logLevelValue = await loadFromStorage<LogLevel>(LOG_LEVEL_KEY, DEFAULT_LOG_LEVEL, ['local']);
+      setLogLevelState(logLevelValue);
+      setLogLevel(logLevelValue);
+    } catch (error) {
+      log("Failed to load log level preference", "error", error);
     }
 
     // Restore undo/redo history - local only, per-device (see UNDO_STACK_KEY).
@@ -352,8 +360,6 @@ function useFlexHeaderSettings() {
       }
 
       if (meta) {
-        log("SETTINGS: Loading settings from distributed storage format", "info");
-
         // Load all pages
         const pagePromises = [];
         for (let i = 0; i < meta.pageCount; i++) {
@@ -429,7 +435,7 @@ function useFlexHeaderSettings() {
       setHasInitialized(true);
 
     } catch (error) {
-      console.error("Failed to retrieve settings:", error);
+      log("Failed to retrieve settings", "error", error);
       const message = error instanceof Error ? error.message : "Failed to load settings";
       await addStoredError(
         "sync",
@@ -482,7 +488,7 @@ function useFlexHeaderSettings() {
       await saveToStorage("darkMode", newDarkMode, 'local');
       setDarkModeEnabled(newDarkMode);
     } catch (error) {
-      console.error("Error toggling dark mode:", error);
+      log("Error toggling dark mode", "error", error);
     }
   };
 
@@ -496,7 +502,20 @@ function useFlexHeaderSettings() {
       await saveToStorage(HISTORY_ENABLED_KEY, newHistoryEnabled, 'local');
       setHistoryEnabled(newHistoryEnabled);
     } catch (error) {
-      console.error("Error toggling undo/redo history:", error);
+      log("Error toggling undo/redo history", "error", error);
+    }
+  };
+
+  /**
+   * Change the console log verbosity level (per-device preference).
+   */
+  const changeLogLevel = async (level: LogLevel) => {
+    try {
+      await saveToStorage(LOG_LEVEL_KEY, level, 'local');
+      setLogLevelState(level);
+      setLogLevel(level);
+    } catch (error) {
+      log("Error changing log level", "error", error);
     }
   };
 
@@ -551,6 +570,8 @@ function useFlexHeaderSettings() {
     toggleSync,
     historyEnabled,
     toggleHistoryEnabled,
+    logLevel,
+    changeLogLevel,
     undo,
     redo,
     canUndo,

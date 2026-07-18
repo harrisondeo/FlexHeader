@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import browser from "webextension-polyfill";
 import { REVIEW_PROMPT_KEY } from "../../constants";
+import { log } from "../log";
 
 export interface ReviewPromptData {
   installDate: number;
@@ -62,7 +63,7 @@ const useReviewPrompt = () => {
       setShouldShow(true);
       setLoading(false);
     } catch (error) {
-      console.error("Error checking review prompt:", error);
+      log("Error checking review prompt", "error", error);
       setLoading(false);
     }
   };

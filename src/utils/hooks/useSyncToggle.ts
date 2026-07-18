@@ -124,7 +124,7 @@ function useSyncToggle({
         });
       }
     } catch (error) {
-      console.error("Error toggling sync:", error);
+      log("Error toggling sync", "error", error);
       const message = error instanceof Error ? error.message : "Failed to toggle sync";
       await addStoredError(
         "sync",

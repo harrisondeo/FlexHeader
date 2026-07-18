@@ -62,22 +62,32 @@
   color: var(--primary);
 }
 
+.settings-page__experimental-grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  align-items: center;
+  column-gap: 0.75rem;
+  row-gap: 0.75rem;
+}
+
 .settings-page__toggle {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
+  /* Let the label's two children (control + content) become direct grid
+     items, so the control column and content column line up across rows
+     instead of each label sizing its own independent flex row. */
+  display: contents;
   cursor: pointer;
 }
 
 .settings-page__toggle-input {
-  margin-top: 0.2rem;
-  flex-shrink: 0;
+  align-self: flex-start;
 }
 
 .settings-page__toggle-content {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  flex-direction: row;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem;
 }
 
 .settings-page__toggle-title {
@@ -88,4 +98,10 @@
 .settings-page__toggle-description {
   font-size: 0.9rem;
   opacity: 0.9;
+}
+
+.settings-page__field-select {
+  flex-shrink: 0;
+  align-self: flex-start;
+  width: 8rem;
 }

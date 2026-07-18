@@ -1,5 +1,6 @@
 import browser from "webextension-polyfill";
 import { ERRORS_STATE_KEY } from "../../constants";
+import { log } from "../log";
 
 export type ErrorCategory = "save" | "apply" | "sync";
 
@@ -55,7 +56,7 @@ export async function getStoredErrors(): Promise<AppError[]> {
     const state = result[ERRORS_STATE_KEY] as ErrorsState | undefined;
     return state?.errors ?? [];
   } catch (error) {
-    console.error("Failed to read errors from storage", error);
+    log("Failed to read errors from storage", "error", error);
     return [];
   }
 }
@@ -81,7 +82,7 @@ export async function addStoredError(
     const errors = [newError, ...existing].slice(0, MAX_STORED_ERRORS);
     await browser.storage.local.set({ [ERRORS_STATE_KEY]: { errors } });
   } catch (error) {
-    console.error("Failed to store error", error);
+    log("Failed to store error", "error", error);
   }
 }
 
@@ -104,7 +105,7 @@ export async function clearStoredErrors(category?: ErrorCategory): Promise<void>
       await browser.storage.local.set({ [ERRORS_STATE_KEY]: { errors } });
     }
   } catch (error) {
-    console.error("Failed to clear stored errors", error);
+    log("Failed to clear stored errors", "error", error);
   }
 }
 

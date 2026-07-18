@@ -1,4 +1,5 @@
 import browser from "webextension-polyfill";
+import { log } from "./log";
 
 export const isRunningInActionPopup = (): boolean => {
   try {
@@ -46,6 +47,6 @@ export const openOptionsPageAndClosePopup = async (): Promise<void> => {
     await browser.runtime.openOptionsPage();
     closeActionPopup();
   } catch (error) {
-    console.error("Failed to open settings page:", error);
+    log("Failed to open settings page", "error", error);
   }
 };

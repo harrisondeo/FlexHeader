@@ -3,6 +3,7 @@ import { saveToStorage, loadFromStorage } from "../storage/storage";
 import { UNDO_STACK_KEY, REDO_STACK_KEY } from "../../constants";
 import { reconcileHistoryAfterMerge, type PageTombstone } from "../domain/pageMerge";
 import type { Page, PagesData } from "../domain/schemas";
+import { log } from "../log";
 
 // How long an edit burst (e.g. a run of keystrokes) can pause before the next
 // change starts a new undo step, so backspacing through a whole value only
@@ -123,7 +124,7 @@ function usePageHistory({ enabled, pagesData, setPagesData, hasInitialized }: Us
       setUndoStack(savedUndoStack);
       setRedoStack(savedRedoStack);
     } catch (error) {
-      console.error("Failed to load undo/redo history:", error);
+      log("Failed to load undo/redo history", "error", error);
     }
   };
 
@@ -152,14 +153,14 @@ function usePageHistory({ enabled, pagesData, setPagesData, hasInitialized }: Us
   useEffect(() => {
     if (!hasInitialized) return;
     saveToStorage(UNDO_STACK_KEY, undoStack, 'local').catch((error) => {
-      console.error("Failed to persist undo history:", error);
+      log("Failed to persist undo history", "error", error);
     });
   }, [undoStack, hasInitialized]);
 
   useEffect(() => {
     if (!hasInitialized) return;
     saveToStorage(REDO_STACK_KEY, redoStack, 'local').catch((error) => {
-      console.error("Failed to persist redo history:", error);
+      log("Failed to persist redo history", "error", error);
     });
   }, [redoStack, hasInitialized]);
 

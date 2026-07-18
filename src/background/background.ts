@@ -1,9 +1,9 @@
-import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, PAGE_TOMBSTONES_KEY, SYNC_INTERVAL, LAST_SYNC_TIME_KEY, LAST_MERGE_TIME_KEY, LOCAL_MODIFIED_TIME_KEY, SYNC_ENABLED_KEY, ERRORS_STATE_KEY, SETTINGS_SAVE_DEBOUNCE_TIME, SYNC_ITEM_BYTE_LIMIT } from "../constants";
+import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, PAGE_TOMBSTONES_KEY, SYNC_INTERVAL, LAST_SYNC_TIME_KEY, LAST_MERGE_TIME_KEY, LOCAL_MODIFIED_TIME_KEY, SYNC_ENABLED_KEY, ERRORS_STATE_KEY, SETTINGS_SAVE_DEBOUNCE_TIME, SYNC_ITEM_BYTE_LIMIT, LOG_LEVEL_KEY } from "../constants";
 import type { Page, SettingsV3Meta } from "../utils/settings";
 import { defaultPage } from "../utils/settings";
 import browser from "webextension-polyfill";
 import { getAllFromStorage, saveToStorage, getDataSizeInBytes, loadFromStorage } from "../utils/storage/storage";
-import { log } from "../utils/log";
+import { log, setLogLevel, DEFAULT_LOG_LEVEL, type LogLevel } from "../utils/log";
 import { normalizePage } from "../utils/domain/headers";
 import { mergeSyncState, mergeTombstones, applyTombstones, synthesizeFallbackPage, pruneExpiredTombstones, type PageTombstone } from "../utils/domain/pageMerge";
 import { readPageStorage } from "../utils/storage/pageStorage";
@@ -21,15 +21,8 @@ export async function getAndApplyHeaderRules() {
     const getUniqueRuleID = () => nextRuleId++;
 
     const localSettings = await readPageStorage(browser.storage.local);
-    if (!localSettings) {
-      console.log("FlexHeader: No settings metadata found, applying empty rules");
-    }
     const pages: Page[] = localSettings?.pages ?? [];
 
-    console.log(
-      "%cBACKGROUND: Pages loaded",
-      "color: #1976d2; font-weight: bold;"
-    );
     const headers = buildRulesFromPages(pages, getUniqueRuleID);
 
     await browser.declarativeNetRequest.updateDynamicRules({
@@ -40,7 +33,7 @@ export async function getAndApplyHeaderRules() {
     // Clear apply errors once rules have been successfully updated
     await clearStoredErrors("apply");
   } catch (error) {
-    console.error("Error in getAndApplyHeaderRules", error);
+    log("Error in getAndApplyHeaderRules", "error", error);
     const message = error instanceof Error ? error.message : "Failed to apply header rules";
     await addStoredError(
       "apply",
@@ -91,8 +84,6 @@ export async function syncLocalToRemoteStorage() {
       log("BACKGROUND: Sync is disabled, skipping sync to remote storage", "info");
       return;
     }
-
-    log("BACKGROUND: Starting sync from local to remote storage", "info");
 
     const localSettings = await readPageStorage(browser.storage.local);
     if (!localSettings) {
@@ -171,8 +162,7 @@ export async function syncLocalToRemoteStorage() {
 
     log("BACKGROUND: Successfully synced local data to remote storage", "success");
   } catch (error) {
-    console.error("Failed to sync to remote storage:", error);
-    log("BACKGROUND: Failed to sync to remote storage", "error");
+    log("BACKGROUND: Failed to sync to remote storage", "error", error);
     const message = error instanceof Error ? error.message : "Failed to sync settings to remote storage";
     await addStoredError(
       "sync",
@@ -246,8 +236,6 @@ export async function syncRemoteToLocalStorage() {
       return;
     }
 
-    log("BACKGROUND: Checking remote storage for updates", "info");
-
     const syncSettings = await readPageStorage(browser.storage.sync);
     if (!syncSettings) {
       return;
@@ -292,8 +280,7 @@ export async function syncRemoteToLocalStorage() {
       await writePagesToLocalStorage(merged.pages, localSettings.meta.selectedPage, merged.tombstones);
     }
   } catch (error) {
-    console.error("Failed to sync from remote storage:", error);
-    log("BACKGROUND: Failed to sync from remote storage", "error");
+    log("BACKGROUND: Failed to sync from remote storage", "error", error);
     const message = error instanceof Error ? error.message : "Failed to sync settings from remote storage";
     await addStoredError(
       "sync",
@@ -343,7 +330,16 @@ function schedulePushSoon(): void {
  * during the Node-based build step.
  */
 export function initBackground() {
+  // The service worker is a separate bundle from the popup/options UI, so it
+  // can't share log.ts's in-memory level with them - load the stored
+  // preference once here, then stay in sync via the onChanged listener below.
+  loadFromStorage<LogLevel>(LOG_LEVEL_KEY, DEFAULT_LOG_LEVEL, ['local']).then(setLogLevel);
+
   browser.storage.local.onChanged.addListener(function (changes) {
+    if (LOG_LEVEL_KEY in changes) {
+      setLogLevel((changes[LOG_LEVEL_KEY].newValue as LogLevel) ?? DEFAULT_LOG_LEVEL);
+    }
+
     // Trigger update if any settings change (v3 meta or any page_* key)
     const settingsChanged = SETTINGS_V3_META_KEY in changes ||
       PAGE_TOMBSTONES_KEY in changes ||

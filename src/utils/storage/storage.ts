@@ -1,4 +1,5 @@
 import browser from "webextension-polyfill";
+import { log } from "../log";
 
 /**
  * Save data to local or sync storage
@@ -24,7 +25,7 @@ export const saveToStorage = async <T>(
         await browser.storage[storageType].set({ [key]: data });
         return Promise.resolve();
     } catch (error) {
-        console.error(`Failed to save data to ${storageType} storage:`, error);
+        log(`Failed to save data to ${storageType} storage`, "error", error);
         if (storageType === 'sync') {
             // If sync fails, try to save to local
             try {
@@ -57,7 +58,7 @@ export const loadFromStorage = async <T>(
                 return result[key] as T;
             }
         } catch (error) {
-            console.error(`Failed to load data from ${storageType} storage:`, error);
+            log(`Failed to load data from ${storageType} storage`, "error", error);
             // Continue to next storage type
         }
     }
@@ -79,7 +80,7 @@ export const removeFromStorage = async (
         await browser.storage[storageType].remove(keys);
         return Promise.resolve();
     } catch (error) {
-        console.error(`Failed to remove keys from ${storageType} storage:`, error);
+        log(`Failed to remove keys from ${storageType} storage`, "error", error);
         return Promise.reject(error);
     }
 };
@@ -103,7 +104,7 @@ export const clearStorage = async (
 
         return Promise.resolve();
     } catch (error) {
-        console.error(`Failed to clear ${storageType} storage:`, error);
+        log(`Failed to clear ${storageType} storage`, "error", error);
         return Promise.reject(error);
     }
 };
@@ -122,7 +123,7 @@ export const saveMultipleToStorage = async (
         await browser.storage[storageType].set(data);
         return Promise.resolve();
     } catch (error) {
-        console.error(`Failed to save multiple items to ${storageType} storage:`, error);
+        log(`Failed to save multiple items to ${storageType} storage`, "error", error);
         if (storageType === 'sync') {
             // If sync fails, try to save to local
             try {
@@ -147,7 +148,7 @@ export const getAllFromStorage = async (
     try {
         return await browser.storage[storageType].get(null);
     } catch (error) {
-        console.error(`Failed to get all data from ${storageType} storage:`, error);
+        log(`Failed to get all data from ${storageType} storage`, "error", error);
         return Promise.reject(error);
     }
 };
@@ -170,7 +171,7 @@ export const saveToBothStorages = async <T>(
         try {
             await saveToStorage(key, data, 'sync');
         } catch (syncError) {
-            console.warn("Failed to sync to remote storage:", syncError);
+            log("Failed to sync to remote storage", "warning", syncError);
             // We don't consider this a full failure since local save succeeded
         }
 

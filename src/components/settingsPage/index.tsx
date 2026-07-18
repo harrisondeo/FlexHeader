@@ -8,11 +8,12 @@ import {
   useSettingsActions,
 } from "../../context/settingsContext";
 import { getSyncStatus } from "../../utils/sync/syncStatus";
+import type { LogLevel } from "../../utils/log";
 import "./index.css";
 
 const SettingsPage = () => {
-  const { pages, syncEnabled, lastSyncTime, localModifiedTime, historyEnabled } = useSettingsState();
-  const { importSettings, toggleSync, injectError, clearErrors, toggleHistoryEnabled } = useSettingsActions();
+  const { pages, syncEnabled, lastSyncTime, localModifiedTime, historyEnabled, logLevel } = useSettingsState();
+  const { importSettings, toggleSync, injectError, clearErrors, toggleHistoryEnabled, changeLogLevel } = useSettingsActions();
   const syncStatus = getSyncStatus(lastSyncTime, localModifiedTime);
   return (
     <div className="settings-page">
@@ -82,22 +83,44 @@ const SettingsPage = () => {
         <h2>Experimental Settings</h2>
         <p>Opt-in features still under evaluation.</p>
 
-        <label className="settings-page__toggle">
-          <input
-            type="checkbox"
-            className="settings-page__toggle-input"
-            checked={historyEnabled}
-            onChange={toggleHistoryEnabled}
-            data-testid="history-toggle-button"
-          />
-          <span className="settings-page__toggle-content">
-            <span className="settings-page__toggle-title">Undo / Redo</span>
-            <span className="settings-page__toggle-description">
-              Track header, filter, and page edits so they can be undone with
-              Ctrl+Z (Ctrl+Shift+Z to redo).
+        <div className="settings-page__experimental-grid">
+          <label className="settings-page__toggle">
+            <input
+              type="checkbox"
+              className="settings-page__toggle-input"
+              checked={historyEnabled}
+              onChange={toggleHistoryEnabled}
+              data-testid="history-toggle-button"
+            />
+            <span className="settings-page__toggle-content">
+              <span className="settings-page__toggle-title">Undo / Redo</span>
+              <span className="settings-page__toggle-description">
+                Track header, filter, and page edits so they can be undone
+                with Ctrl+Z (Ctrl+Shift+Z to redo).
+              </span>
             </span>
-          </span>
-        </label>
+          </label>
+
+          <label className="settings-page__toggle">
+            <select
+              className="settings-page__field-select"
+              value={logLevel}
+              onChange={(event) => changeLogLevel(event.target.value as LogLevel)}
+              data-testid="log-level-select"
+            >
+              <option value="error">Errors only</option>
+              <option value="warning">Warnings &amp; errors</option>
+              <option value="info">All (info, warnings &amp; errors)</option>
+            </select>
+            <span className="settings-page__toggle-content">
+              <span className="settings-page__toggle-title">Log Level</span>
+              <span className="settings-page__toggle-description">
+                Control how much detail Flex Headers prints to the browser
+                console.
+              </span>
+            </span>
+          </label>
+        </div>
       </div>
 
       {import.meta.env.DEV && (
