@@ -451,6 +451,12 @@ function useFlexHeaderSettings() {
 
     } catch (error) {
       console.error("Failed to retrieve settings:", error);
+      const message = error instanceof Error ? error.message : "Failed to load settings";
+      await addStoredError(
+        "sync",
+        message,
+        error instanceof Error ? error.stack : undefined
+      );
       alertContext.setAlert({
         alertType: "error",
         alertText: "Failed to load settings. Using default configuration.",
@@ -929,6 +935,12 @@ function useFlexHeaderSettings() {
       }
     } catch (error) {
       console.error("Error toggling sync:", error);
+      const message = error instanceof Error ? error.message : "Failed to toggle sync";
+      await addStoredError(
+        "sync",
+        message,
+        error instanceof Error ? error.stack : undefined
+      );
       alertContext.setAlert({
         alertType: "error",
         alertText: "Failed to toggle sync. Please try again.",
