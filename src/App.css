@@ -23,7 +23,8 @@
 
 .app:not(.darkmode) img[src$="import.svg"],
 .app:not(.darkmode) img[src$="export.svg"],
-.app:not(.darkmode) img[src$="settings.svg"] {
+.app:not(.darkmode) img[src$="settings.svg"],
+.app:not(.darkmode) img[src$="sync.svg"] {
   filter: invert(1);
 }
 

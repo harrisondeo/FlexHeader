@@ -2,6 +2,7 @@ import Button from "../button";
 import Divider from "../divider";
 import DragDropFile from "../dragDropFile";
 import ExportPopup from "../exportPopup";
+import SyncToggleButton from "../syncToggleButton";
 import {
   useSettingsState,
   useSettingsActions,
@@ -53,21 +54,10 @@ const SettingsPage = () => {
           Sync your pages across browsers where you are signed in with the same
           account.
         </p>
-        <Button
-          onClick={toggleSync}
-          content={
-            <span
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              <img src="/icons/sync.svg" alt="Sync" />
-              {syncEnabled ? "Disable Sync" : "Enable Sync"}
-            </span>
-          }
+        <SyncToggleButton
+          syncEnabled={syncEnabled}
+          onToggle={toggleSync}
+          variant="labeled"
         />
       </div>
 
