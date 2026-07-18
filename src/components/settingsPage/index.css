@@ -35,6 +35,11 @@
   margin: 0;
 }
 
+.settings-page__section h3 {
+  font-size: 1rem;
+  margin: 0.5rem 0 0;
+}
+
 .settings-page__section p {
   margin: 0;
   font-size: 0.9rem;
@@ -55,4 +60,32 @@
 .settings-page__sync-status--pending {
   opacity: 1;
   color: var(--primary);
+}
+
+.settings-page__toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.settings-page__toggle-input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+.settings-page__toggle-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.settings-page__toggle-title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.settings-page__toggle-description {
+  font-size: 0.9rem;
+  opacity: 0.9;
 }
