@@ -27,68 +27,7 @@ vi.mock('webextension-polyfill', () => ({
 
 import { Page, HeaderSetting, HeaderFilter, isValidUrlFilter } from './settings';
 import { normalizePage } from './headers';
-
-// Extract the merge logic functions for testing
-// These are pure functions that can be tested independently
-
-/**
- * Creates a unique key for a page based on its name, headers, and filters
- * Used for deduplication during merge
- * Note: Only compares headerName, headerValue for headers and type, value for filters
- */
-const getPageKey = (page: Page): string => {
-  const sortedHeaders = [...page.headers].sort((a, b) => {
-    if (a.headerName !== b.headerName) return a.headerName.localeCompare(b.headerName);
-    if (a.headerValue !== b.headerValue) return a.headerValue.localeCompare(b.headerValue);
-    return 0;
-  });
-  const sortedFilters = [...page.filters].sort((a, b) => {
-    if (a.type !== b.type) return a.type.localeCompare(b.type);
-    if (a.mode !== b.mode) return a.mode.localeCompare(b.mode);
-    if (a.value !== b.value) return String(a.value).localeCompare(String(b.value));
-    return 0;
-  });
-  // Only include the properties used for comparison
-  return `${page.name}_${JSON.stringify({
-    headers: sortedHeaders.map(h => ({ headerName: h.headerName, headerValue: h.headerValue })),
-    filters: sortedFilters.map(f => ({ type: f.type, mode: f.mode, value: f.value })),
-  })}`;
-};
-
-/**
- * Merges pages from sync storage with local pages, avoiding duplicates
- */
-const mergePages = (localPages: Page[], syncPages: Page[]): Page[] => {
-  const localPagesMap = new Map<string, Page>();
-  localPages.forEach(page => {
-    localPagesMap.set(getPageKey(page), page);
-  });
-
-  const newPagesFromSync: Page[] = [];
-  syncPages.forEach(syncPage => {
-    if (!localPagesMap.has(getPageKey(syncPage))) {
-      newPagesFromSync.push(syncPage);
-    }
-  });
-
-  if (newPagesFromSync.length === 0) {
-    return localPages;
-  }
-
-  const mergedPages = [
-    ...localPages.map((page, index) => ({
-      ...page,
-      id: index,
-    })),
-    ...newPagesFromSync.map((page, index) => ({
-      ...page,
-      id: localPages.length + index,
-      enabled: false, // New pages from sync are disabled by default
-    }))
-  ];
-
-  return mergedPages;
-};
+import { getPageKey, mergePages } from './pageMerge';
 
 // Helper functions to create test data
 const createHeader = (name: string, value: string, enabled = true): HeaderSetting => ({

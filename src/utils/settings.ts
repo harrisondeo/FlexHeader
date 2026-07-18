@@ -6,6 +6,7 @@ import { SELECTED_PAGE_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, SYNC_ENABLED_
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage";
 import { log } from "./log";
 import { normalizePage } from "./headers";
+import { mergePages } from "./pageMerge";
 import { AppError, addStoredError, clearStoredErrors, getStoredErrors, injectTestError, ErrorCategory } from "./errors";
 
 export enum SettingsErrorType {
@@ -755,70 +756,6 @@ function useFlexHeaderSettings() {
   };
 
   /**
-   * Merges pages from sync storage with local pages, avoiding duplicates.
-   * Deduplication is based on page name, sorted headers (by headerName and headerValue),
-   * and sorted filters (by type and value). The comparison uses these sorted properties
-   * to generate a unique key for each page.
-   * @param localPages The current local pages
-   * @param syncPages The pages from sync storage
-   * @returns The merged pages array
-   */
-  const mergePages = (localPages: Page[], syncPages: Page[]): Page[] => {
-    // Helper function to create unique key for page comparison
-    const getPageKey = (page: Page): string => {
-      // Sort headers and filters for stable key
-      const sortedHeaders = [...page.headers].sort((a, b) => {
-        if (a.headerName !== b.headerName) return a.headerName.localeCompare(b.headerName);
-        if (a.headerValue !== b.headerValue) return a.headerValue.localeCompare(b.headerValue);
-        return 0;
-      });
-      const sortedFilters = [...page.filters].sort((a, b) => {
-        if (a.type !== b.type) return a.type.localeCompare(b.type);
-        if (a.mode !== b.mode) return a.mode.localeCompare(b.mode);
-        if (a.value !== b.value) return String(a.value).localeCompare(String(b.value));
-        return 0;
-      });
-      return `${page.name}_${JSON.stringify({
-        headers: sortedHeaders,
-        filters: sortedFilters,
-      })}`;
-    };
-
-    // Create a map of local pages for comparison
-    const localPagesMap = new Map<string, Page>();
-    localPages.forEach(page => {
-      localPagesMap.set(getPageKey(page), page);
-    });
-
-    // Find sync pages that don't exist in local storage
-    const newPagesFromSync: Page[] = [];
-    syncPages.forEach(syncPage => {
-      if (!localPagesMap.has(getPageKey(syncPage))) {
-        newPagesFromSync.push(syncPage);
-      }
-    });
-
-    if (newPagesFromSync.length === 0) {
-      return localPages;
-    }
-
-    // Merge the pages and re-index, preserving enabled state for local pages
-    const mergedPages = [
-      ...localPages.map((page, index) => ({
-        ...page,
-        id: index,
-      })),
-      ...newPagesFromSync.map((page, index) => ({
-        ...page,
-        id: localPages.length + index,
-        enabled: false, // New pages from sync are disabled by default
-      }))
-    ];
-
-    return mergedPages;
-  };
-
-  /**
    * Loads pages from sync storage
    * @returns The pages from sync storage or null if none found
    */
@@ -1039,6 +976,32 @@ function useFlexHeaderSettings() {
     browser.storage.local.onChanged.addListener(listener);
     return () => browser.storage.local.onChanged.removeListener(listener);
   }, []);
+
+  // Track the current page count so the listener below can tell a background
+  // merge (more pages than we know about) apart from our own writes.
+  const pageCountRef = useRef(pagesData.pages.length);
+  useEffect(() => {
+    pageCountRef.current = pagesData.pages.length;
+  }, [pagesData.pages.length]);
+
+  // The background service worker can merge new pages in from sync storage
+  // at any time (not just on load). If that happens while this page is open,
+  // pick up the change immediately instead of waiting for a reload.
+  useEffect(() => {
+    const listener = (changes: Record<string, browser.Storage.StorageChange>) => {
+      const metaChange = changes[SETTINGS_V3_META_KEY];
+      if (!metaChange) return;
+
+      const newMeta = metaChange.newValue as SettingsV3Meta | undefined;
+      if (newMeta && newMeta.pageCount > pageCountRef.current) {
+        log("SETTINGS: Detected pages merged in from sync storage, reloading", "info");
+        retrieveSettings();
+      }
+    };
+
+    browser.storage.local.onChanged.addListener(listener);
+    return () => browser.storage.local.onChanged.removeListener(listener);
+  }, [retrieveSettings]);
 
   const clearErrors = useCallback(async (category?: AppError["category"]) => {
     await clearStoredErrors(category);
