@@ -46,3 +46,13 @@
   padding: 0.1rem 0.3rem;
   border-radius: var(--input-radius);
 }
+
+.settings-page__sync-status {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.settings-page__sync-status--pending {
+  opacity: 1;
+  color: var(--primary);
+}

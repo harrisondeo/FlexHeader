@@ -14,13 +14,16 @@ import {
 } from "../../context/settingsContext";
 import ErrorsIcon from "../errorsIcon";
 import SyncToggleButton from "../syncToggleButton";
+import { getSyncStatus } from "../../utils/syncStatus";
 
 const AppHeader = () => {
-  const { darkModeEnabled, syncEnabled, pages, errors } = useSettingsState();
+  const { darkModeEnabled, syncEnabled, pages, errors, lastSyncTime, localModifiedTime } =
+    useSettingsState();
   const { toggleDarkMode, toggleSync, importSettings, clearErrors } =
     useSettingsActions();
   const manifest = browser.runtime.getManifest();
   const isFirefoxPopup = isRunningInActionPopup() && isFirefox();
+  const syncStatus = getSyncStatus(lastSyncTime, localModifiedTime);
 
   return (
     <div className="app-header">
@@ -98,7 +101,11 @@ const AppHeader = () => {
           </svg>
         )}
       </button>
-      <SyncToggleButton syncEnabled={syncEnabled} onToggle={toggleSync} />
+      <SyncToggleButton
+        syncEnabled={syncEnabled}
+        onToggle={toggleSync}
+        statusText={syncStatus.label}
+      />
       <div className="app-header__actions">
         <ErrorsIcon errors={errors} clearErrors={clearErrors} />
         {isFirefoxPopup ? (

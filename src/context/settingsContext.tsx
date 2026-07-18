@@ -17,6 +17,8 @@ type SettingsStateContextValue = {
   currentPage: Page;
   darkModeEnabled: boolean;
   syncEnabled: boolean;
+  lastSyncTime: number | null;
+  localModifiedTime: number | null;
   errors: AppError[];
 };
 
@@ -76,6 +78,8 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       currentPage,
       darkModeEnabled: settings.darkModeEnabled,
       syncEnabled: settings.syncEnabled,
+      lastSyncTime: settings.lastSyncTime,
+      localModifiedTime: settings.localModifiedTime,
       errors: settings.errors,
     }),
     [
@@ -84,6 +88,8 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       currentPage,
       settings.darkModeEnabled,
       settings.syncEnabled,
+      settings.lastSyncTime,
+      settings.localModifiedTime,
       settings.errors,
     ]
   );

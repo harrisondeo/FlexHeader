@@ -63,6 +63,7 @@ export const PageContextMenu = ({
     addPage({
       ...page,
       id: -1,
+      pageId: undefined,
       name: `${page.name} Copy`,
     });
     onClose();

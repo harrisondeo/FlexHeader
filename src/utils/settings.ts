@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
 import { z } from "zod";
-import { SELECTED_PAGE_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, ERRORS_STATE_KEY, LAST_MERGE_TIME_KEY } from "../constants";
+import { SELECTED_PAGE_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, ERRORS_STATE_KEY, LAST_MERGE_TIME_KEY, LAST_SYNC_TIME_KEY, LOCAL_MODIFIED_TIME_KEY } from "../constants";
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage";
 import { log } from "./log";
 import { normalizePage } from "./headers";
@@ -176,6 +176,8 @@ function useFlexHeaderSettings() {
   const [hasInitialized, setHasInitialized] = useState(false);
   const [saveVersion, setSaveVersion] = useState(0);
   const [errors, setErrors] = useState<AppError[]>([]);
+  const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
+  const [localModifiedTime, setLocalModifiedTime] = useState<number | null>(null);
   const isSavingRef = useRef<boolean>(false);
   const hasPendingSaveRef = useRef<boolean>(false);
   const alertContext = useAlert();
@@ -201,7 +203,7 @@ function useFlexHeaderSettings() {
         const dataToWrite: Record<string, unknown> = {
           [SETTINGS_V3_META_KEY]: metadata,
           [PAGE_TOMBSTONES_KEY]: pruneExpiredTombstones(tombstonesToSave),
-          localModifiedTime: Date.now(),
+          [LOCAL_MODIFIED_TIME_KEY]: Date.now(),
         };
 
         settings.pages.forEach((page, index) => {
@@ -346,9 +348,12 @@ function useFlexHeaderSettings() {
    * Loads the settings from storage and sets the state
    */
   const retrieveSettings = useCallback(async () => {
-    // Load dark mode setting
+    // Load dark mode setting - local only. This is a per-device preference
+    // (a user may want dark mode on one browser and light on another), not
+    // shared truth, so it's never synced (see background.ts's
+    // syncLocalToRemoteStorage).
     try {
-      const darkModeValue = await loadFromStorage("darkMode", false, ['local', 'sync']);
+      const darkModeValue = await loadFromStorage("darkMode", false, ['local']);
       setDarkModeEnabled(darkModeValue);
 
       // If darkMode wasn't found in either storage, save the default value
@@ -502,11 +507,16 @@ function useFlexHeaderSettings() {
         ...page,
         id: pagesData.pages.length,
         enabled: true,
-        pageId: page.pageId || crypto.randomUUID(),
+        // Always mint a fresh identity, even if the caller's page object
+        // still carries one (e.g. a duplicated page) - addPage always
+        // creates a distinct page, and reusing an existing pageId here is
+        // exactly the bug class that made a duplicated page get merged back
+        // into the original on another synced browser instead of appearing
+        // as a separate page.
+        pageId: crypto.randomUUID(),
         lastModified: Date.now(),
       },
     ];
-
     const testData = {
       pages: newPages,
       selectedPage: newPages.length - 1,
@@ -975,9 +985,14 @@ function useFlexHeaderSettings() {
           setPagesData((prev) => {
             const importedPages = parsed.map(normalizePage).map((page) => ({
               ...page,
-              // A fresh id if the file has none, so an imported page never
-              // merge-matches an unrelated existing page by coincidence.
-              pageId: page.pageId || crypto.randomUUID(),
+              // Always a fresh id, even if the file already has one (e.g.
+              // re-importing a previous export, or a file exported from a
+              // device this one already syncs with) - import always appends
+              // alongside existing pages (never replaces), so reusing an
+              // existing pageId would put two pages sharing one identity in
+              // the same local list, which is exactly the bug class that
+              // made a duplicated page collide with its original on sync.
+              pageId: crypto.randomUUID(),
               lastModified: page.lastModified || Date.now(),
             }));
             const combinedPages = [...prev.pages, ...importedPages];
@@ -1051,6 +1066,35 @@ function useFlexHeaderSettings() {
     return () => browser.storage.local.onChanged.removeListener(listener);
   }, []);
 
+  // Sync status: comparing localModifiedTime (bumped on every local write, by
+  // this hook and by the background worker) against LAST_SYNC_TIME_KEY
+  // (stamped only after a successful push) tells the UI "pending" vs
+  // "synced" without needing a new dedicated flag - both timestamps already
+  // existed, just weren't read anywhere until now.
+  useEffect(() => {
+    const loadSyncStatus = async () => {
+      const [syncTime, modifiedTime] = await Promise.all([
+        loadFromStorage<number | null>(LAST_SYNC_TIME_KEY, null, ['local']),
+        loadFromStorage<number | null>(LOCAL_MODIFIED_TIME_KEY, null, ['local']),
+      ]);
+      setLastSyncTime(syncTime);
+      setLocalModifiedTime(modifiedTime);
+    };
+    loadSyncStatus();
+
+    const listener = (changes: Record<string, browser.Storage.StorageChange>) => {
+      if (LAST_SYNC_TIME_KEY in changes) {
+        setLastSyncTime(changes[LAST_SYNC_TIME_KEY].newValue as number | null);
+      }
+      if (LOCAL_MODIFIED_TIME_KEY in changes) {
+        setLocalModifiedTime(changes[LOCAL_MODIFIED_TIME_KEY].newValue as number | null);
+      }
+    };
+
+    browser.storage.local.onChanged.addListener(listener);
+    return () => browser.storage.local.onChanged.removeListener(listener);
+  }, []);
+
   // LAST_MERGE_TIME_KEY is stamped only by the background worker's merge
   // writes, never by this hook's own saves - an unambiguous "reload" signal
   // that a page-count comparison couldn't give us (it misses in-place edits).
@@ -1084,6 +1128,8 @@ function useFlexHeaderSettings() {
     darkModeEnabled,
     syncEnabled,
     isSaving: isSavingRef.current,
+    lastSyncTime,
+    localModifiedTime,
     errors,
     clearErrors,
     injectError,

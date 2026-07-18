@@ -4,7 +4,7 @@
  * tests guard that it can never drop an existing local page.
  */
 
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import type { Page, SettingsV3Meta } from '../utils/settings';
 
 const createMockArea = (initial: Record<string, any> = {}) => {
@@ -66,8 +66,8 @@ vi.mock('webextension-polyfill', () => ({
   ...browserMock,
 }));
 
-import { syncRemoteToLocalStorage, syncLocalToRemoteStorage } from './background';
-import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, LAST_MERGE_TIME_KEY } from '../constants';
+import { syncRemoteToLocalStorage, syncLocalToRemoteStorage, initBackground } from './background';
+import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, LAST_MERGE_TIME_KEY, SELECTED_PAGE_KEY, SETTINGS_SAVE_DEBOUNCE_TIME } from '../constants';
 import type { PageTombstone } from '../utils/pageMerge';
 
 const createPage = (
@@ -338,11 +338,20 @@ describe('syncLocalToRemoteStorage', () => {
     browserMock.storage.sync.remove.mockImplementation(syncArea.remove);
   });
 
-  it('removes stale page_N keys from sync storage when local pages shrink', async () => {
+  it('removes stale page_N keys from sync storage when a tombstoned page shrinks the merged set', async () => {
+    // A page removed with no tombstone is indistinguishable from "not synced
+    // yet" (see CLAUDE.md's "Deletion needs tombstones") - push now merges
+    // against remote just like pull does, so only a genuinely tombstoned
+    // deletion should shrink what gets pushed.
+    const now = Date.now();
     localArea.store[SYNC_ENABLED_KEY] = true;
-    seedArea(localArea, [createPage(0, 'Only Page')], 0);
-    // Left over in sync storage from before a page was deleted locally.
-    seedArea(syncArea, [createPage(0, 'Only Page'), createPage(1, 'Deleted Page')], 0);
+    seedArea(localArea, [createPage(0, 'Only Page', 'value', { pageId: 'page-1', lastModified: now - 60000 })], 0);
+    seedTombstones(localArea, [{ pageId: 'page-2', deletedAt: now }]);
+    // Left over in sync storage from before the page was deleted locally.
+    seedArea(syncArea, [
+      createPage(0, 'Only Page', 'value', { pageId: 'page-1', lastModified: now - 60000 }),
+      createPage(1, 'Deleted Page', 'value', { pageId: 'page-2', lastModified: now - 120000 }),
+    ], 0);
 
     await syncLocalToRemoteStorage();
 
@@ -357,5 +366,211 @@ describe('syncLocalToRemoteStorage', () => {
     await syncLocalToRemoteStorage();
 
     expect(readTombstones(syncArea)).toEqual([{ pageId: 'deleted-1', deletedAt: expect.any(Number) }]);
+  });
+
+  it('does not clobber a page another browser already pushed to sync storage that this browser has not pulled yet', async () => {
+    // Regression test: pushing local's raw view (without merging against
+    // sync storage's current state first) would overwrite a page pushed by
+    // another browser in the gap since this browser's last pull - this is
+    // the most likely explanation for "a new page sometimes doesn't sync to
+    // the other browser at all".
+    const now = Date.now();
+    localArea.store[SYNC_ENABLED_KEY] = true;
+    seedArea(localArea, [
+      createPage(0, 'Default', 'value', { pageId: 'default', lastModified: 0 }),
+    ], 0);
+    // Another browser already pushed a new page this one hasn't pulled yet.
+    seedArea(syncArea, [
+      createPage(0, 'Default', 'value', { pageId: 'default', lastModified: 0 }),
+      createPage(1, 'Pushed elsewhere', 'value', { pageId: 'page-remote', lastModified: now - 1000 }),
+    ], 0);
+
+    await syncLocalToRemoteStorage();
+
+    const syncPages = readLocalPages(syncArea);
+    expect(syncPages.map((p) => p.pageId)).toContain('page-remote');
+  });
+
+  it('catches local up with anything the push-time merge discovered on sync storage', async () => {
+    const now = Date.now();
+    localArea.store[SYNC_ENABLED_KEY] = true;
+    seedArea(localArea, [
+      createPage(0, 'Default', 'value', { pageId: 'default', lastModified: 0 }),
+    ], 0);
+    seedArea(syncArea, [
+      createPage(0, 'Default', 'value', { pageId: 'default', lastModified: 0 }),
+      createPage(1, 'Pushed elsewhere', 'value', { pageId: 'page-remote', lastModified: now - 1000 }),
+    ], 0);
+
+    await syncLocalToRemoteStorage();
+
+    const localPages = readLocalPages(localArea);
+    expect(localPages.map((p) => p.pageId)).toContain('page-remote');
+  });
+
+  it('does not include darkMode or selectedPage in what gets pushed to sync storage', async () => {
+    localArea.store[SYNC_ENABLED_KEY] = true;
+    localArea.store['darkMode'] = true;
+    localArea.store[SELECTED_PAGE_KEY] = 3;
+    seedArea(localArea, [createPage(0, 'Only Page')], 0);
+
+    await syncLocalToRemoteStorage();
+
+    expect(syncArea.store['darkMode']).toBeUndefined();
+    expect(syncArea.store[SELECTED_PAGE_KEY]).toBeUndefined();
+  });
+});
+
+describe('writePagesToLocalStorage race protection (via syncRemoteToLocalStorage)', () => {
+  let localArea: MockArea;
+  let syncArea: MockArea;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localArea = createMockArea();
+    syncArea = createMockArea();
+
+    browserMock.storage.local.get.mockImplementation(localArea.get);
+    browserMock.storage.local.set.mockImplementation(localArea.set);
+    browserMock.storage.local.remove.mockImplementation(localArea.remove);
+    browserMock.storage.sync.get.mockImplementation(syncArea.get);
+    browserMock.storage.sync.set.mockImplementation(syncArea.set);
+    browserMock.storage.sync.remove.mockImplementation(syncArea.remove);
+  });
+
+  it('does not resurrect a page (or erase its tombstone) when the foreground deletes it while a slower, already-in-flight merge - computed before the delete - is still writing', async () => {
+    // Regression test: syncRemoteToLocalStorage's merge is computed from a
+    // local/sync snapshot read at the *start* of the call. If the foreground
+    // popup deletes a page (writing local storage directly, independent of
+    // this call) while this call is still awaiting later storage
+    // round-trips, its merge result has no idea the delete ever happened.
+    // Before writePagesToLocalStorage re-read and unioned local's tombstones
+    // immediately before committing, this write would silently overwrite the
+    // just-created tombstone and resurrect the page it protected.
+    const now = Date.now();
+    const defaultPage = createPage(0, 'Default', undefined, { pageId: 'default', lastModified: 0 });
+    const pageA = createPage(1, 'A', undefined, { pageId: 'page-a', lastModified: now - 100000 });
+    const pageB = createPage(2, 'B', undefined, { pageId: 'page-b', lastModified: now - 100000 });
+
+    // Local only knows about Default + A so far; sync already has B (pushed
+    // by another browser) - this pull's job is to merge B in.
+    localArea.store[SYNC_ENABLED_KEY] = true;
+    seedArea(localArea, [defaultPage, pageA]);
+    seedArea(syncArea, [defaultPage, pageA, pageB]);
+
+    // Stall writePagesToLocalStorage's own fresh tombstone read (its very
+    // first local.get call after the outer merge has already been computed)
+    // so a concurrent foreground delete can land in between.
+    let resolveStall: () => void;
+    const stall = new Promise<void>((r) => { resolveStall = r; });
+    let resolveReachedStall: () => void;
+    const reachedStall = new Promise<void>((r) => { resolveReachedStall = r; });
+    let tombstoneGetCount = 0;
+    const originalLocalGet = localArea.get.getMockImplementation()!;
+    browserMock.storage.local.get.mockImplementation(async (key?: any) => {
+      if (key === PAGE_TOMBSTONES_KEY) {
+        tombstoneGetCount++;
+        // The 1st read is readV3Settings' own read for the outer merge; the
+        // 2nd is writePagesToLocalStorage's fresh re-check right before
+        // committing - that's the one we want to stall.
+        if (tombstoneGetCount === 2) {
+          resolveReachedStall!();
+          await stall;
+        }
+      }
+      return originalLocalGet(key);
+    });
+
+    const pullPromise = syncRemoteToLocalStorage();
+    await reachedStall;
+
+    // The foreground deletes page A while the pull above is stalled mid-write.
+    seedArea(localArea, [defaultPage].map((p, i) => ({ ...p, id: i })), 0);
+    localArea.store[PAGE_TOMBSTONES_KEY] = [{ pageId: 'page-a', deletedAt: Date.now() }];
+
+    resolveStall!();
+    await pullPromise;
+
+    const finalPages = readLocalPages(localArea);
+    expect(finalPages.map((p) => p.pageId)).not.toContain('page-a');
+    expect(finalPages.map((p) => p.pageId)).toContain('page-b');
+    expect(readTombstones(localArea).map((t) => t.pageId)).toContain('page-a');
+  });
+});
+
+describe('debounced push-on-local-change (initBackground)', () => {
+  let localArea: MockArea;
+  let syncArea: MockArea;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    localArea = createMockArea();
+    syncArea = createMockArea();
+
+    browserMock.storage.local.get.mockImplementation(localArea.get);
+    browserMock.storage.local.set.mockImplementation(localArea.set);
+    browserMock.storage.local.remove.mockImplementation(localArea.remove);
+    browserMock.storage.sync.get.mockImplementation(syncArea.get);
+    browserMock.storage.sync.set.mockImplementation(syncArea.set);
+    browserMock.storage.sync.remove.mockImplementation(syncArea.remove);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('pushes shortly after a local page change instead of waiting for the next interval tick', async () => {
+    localArea.store[SYNC_ENABLED_KEY] = true;
+    seedArea(localArea, [createPage(0, 'Only Page', 'value', { pageId: 'page-1', lastModified: Date.now() })], 0);
+
+    initBackground();
+    const onLocalChanged = (browserMock.storage.local.onChanged.addListener as any).mock.calls[0][0] as
+      (changes: Record<string, unknown>) => void;
+
+    // Flush the startup pull-then-push microtask chain (no sync data yet, so
+    // it's a fast no-op) before triggering the change under test.
+    await vi.runOnlyPendingTimersAsync();
+    vi.clearAllMocks();
+    browserMock.storage.local.get.mockImplementation(localArea.get);
+    browserMock.storage.local.set.mockImplementation(localArea.set);
+    browserMock.storage.local.remove.mockImplementation(localArea.remove);
+    browserMock.storage.sync.get.mockImplementation(syncArea.get);
+    browserMock.storage.sync.set.mockImplementation(syncArea.set);
+    browserMock.storage.sync.remove.mockImplementation(syncArea.remove);
+    onLocalChanged({ [SETTINGS_V3_META_KEY]: { newValue: {}, oldValue: {} } });
+
+    // Well under the 10s interval, but past the debounce - should already
+    // have pushed via the fast path, not be waiting on the interval.
+    await vi.advanceTimersByTimeAsync(SETTINGS_SAVE_DEBOUNCE_TIME + 100);
+
+    expect(browserMock.storage.sync.set).toHaveBeenCalled();
+    expect(readLocalPages(syncArea).map((p) => p.pageId)).toContain('page-1');
+  });
+
+  it('coalesces a burst of local changes into a single push', async () => {
+    localArea.store[SYNC_ENABLED_KEY] = true;
+    seedArea(localArea, [createPage(0, 'Only Page', 'value', { pageId: 'page-1', lastModified: Date.now() })], 0);
+
+    initBackground();
+    const onLocalChanged = (browserMock.storage.local.onChanged.addListener as any).mock.calls[0][0] as
+      (changes: Record<string, unknown>) => void;
+
+    await vi.runOnlyPendingTimersAsync();
+    vi.clearAllMocks();
+    browserMock.storage.local.get.mockImplementation(localArea.get);
+    browserMock.storage.local.set.mockImplementation(localArea.set);
+    browserMock.storage.local.remove.mockImplementation(localArea.remove);
+    browserMock.storage.sync.get.mockImplementation(syncArea.get);
+    browserMock.storage.sync.set.mockImplementation(syncArea.set);
+    browserMock.storage.sync.remove.mockImplementation(syncArea.remove);
+
+    for (let i = 0; i < 5; i++) {
+      onLocalChanged({ [SETTINGS_V3_META_KEY]: { newValue: {}, oldValue: {} } });
+      await vi.advanceTimersByTimeAsync(SETTINGS_SAVE_DEBOUNCE_TIME / 2);
+    }
+    await vi.advanceTimersByTimeAsync(SETTINGS_SAVE_DEBOUNCE_TIME + 100);
+
+    expect(browserMock.storage.sync.set).toHaveBeenCalledTimes(1);
   });
 });

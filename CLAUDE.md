@@ -124,6 +124,52 @@ Two non-obvious consequences worth knowing before touching this code:
   id; one of them deletes it), and `background.ts` has no popup open to run
   the UI's own empty-pages safety net.
 
+### Concurrent writers can still race - two defenses, not one
+
+`background.ts`'s pull/push has three independent, unsynchronized triggers
+(the interval, `storage.sync.onChanged`, and the initial startup call) - a
+real signed-in-elsewhere account can fire `onChanged` while another trigger
+is still mid-flight awaiting its own storage round-trips. `runSyncSerially`
+(a simple promise-chain queue) makes sure these three can never run a
+pull/push cycle concurrently with *each other*.
+
+That alone doesn't cover every writer: the foreground popup (`settings.ts`)
+writes local storage directly, independent of and unsynchronized with
+background's queue. A slow background merge computed *before* a foreground
+delete can still finish *after* it. `writePagesToLocalStorage` defends
+against this specifically: right before committing, it re-reads local
+storage's current tombstones and unions them in (never just overwrites),
+then re-applies the unioned set to the pages it's about to write. This is
+what stops a stale in-flight merge from silently erasing a tombstone the
+foreground just created and resurrecting the page it protected - see
+`writePagesToLocalStorage race protection` in `backgroundSync.test.ts`.
+
+### Push must merge too, not just pull
+
+`syncLocalToRemoteStorage` used to push local's raw page/tombstone view to
+sync storage unconditionally every cycle. That's a blind "last full write
+wins" - if another browser pushed a page in the gap since this browser's own
+last pull, this push would overwrite sync storage's copy with a smaller
+snapshot that doesn't know that page exists, and the stale-key cleanup would
+then delete its `page_N` key outright. This was the most likely cause of "a
+new page sometimes doesn't sync to the other browser at all" - not a
+`chrome.storage.sync` quota issue (`MAX_WRITE_OPERATIONS_PER_HOUR` is 1800;
+our interval-driven push cadence is nowhere near that).
+
+Fix: push now re-reads sync storage's current state and runs it through the
+same `mergeSyncState` the pull path uses *before* writing, pushing the merged
+result instead of local's raw view - see `does not clobber a page another
+browser already pushed...` in `backgroundSync.test.ts`. If that merge turns
+up something local didn't have, it's written back to local too
+(`writePagesToLocalStorage`), so push doubles as a catch-up pull rather than
+requiring a separate round trip.
+
+`darkMode` and `selectedPage` are deliberately **not** synced at all -
+they're per-device preferences (a user may want dark mode on one browser and
+not another), not shared truth. Syncing them with no last-write-wins
+protection is what caused an earlier bug where toggling dark mode on one
+browser would get silently flipped back by the other browser's next push.
+
 ## Testing conventions
 
 - Vitest + jsdom. Background/storage tests mock `webextension-polyfill` with:

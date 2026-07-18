@@ -4,6 +4,7 @@ export interface SyncToggleButtonProps {
   syncEnabled: boolean;
   onToggle: () => void | Promise<void>;
   variant?: "icon" | "labeled";
+  statusText?: string;
 }
 
 const descriptions = {
@@ -17,8 +18,10 @@ const SyncToggleButton = ({
   syncEnabled,
   onToggle,
   variant = "icon",
+  statusText,
 }: SyncToggleButtonProps) => {
   const description = syncEnabled ? descriptions.disable : descriptions.enable;
+  const tooltip = syncEnabled && statusText ? `${description} — ${statusText}` : description;
 
   if (variant === "labeled") {
     return (
@@ -26,8 +29,8 @@ const SyncToggleButton = ({
         type="button"
         className="sync-toggle-button sync-toggle-button--labeled"
         onClick={onToggle}
-        aria-label={description}
-        title={description}
+        aria-label={tooltip}
+        title={tooltip}
         aria-pressed={syncEnabled}
         data-testid="sync-toggle-button"
       >
@@ -42,8 +45,8 @@ const SyncToggleButton = ({
       type="button"
       className="sync-toggle-button sync-toggle-button--icon"
       onClick={onToggle}
-      aria-label={description}
-      title={description}
+      aria-label={tooltip}
+      title={tooltip}
       aria-pressed={syncEnabled}
       data-testid="sync-toggle-button"
     >
