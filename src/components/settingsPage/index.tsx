@@ -2,15 +2,18 @@ import Button from "../button";
 import Divider from "../divider";
 import DragDropFile from "../dragDropFile";
 import ExportPopup from "../exportPopup";
+import SyncToggleButton from "../syncToggleButton";
 import {
   useSettingsState,
   useSettingsActions,
 } from "../../context/settingsContext";
+import { getSyncStatus } from "../../utils/syncStatus";
 import "./index.css";
 
 const SettingsPage = () => {
-  const { pages, syncEnabled } = useSettingsState();
+  const { pages, syncEnabled, lastSyncTime, localModifiedTime } = useSettingsState();
   const { importSettings, toggleSync, injectError, clearErrors } = useSettingsActions();
+  const syncStatus = getSyncStatus(lastSyncTime, localModifiedTime);
   return (
     <div className="settings-page">
       <div className="settings-page__header">
@@ -53,22 +56,24 @@ const SettingsPage = () => {
           Sync your pages across browsers where you are signed in with the same
           account.
         </p>
-        <Button
-          onClick={toggleSync}
-          content={
-            <span
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              <img src="/icons/sync.svg" alt="Sync" />
-              {syncEnabled ? "Disable Sync" : "Enable Sync"}
-            </span>
-          }
+        <SyncToggleButton
+          syncEnabled={syncEnabled}
+          onToggle={toggleSync}
+          variant="labeled"
+          statusText={syncStatus.label}
         />
+        {syncEnabled && (
+          <p
+            className={
+              syncStatus.pending
+                ? "settings-page__sync-status settings-page__sync-status--pending"
+                : "settings-page__sync-status"
+            }
+            data-testid="sync-status"
+          >
+            {syncStatus.label}
+          </p>
+        )}
       </div>
 
       {import.meta.env.DEV && (

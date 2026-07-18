@@ -2,10 +2,12 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
 import { z } from "zod";
-import { SELECTED_PAGE_KEY, SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, SYNC_ENABLED_KEY, MIGRATION_COMPLETE_KEY, ERRORS_STATE_KEY } from "../constants";
+import { SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, ERRORS_STATE_KEY, LAST_MERGE_TIME_KEY, LAST_SYNC_TIME_KEY, LOCAL_MODIFIED_TIME_KEY } from "../constants";
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage";
 import { log } from "./log";
 import { normalizePage } from "./headers";
+import { mergeSyncState, createTombstone, synthesizeFallbackPage, applyTombstones, pruneExpiredTombstones, type PageTombstone } from "./pageMerge";
+import { readPageStorage } from "./pageStorage";
 import { AppError, addStoredError, clearStoredErrors, getStoredErrors, injectTestError, ErrorCategory } from "./errors";
 
 export enum SettingsErrorType {
@@ -36,6 +38,11 @@ export const headerFilterSchema = z.object({
 
 export const pageSchema = z.object({
   id: z.number(),
+  // Stable identity so mergePages can match "the same page" across browsers
+  // even after an edit changes its content. Optional (not zod-defaulted)
+  // because a default here would fabricate a fresh id on every parse -
+  // legacy pages are backfilled once instead, in retrieveSettings.
+  pageId: z.string().optional(),
   name: z.string().min(1),
   enabled: z.boolean(),
   keepEnabled: z.boolean(),
@@ -43,6 +50,10 @@ export const pageSchema = z.object({
   filtersExpanded: z.boolean().default(true),
   filters: z.array(headerFilterSchema).default([]),
   headers: z.array(headerSettingSchema).default([]),
+  // Resolves which side wins when the same page is edited on two synced
+  // browsers. Optional rather than defaulted so legacy pages don't need one -
+  // readers treat a missing value as 0, the oldest possible timestamp.
+  lastModified: z.number().optional(),
 });
 
 export const pagesDataSchema = z.object({
@@ -69,14 +80,19 @@ export type SettingsV3Meta = z.infer<typeof settingsV3MetaSchema>;
  * for handling window unload events
  */
 
-const defaultPage: Page = {
+export const defaultPage: Page = {
   id: 0,
+  // Fixed (not random) so that two fresh installs on the same sync account
+  // recognize each other's untouched default page as the same page instead
+  // of forking into a duplicate the first time they sync.
+  pageId: "default",
   name: "Default",
   enabled: true,
   keepEnabled: false,
   showHeaderComments: true,
   filtersExpanded: true,
   filters: [],
+  lastModified: 0,
   headers: [
     {
       id: "default-1",
@@ -155,11 +171,14 @@ function useFlexHeaderSettings() {
     pages: [defaultPage],
     selectedPage: defaultPage.id,
   });
+  const [tombstones, setTombstones] = useState<PageTombstone[]>([]);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const [syncEnabled, setSyncEnabled] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [saveVersion, setSaveVersion] = useState(0);
   const [errors, setErrors] = useState<AppError[]>([]);
+  const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
+  const [localModifiedTime, setLocalModifiedTime] = useState<number | null>(null);
   const isSavingRef = useRef<boolean>(false);
   const hasPendingSaveRef = useRef<boolean>(false);
   const alertContext = useAlert();
@@ -168,8 +187,9 @@ function useFlexHeaderSettings() {
    * Handles saving data to local storage and manages cleanup of extra pages
    * Syncing to remote storage is now handled by the background service worker
    * @param settings The complete settings data
+   * @param tombstonesToSave The current delete tombstones, saved alongside pages
    */
-  const saveToStorages = useCallback(async (settings: PagesData) => {
+  const saveToStorages = useCallback(async (settings: PagesData, tombstonesToSave: PageTombstone[]) => {
     try {
       // Create metadata
       const metadata: SettingsV3Meta = {
@@ -183,7 +203,8 @@ function useFlexHeaderSettings() {
 
         const dataToWrite: Record<string, unknown> = {
           [SETTINGS_V3_META_KEY]: metadata,
-          localModifiedTime: Date.now(),
+          [PAGE_TOMBSTONES_KEY]: pruneExpiredTombstones(tombstonesToSave),
+          [LOCAL_MODIFIED_TIME_KEY]: Date.now(),
         };
 
         settings.pages.forEach((page, index) => {
@@ -311,7 +332,7 @@ function useFlexHeaderSettings() {
     const settingsToSave = JSON.parse(JSON.stringify(pagesData));
 
     // Save to local storage immediately
-    saveToStorages(settingsToSave)
+    saveToStorages(settingsToSave, tombstones)
       .finally(() => {
         setTimeout(() => {
           isSavingRef.current = false;
@@ -322,15 +343,18 @@ function useFlexHeaderSettings() {
           }
         }, 0);
       });
-  }, [pagesData, hasInitialized, lastError, saveToStorages, alertContext, saveVersion]);
+  }, [pagesData, tombstones, hasInitialized, lastError, saveToStorages, alertContext, saveVersion]);
 
   /**
    * Loads the settings from storage and sets the state
    */
   const retrieveSettings = useCallback(async () => {
-    // Load dark mode setting
+    // Load dark mode setting - local only. This is a per-device preference
+    // (a user may want dark mode on one browser and light on another), not
+    // shared truth, so it's never synced (see background.ts's
+    // syncLocalToRemoteStorage).
     try {
-      const darkModeValue = await loadFromStorage("darkMode", false, ['local', 'sync']);
+      const darkModeValue = await loadFromStorage("darkMode", false, ['local']);
       setDarkModeEnabled(darkModeValue);
 
       // If darkMode wasn't found in either storage, save the default value
@@ -374,10 +398,28 @@ function useFlexHeaderSettings() {
           pagePromises.push(loadFromStorage<Page | null>(pageKey, null, [storageType]));
         }
 
-        const pagesWithNulls = await Promise.all(pagePromises);
-        const pages: Page[] = pagesWithNulls
+        const [pagesWithNulls, loadedTombstones] = await Promise.all([
+          Promise.all(pagePromises),
+          loadFromStorage<PageTombstone[]>(PAGE_TOMBSTONES_KEY, [], [storageType]),
+        ]);
+        let pages: Page[] = pagesWithNulls
           .filter((page): page is Page => page !== null) // Remove any null/undefined pages with type guard
-          .map(normalizePage);
+          .map(normalizePage)
+          // Backfilled here (not in normalizePage) so it happens once and gets
+          // persisted by the save effect below - normalizePage also runs on
+          // background.ts's non-persisting reads, which would otherwise
+          // re-fabricate a throwaway id every time.
+          .map((page) => ({ ...page, pageId: page.pageId || crypto.randomUUID() }));
+
+        // This device has no local data yet and is bootstrapping straight from
+        // sync - apply tombstones directly (not the full mergeSyncState/
+        // mergePages path, which would mark every incoming page disabled;
+        // there's no existing local selection to protect here).
+        if (storageType === 'sync') {
+          pages = applyTombstones(pages, loadedTombstones);
+        }
+
+        setTombstones(loadedTombstones);
 
         if (pages.length === 0) {
           // No pages found, use default
@@ -397,7 +439,7 @@ function useFlexHeaderSettings() {
             await saveToStorages({
               pages,
               selectedPage: meta.selectedPage,
-            });
+            }, loadedTombstones);
           }
         }
 
@@ -410,10 +452,17 @@ function useFlexHeaderSettings() {
         pages: [defaultPage],
         selectedPage: defaultPage.id,
       });
+      setTombstones([]);
       setHasInitialized(true);
 
     } catch (error) {
       console.error("Failed to retrieve settings:", error);
+      const message = error instanceof Error ? error.message : "Failed to load settings";
+      await addStoredError(
+        "sync",
+        message,
+        error instanceof Error ? error.stack : undefined
+      );
       alertContext.setAlert({
         alertType: "error",
         alertText: "Failed to load settings. Using default configuration.",
@@ -424,6 +473,7 @@ function useFlexHeaderSettings() {
         pages: [defaultPage],
         selectedPage: defaultPage.id,
       });
+      setTombstones([]);
       setHasInitialized(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -440,6 +490,7 @@ function useFlexHeaderSettings() {
       pages: [defaultPage],
       selectedPage: defaultPage.id,
     });
+    setTombstones([]);
   };
 
   /**
@@ -453,9 +504,20 @@ function useFlexHeaderSettings() {
   const addPage = (page: Page) => {
     const newPages = [
       ...pagesData.pages.map((p) => ({ ...p, enabled: false })),
-      { ...page, id: pagesData.pages.length, enabled: true },
+      {
+        ...page,
+        id: pagesData.pages.length,
+        enabled: true,
+        // Always mint a fresh identity, even if the caller's page object
+        // still carries one (e.g. a duplicated page) - addPage always
+        // creates a distinct page, and reusing an existing pageId here is
+        // exactly the bug class that made a duplicated page get merged back
+        // into the original on another synced browser instead of appearing
+        // as a separate page.
+        pageId: crypto.randomUUID(),
+        lastModified: Date.now(),
+      },
     ];
-
     const testData = {
       pages: newPages,
       selectedPage: newPages.length - 1,
@@ -470,11 +532,15 @@ function useFlexHeaderSettings() {
    * @param autoSelectPage Whether to automatically select the next page after removing the current one
    */
   const removePage = (id: number, autoSelectPage: boolean) => {
+    const removedPage = pagesData.pages.find((page) => page.id === id);
     let newPages = pagesData.pages.filter((page) => page.id !== id);
 
-    // if there are no pages left after removing the page, add the default page
+    // if there are no pages left after removing the page, add a fresh default
+    // page - NOT the defaultPage constant itself, since it shares its fixed
+    // pageId with the page we may have just tombstoned below, which would
+    // make the very next sync merge immediately re-exclude it.
     if (newPages.length === 0) {
-      newPages.push(defaultPage);
+      newPages.push(synthesizeFallbackPage(defaultPage));
     }
 
     newPages = newPages.map((page, index) => ({ ...page, id: index }));
@@ -490,6 +556,11 @@ function useFlexHeaderSettings() {
       selectedPage: newPageId,
     });
 
+    const tombstone = removedPage && createTombstone(removedPage);
+    if (tombstone) {
+      setTombstones((prev) => [...prev, tombstone]);
+    }
+
     alertContext.setAlert({
       alertType: "info",
       alertText: "Page removed.",
@@ -502,7 +573,7 @@ function useFlexHeaderSettings() {
    * @param page The page object to update
    */
   const updatePage = (page: Page) => {
-    const newPages = pagesData.pages.map((p) => (p.id === page.id ? page : p));
+    const newPages = pagesData.pages.map((p) => (p.id === page.id ? { ...page, lastModified: Date.now() } : p));
 
     setPagesData((prev) => ({
       ...prev,
@@ -577,6 +648,7 @@ function useFlexHeaderSettings() {
       page.id === pageId
         ? {
           ...page,
+          lastModified: Date.now(),
           headers: [
             ...page.headers,
             {
@@ -608,6 +680,7 @@ function useFlexHeaderSettings() {
       page.id === pageId
         ? {
           ...page,
+          lastModified: Date.now(),
           headers: _reIndexHeaders(
             page.headers.filter((header) => header.id !== id)
           ),
@@ -631,7 +704,7 @@ function useFlexHeaderSettings() {
     const reIndexedHeaders = _reIndexHeaders(newHeaders);
 
     const newPages = pagesData.pages.map((page) =>
-      page.id === pageId ? { ...page, headers: reIndexedHeaders } : page
+      page.id === pageId ? { ...page, headers: reIndexedHeaders, lastModified: Date.now() } : page
     );
 
     setPagesData((prev) => ({
@@ -650,6 +723,7 @@ function useFlexHeaderSettings() {
       page.id === pageId
         ? {
           ...page,
+          lastModified: Date.now(),
           headers: page.headers.map((h) => (h.id === header.id ? header : h)),
         }
         : page
@@ -675,6 +749,7 @@ function useFlexHeaderSettings() {
       page.id === pageId
         ? {
           ...page,
+          lastModified: Date.now(),
           filters: [
             ...page.filters,
             { ...filter, id: `${pageId}-${page.filters.length + 1}` },
@@ -699,6 +774,7 @@ function useFlexHeaderSettings() {
       page.id === pageId
         ? {
           ...page,
+          lastModified: Date.now(),
           filters: page.filters.filter((filter) => filter.id !== filterId),
         }
         : page
@@ -724,6 +800,7 @@ function useFlexHeaderSettings() {
         page.id === pageId
           ? {
             ...page,
+            lastModified: Date.now(),
             filters: page.filters.map((f) =>
               f.id === filter.id ? { ...filter, valid: result } : f
             ),
@@ -755,100 +832,6 @@ function useFlexHeaderSettings() {
   };
 
   /**
-   * Merges pages from sync storage with local pages, avoiding duplicates.
-   * Deduplication is based on page name, sorted headers (by headerName and headerValue),
-   * and sorted filters (by type and value). The comparison uses these sorted properties
-   * to generate a unique key for each page.
-   * @param localPages The current local pages
-   * @param syncPages The pages from sync storage
-   * @returns The merged pages array
-   */
-  const mergePages = (localPages: Page[], syncPages: Page[]): Page[] => {
-    // Helper function to create unique key for page comparison
-    const getPageKey = (page: Page): string => {
-      // Sort headers and filters for stable key
-      const sortedHeaders = [...page.headers].sort((a, b) => {
-        if (a.headerName !== b.headerName) return a.headerName.localeCompare(b.headerName);
-        if (a.headerValue !== b.headerValue) return a.headerValue.localeCompare(b.headerValue);
-        return 0;
-      });
-      const sortedFilters = [...page.filters].sort((a, b) => {
-        if (a.type !== b.type) return a.type.localeCompare(b.type);
-        if (a.mode !== b.mode) return a.mode.localeCompare(b.mode);
-        if (a.value !== b.value) return String(a.value).localeCompare(String(b.value));
-        return 0;
-      });
-      return `${page.name}_${JSON.stringify({
-        headers: sortedHeaders,
-        filters: sortedFilters,
-      })}`;
-    };
-
-    // Create a map of local pages for comparison
-    const localPagesMap = new Map<string, Page>();
-    localPages.forEach(page => {
-      localPagesMap.set(getPageKey(page), page);
-    });
-
-    // Find sync pages that don't exist in local storage
-    const newPagesFromSync: Page[] = [];
-    syncPages.forEach(syncPage => {
-      if (!localPagesMap.has(getPageKey(syncPage))) {
-        newPagesFromSync.push(syncPage);
-      }
-    });
-
-    if (newPagesFromSync.length === 0) {
-      return localPages;
-    }
-
-    // Merge the pages and re-index, preserving enabled state for local pages
-    const mergedPages = [
-      ...localPages.map((page, index) => ({
-        ...page,
-        id: index,
-      })),
-      ...newPagesFromSync.map((page, index) => ({
-        ...page,
-        id: localPages.length + index,
-        enabled: false, // New pages from sync are disabled by default
-      }))
-    ];
-
-    return mergedPages;
-  };
-
-  /**
-   * Loads pages from sync storage
-   * @returns The pages from sync storage or null if none found
-   */
-  const loadPagesFromSync = async (): Promise<Page[] | null> => {
-    try {
-      // Check for v3 format in sync storage
-      const syncMeta = await browser.storage.sync.get(SETTINGS_V3_META_KEY);
-      const meta = syncMeta[SETTINGS_V3_META_KEY] as SettingsV3Meta | undefined;
-
-      if (meta) {
-        const pagePromises = [];
-        for (let i = 0; i < meta.pageCount; i++) {
-          pagePromises.push(browser.storage.sync.get(`${PAGE_KEY_PREFIX}${i}`));
-        }
-        const pageResults = await Promise.all(pagePromises);
-        const pages = pageResults
-          .map((result, index) => result[`${PAGE_KEY_PREFIX}${index}`] as Page)
-          .filter(Boolean)
-          .map(normalizePage);
-        return pages.length > 0 ? pages : null;
-      }
-
-      return null;
-    } catch (error) {
-      console.error("Failed to load pages from sync storage:", error);
-      return null;
-    }
-  };
-
-  /**
    * Toggle sync feature
    * When enabling sync, merges sync data with local data to avoid data loss
    */
@@ -861,62 +844,58 @@ function useFlexHeaderSettings() {
       setSyncEnabled(newSyncEnabled);
 
       if (newSyncEnabled) {
-        // Enabling sync - check for existing sync data and merge if needed
+        // Enabling sync - merge with whatever already exists in sync storage.
+        // Runs unconditionally (no one-shot "already migrated" gate) since
+        // mergeSyncState is idempotent - a no-op merge is cheap and this way
+        // any tombstones/edits made while sync was off still reconcile
+        // immediately on re-enable instead of waiting for the next interval.
         log("SETTINGS: Enabling sync, checking for existing sync data to merge", "info");
-        
-        // Check if migration has already been completed to avoid re-merging
-        const migrationComplete = await loadFromStorage(MIGRATION_COMPLETE_KEY, false, ['local']);
-        if (migrationComplete) {
-          log("SETTINGS: Migration already complete, skipping merge", "info");
-          alertContext.setAlert({
-            alertType: "success",
-            alertText: "Sync enabled! Your settings will now sync across browsers.",
-            location: "bottom",
-          });
-          return;
+
+        const syncSettings = await readPageStorage(browser.storage.sync);
+
+        const merged = mergeSyncState(
+          { pages: pagesData.pages, tombstones },
+          { pages: syncSettings?.pages ?? [], tombstones: syncSettings?.tombstones ?? [] },
+          defaultPage
+        );
+
+        const pagesChanged = merged.pages !== pagesData.pages;
+        const tombstonesChanged = merged.tombstones !== tombstones;
+        let selectedPage = pagesData.selectedPage;
+
+        if (pagesChanged) {
+          // Try to preserve the selected page, or select the first enabled page
+          const currentSelectedPage = pagesData.pages[pagesData.selectedPage];
+          let newSelectedPage = currentSelectedPage
+            ? merged.pages.findIndex((p) => p.name === currentSelectedPage.name)
+            : -1;
+          if (newSelectedPage === -1) {
+            newSelectedPage = merged.pages.findIndex((p) => p.enabled);
+          }
+          if (newSelectedPage === -1) {
+            newSelectedPage = 0; // fallback
+          }
+          selectedPage = newSelectedPage;
+
+          setPagesData({ pages: merged.pages, selectedPage });
         }
 
-        const syncPages = await loadPagesFromSync();
-        
-        if (syncPages && syncPages.length > 0) {
-          // There is existing sync data, perform merge
-          const mergedPages = mergePages(pagesData.pages, syncPages);
-          
-          if (mergedPages.length > pagesData.pages.length) {
-            // New pages were added from sync
-            const newPagesCount = mergedPages.length - pagesData.pages.length;
-            log(`SETTINGS: Merged ${newPagesCount} pages from sync storage`, "info");
-            
-            // Try to preserve the selected page, or select the first enabled page
-            const currentSelectedPage = pagesData.pages[pagesData.selectedPage];
-            let newSelectedPage = currentSelectedPage 
-              ? mergedPages.findIndex((p) => p.name === currentSelectedPage.name)
-              : -1;
-            if (newSelectedPage === -1) {
-              newSelectedPage = mergedPages.findIndex((p) => p.enabled);
-            }
-            if (newSelectedPage === -1) {
-              newSelectedPage = 0; // fallback
-            }
-            
-            // Update state with merged pages
-            setPagesData({
-              pages: mergedPages,
-              selectedPage: newSelectedPage,
-            });
-            
-            alertContext.setAlert({
-              alertType: "info",
-              alertText: `Sync enabled! ${newPagesCount} page(s) merged from other browsers.`,
-              location: "bottom",
-            });
-          } else {
-            alertContext.setAlert({
-              alertType: "success",
-              alertText: "Sync enabled! Your settings will now sync across browsers.",
-              location: "bottom",
-            });
-          }
+        if (tombstonesChanged) {
+          setTombstones(merged.tombstones);
+        }
+
+        if (pagesChanged || tombstonesChanged) {
+          const newPagesCount = merged.pages.length - pagesData.pages.length;
+          log(`SETTINGS: Merged sync storage data (${Math.max(newPagesCount, 0)} new page(s))`, "info");
+          await saveToStorages({ pages: merged.pages, selectedPage }, merged.tombstones);
+
+          alertContext.setAlert({
+            alertType: "info",
+            alertText: newPagesCount > 0
+              ? `Sync enabled! ${newPagesCount} page(s) merged from other browsers.`
+              : "Sync enabled! Existing pages were updated from other browsers.",
+            location: "bottom",
+          });
         } else {
           alertContext.setAlert({
             alertType: "success",
@@ -924,9 +903,6 @@ function useFlexHeaderSettings() {
             location: "bottom",
           });
         }
-
-        // Mark migration as complete for all successful sync enable paths
-        await saveToStorage(MIGRATION_COMPLETE_KEY, true, 'local');
       } else {
         // Disabling sync
         alertContext.setAlert({
@@ -937,6 +913,12 @@ function useFlexHeaderSettings() {
       }
     } catch (error) {
       console.error("Error toggling sync:", error);
+      const message = error instanceof Error ? error.message : "Failed to toggle sync";
+      await addStoredError(
+        "sync",
+        message,
+        error instanceof Error ? error.stack : undefined
+      );
       alertContext.setAlert({
         alertType: "error",
         alertText: "Failed to toggle sync. Please try again.",
@@ -969,7 +951,19 @@ function useFlexHeaderSettings() {
 
           // remap the ids to avoid conflicts
           setPagesData((prev) => {
-            const combinedPages = [...prev.pages, ...parsed.map(normalizePage)];
+            const importedPages = parsed.map(normalizePage).map((page) => ({
+              ...page,
+              // Always a fresh id, even if the file already has one (e.g.
+              // re-importing a previous export, or a file exported from a
+              // device this one already syncs with) - import always appends
+              // alongside existing pages (never replaces), so reusing an
+              // existing pageId would put two pages sharing one identity in
+              // the same local list, which is exactly the bug class that
+              // made a duplicated page collide with its original on sync.
+              pageId: crypto.randomUUID(),
+              lastModified: page.lastModified || Date.now(),
+            }));
+            const combinedPages = [...prev.pages, ...importedPages];
             const newPages = combinedPages.map((page, index) => ({
               ...page,
               id: index,
@@ -1015,12 +1009,6 @@ function useFlexHeaderSettings() {
     retrieveSettings();
   }, [retrieveSettings]);
 
-  useEffect(() => {
-    // Only save to local storage, background service worker will handle syncing
-    saveToStorage(SELECTED_PAGE_KEY, pagesData.selectedPage, 'local')
-      .catch(err => console.error("Failed to save selected page to local storage:", err));
-  }, [pagesData.selectedPage]);
-
   // Keep errors in sync with local storage so they can be surfaced in the UI
   useEffect(() => {
     const loadErrors = async () => {
@@ -1040,6 +1028,50 @@ function useFlexHeaderSettings() {
     return () => browser.storage.local.onChanged.removeListener(listener);
   }, []);
 
+  // Sync status: comparing localModifiedTime (bumped on every local write, by
+  // this hook and by the background worker) against LAST_SYNC_TIME_KEY
+  // (stamped only after a successful push) tells the UI "pending" vs
+  // "synced" without needing a new dedicated flag - both timestamps already
+  // existed, just weren't read anywhere until now.
+  useEffect(() => {
+    const loadSyncStatus = async () => {
+      const [syncTime, modifiedTime] = await Promise.all([
+        loadFromStorage<number | null>(LAST_SYNC_TIME_KEY, null, ['local']),
+        loadFromStorage<number | null>(LOCAL_MODIFIED_TIME_KEY, null, ['local']),
+      ]);
+      setLastSyncTime(syncTime);
+      setLocalModifiedTime(modifiedTime);
+    };
+    loadSyncStatus();
+
+    const listener = (changes: Record<string, browser.Storage.StorageChange>) => {
+      if (LAST_SYNC_TIME_KEY in changes) {
+        setLastSyncTime(changes[LAST_SYNC_TIME_KEY].newValue as number | null);
+      }
+      if (LOCAL_MODIFIED_TIME_KEY in changes) {
+        setLocalModifiedTime(changes[LOCAL_MODIFIED_TIME_KEY].newValue as number | null);
+      }
+    };
+
+    browser.storage.local.onChanged.addListener(listener);
+    return () => browser.storage.local.onChanged.removeListener(listener);
+  }, []);
+
+  // LAST_MERGE_TIME_KEY is stamped only by the background worker's merge
+  // writes, never by this hook's own saves - an unambiguous "reload" signal
+  // that a page-count comparison couldn't give us (it misses in-place edits).
+  useEffect(() => {
+    const listener = (changes: Record<string, browser.Storage.StorageChange>) => {
+      if (LAST_MERGE_TIME_KEY in changes) {
+        log("SETTINGS: Detected changes merged in from sync storage, reloading", "info");
+        retrieveSettings();
+      }
+    };
+
+    browser.storage.local.onChanged.addListener(listener);
+    return () => browser.storage.local.onChanged.removeListener(listener);
+  }, [retrieveSettings]);
+
   const clearErrors = useCallback(async (category?: AppError["category"]) => {
     await clearStoredErrors(category);
     const stored = await getStoredErrors();
@@ -1058,6 +1090,8 @@ function useFlexHeaderSettings() {
     darkModeEnabled,
     syncEnabled,
     isSaving: isSavingRef.current,
+    lastSyncTime,
+    localModifiedTime,
     errors,
     clearErrors,
     injectError,
