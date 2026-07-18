@@ -1,5 +1,8 @@
 import { useId, useRef, useState } from "react";
 import "./index.css";
+import Import from "../icons/Import";
+import Check from "../icons/Check";
+import ErrorIcon from "../icons/ErrorIcon";
 
 interface DragDropFileProps {
   importSettings: (file: File) => Promise<void>;
@@ -96,12 +99,7 @@ const DragDropFile = ({
           className={`drag-drop-file__label${isDragging ? " dragging" : ""}`}
         >
           <div>
-            <img
-              src="/icons/import.svg"
-              alt="Import"
-              width={32}
-              height={32}
-            />
+            <Import role="img" aria-label="Import" width={32} height={32} />
             <p className="drag-drop-file__title">
               Drag & drop your exported .json file here
             </p>
@@ -122,12 +120,11 @@ const DragDropFile = ({
           }`}
           data-testid="drag-drop-file-status"
         >
-          <img
-            src={`/icons/${status.type === "success" ? "check" : "error"}.svg`}
-            alt={status.type === "success" ? "Import successful" : "Import failed"}
-            width={16}
-            height={16}
-          />
+          {status.type === "success" ? (
+            <Check role="img" aria-label="Import successful" width={16} height={16} />
+          ) : (
+            <ErrorIcon role="img" aria-label="Import failed" width={16} height={16} />
+          )}
           <span>{status.message}</span>
         </div>
       )}

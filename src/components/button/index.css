@@ -24,7 +24,8 @@
   line-height: 1;
 }
 
-.button.small img {
+.button.small img,
+.button.small svg {
   width: 1rem;
   height: 1rem;
 }
@@ -35,7 +36,8 @@
   font-size: small;
 }
 
-.button.medium img {
+.button.medium img,
+.button.medium svg {
   width: 1rem;
   height: 1rem;
 }
@@ -46,7 +48,8 @@
   font-size: large;
 }
 
-.button.large img {
+.button.large img,
+.button.large svg {
   width: 1rem;
   height: 1rem;
 }

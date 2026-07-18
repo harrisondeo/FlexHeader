@@ -3,6 +3,8 @@ import { useState, useRef, useEffect } from "react";
 import { openOptionsPageAndClosePopup } from "../../utils/browserContext";
 import "./index.css";
 import Button from "../button";
+import ThreeDots from "../icons/ThreeDots";
+import Settings from "../icons/Settings";
 
 const PageOptionsDropdown = ({
   page,
@@ -58,7 +60,7 @@ const PageOptionsDropdown = ({
         <Button
           onClick={() => setShow(!show)}
           size="medium"
-          content={<img src="/icons/three-dots.svg" alt="More Settings" />}
+          content={<ThreeDots role="img" aria-label="More Settings" />}
           testId="page-options-menu"
         />
       </div>
@@ -92,7 +94,7 @@ const PageOptionsDropdown = ({
                   gap: "4px",
                 }}
               >
-                <img src="/icons/settings.svg" alt="Settings" />
+                <Settings role="img" aria-label="Settings" />
                 Settings
               </span>
             }

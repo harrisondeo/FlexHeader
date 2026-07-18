@@ -3,6 +3,7 @@ import Button from "../button";
 import "./index.css";
 import Divider from "../divider";
 import DragDropFile from "../dragDropFile";
+import Import from "../icons/Import";
 
 interface ImportPopupProps {
   importSettings: (file: File) => Promise<void>;
@@ -36,12 +37,7 @@ const ImportPopup = ({ importSettings }: ImportPopupProps) => {
       <Button
         content={
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <img
-              src="/icons/import.svg"
-              alt="Import Settings"
-              width={16}
-              height={16}
-            />
+            <Import role="img" aria-label="Import Settings" width={16} height={16} />
             <span>Import</span>
           </div>
         }

@@ -4,6 +4,8 @@ import { HeaderSetting } from "../../utils/settings";
 import { POPULAR_HEADER_NAMES } from "../../constants";
 import Button from "../button";
 import "./index.css";
+import Draggable from "../icons/Draggable";
+import Basket from "../icons/Basket";
 
 const HeaderRow = ({
   id,
@@ -118,9 +120,9 @@ const HeaderRow = ({
       }}
     >
       <div className="header-row__checkbox">
-        <img
-          src="/icons/draggable.svg"
-          alt="Draggable"
+        <Draggable
+          role="img"
+          aria-label="Draggable"
           className={`draggable-icon${isDragging ? " draggable-icon--dragging" : ""}`}
           draggable
           onDragStart={(e) => {
@@ -230,7 +232,7 @@ const HeaderRow = ({
       </div>
       <div className="header-row__remove" onClick={() => onRemove(id)}>
         <Button
-          content={<img src="/icons/basket.svg" alt="Remove Header" />}
+          content={<Basket role="img" aria-label="Remove Header" />}
           style={{ height: "28px", padding: "6px 8px" }}
           testId="header-remove"
         />

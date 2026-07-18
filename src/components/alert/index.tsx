@@ -1,5 +1,9 @@
 import { useAlert } from "../../context/alertContext";
 import "./index.css";
+import Check from "../icons/Check";
+import ErrorIcon from "../icons/ErrorIcon";
+import Warning from "../icons/Warning";
+import Info from "../icons/Info";
 
 const Alert = () => {
   const { alertText, alertType, location, show } = useAlert();
@@ -10,40 +14,20 @@ const Alert = () => {
     switch (alertType) {
       case "success":
         return (
-          <img
-            src="icons/check.svg"
-            alt="success"
-            width={iconWidth}
-            height={iconHeight}
-          />
+          <Check role="img" aria-label="success" width={iconWidth} height={iconHeight} />
         );
       case "error":
         return (
-          <img
-            src="icons/error.svg"
-            alt="error"
-            width={iconWidth}
-            height={iconHeight}
-          />
+          <ErrorIcon role="img" aria-label="error" width={iconWidth} height={iconHeight} />
         );
       case "warning":
         return (
-          <img
-            src="icons/warning.svg"
-            alt="warning"
-            width={iconWidth}
-            height={iconHeight}
-          />
+          <Warning role="img" aria-label="warning" width={iconWidth} height={iconHeight} />
         );
 
       default:
         return (
-          <img
-            src="icons/info.svg"
-            alt="info"
-            width={iconWidth}
-            height={iconHeight}
-          />
+          <Info role="img" aria-label="info" width={iconWidth} height={iconHeight} />
         );
     }
   };

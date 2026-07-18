@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FilterMode, FilterType, HeaderFilter } from "../../utils/settings";
 import Button from "../button";
 import "./index.css";
+import Basket from "../icons/Basket";
 
 const FilterRow = ({
   id,
@@ -95,7 +96,7 @@ const FilterRow = ({
       </div>
       <div className="filter-row__remove" onClick={() => onRemove(id)}>
         <Button
-          content={<img src="/icons/basket.svg" alt="Remove Filter" />}
+          content={<Basket role="img" aria-label="Remove Filter" />}
           style={{ height: "28px", padding: "6px 8px" }}
           testId="filter-remove"
         />
