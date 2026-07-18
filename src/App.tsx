@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import "./App.css";
 import FilterSection from "./components/filterSection";
 import AppHeader from "./components/appHeader";
@@ -10,11 +11,29 @@ import useReviewPrompt from "./utils/useReviewPrompt";
 import { isRunningInActionPopup } from "./utils/browserContext";
 import HeadersList from "./components/headersList";
 import PageTitle from "./components/pageTitle";
-import { useSettingsState } from "./context/settingsContext";
+import { useSettingsState, useSettingsActions } from "./context/settingsContext";
 
 function App() {
   const { selectedPage, currentPage, darkModeEnabled } = useSettingsState();
+  const { undo, redo } = useSettingsActions();
   const { shouldShow: shouldShowReviewPrompt, loading: reviewPromptLoading, hidePrompt } = useReviewPrompt();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isModifier = e.metaKey || e.ctrlKey;
+      if (!isModifier || e.key.toLowerCase() !== "z") return;
+
+      e.preventDefault();
+      if (e.shiftKey) {
+        redo();
+      } else {
+        undo();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [undo, redo]);
 
   if (!isRunningInActionPopup()) {
     return (

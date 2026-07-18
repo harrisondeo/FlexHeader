@@ -17,9 +17,9 @@ import SyncToggleButton from "../syncToggleButton";
 import { getSyncStatus } from "../../utils/syncStatus";
 
 const AppHeader = () => {
-  const { darkModeEnabled, syncEnabled, pages, errors, lastSyncTime, localModifiedTime } =
+  const { darkModeEnabled, syncEnabled, pages, errors, lastSyncTime, localModifiedTime, canUndo, canRedo } =
     useSettingsState();
-  const { toggleDarkMode, toggleSync, importSettings, clearErrors } =
+  const { toggleDarkMode, toggleSync, importSettings, clearErrors, undo, redo } =
     useSettingsActions();
   const manifest = browser.runtime.getManifest();
   const isFirefoxPopup = isRunningInActionPopup() && isFirefox();
@@ -66,6 +66,52 @@ const AppHeader = () => {
           </a>
         </div>
       </div>
+      <button
+        type="button"
+        className="app-header__icon-button"
+        onClick={undo}
+        disabled={!canUndo}
+        aria-label="Undo"
+        title="Undo (Ctrl+Z)"
+        data-testid="undo-button"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M9 14 4 9l5-5" />
+          <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        className="app-header__icon-button"
+        onClick={redo}
+        disabled={!canRedo}
+        aria-label="Redo"
+        title="Redo (Ctrl+Shift+Z)"
+        data-testid="redo-button"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m15 14 5-5-5-5" />
+          <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
+        </svg>
+      </button>
       <button
         type="button"
         className="app-header__icon-button"

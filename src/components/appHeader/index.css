@@ -73,6 +73,15 @@
   background-color: var(--background-tertiary);
 }
 
+.app-header__icon-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.app-header__icon-button:disabled:hover {
+  background-color: transparent;
+}
+
 .app-header__icon-button svg,
 .app-header__icon-button img {
   width: 1.25rem;

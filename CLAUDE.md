@@ -41,6 +41,13 @@ changed" rot the moment the PR merges.
 - `src/utils/pageMerge.ts` — the sync/local merge logic, shared by both the
   background worker's continuous pull and the UI's one-time "enable sync"
   migration. Keep merge logic here, not duplicated in both callers.
+- `src/utils/usePageHistory.ts` — the undo/redo stack for `pagesData`
+  (recording, replaying, persisting, and reconciling it against a sync
+  merge). Extracted out of `settings.ts` so that hook stays focused on
+  settings persistence. Takes an `enabled` flag (backed by the
+  `historyEnabled` setting, toggled from the settings page) that no-ops
+  recording/undo/redo without touching whatever stack is already persisted -
+  so re-enabling later doesn't lose history collected before the toggle.
 
 ## Storage model
 

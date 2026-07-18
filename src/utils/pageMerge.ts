@@ -1,4 +1,4 @@
-import type { Page } from "./settings";
+import type { Page, PagesData } from "./settings";
 import { TOMBSTONE_RETENTION_MS } from "../constants";
 
 export interface PageTombstone {
@@ -213,4 +213,55 @@ export const mergeSyncState = (
     pages: finalPages,
     tombstones: mergedTombstones,
   };
+};
+
+const stripLastModified = (page: Page): string =>
+  JSON.stringify(page, (key, value) => (key === "lastModified" ? undefined : value));
+
+/**
+ * A stack entry is unsafe to restore once any page it holds either got
+ * tombstoned since the snapshot was taken, or was edited remotely with a
+ * newer `lastModified` than the snapshot has - restoring it would silently
+ * revert that remote change (the same class of bug fresh edits avoid via
+ * settings.ts's stampChangedPages). Pages without a `pageId` predate the
+ * migration and can't be tracked across a merge, so are treated as stale
+ * rather than risk silently reverting one.
+ */
+const isHistorySnapshotStale = (
+  snapshot: PagesData,
+  mergedPages: Page[],
+  tombstones: PageTombstone[]
+): boolean => {
+  const mergedByPageId = new Map(mergedPages.filter((p) => p.pageId).map((p) => [p.pageId as string, p]));
+  const deletedAtByPageId = new Map(tombstones.map((t) => [t.pageId, t.deletedAt]));
+
+  return snapshot.pages.some((page) => {
+    if (!page.pageId) return true;
+
+    const deletedAt = deletedAtByPageId.get(page.pageId);
+    if (deletedAt !== undefined && deletedAt > (page.lastModified ?? 0)) return true;
+
+    const merged = mergedByPageId.get(page.pageId);
+    if (!merged) return true;
+
+    return (
+      (merged.lastModified ?? 0) > (page.lastModified ?? 0) &&
+      stripLastModified(merged) !== stripLastModified(page)
+    );
+  });
+};
+
+/**
+ * Drops only the undo/redo entries a merge actually invalidated, instead of
+ * wiping the whole stack. Each entry is a self-contained full-state
+ * snapshot rather than a diff, so dropping one out of the middle never
+ * breaks the entries around it.
+ */
+export const reconcileHistoryAfterMerge = (
+  stack: PagesData[],
+  mergedPages: Page[],
+  tombstones: PageTombstone[]
+): PagesData[] => {
+  const reconciled = stack.filter((snapshot) => !isHistorySnapshotStale(snapshot, mergedPages, tombstones));
+  return reconciled.length === stack.length ? stack : reconciled;
 };

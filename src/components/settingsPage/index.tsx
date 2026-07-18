@@ -11,8 +11,8 @@ import { getSyncStatus } from "../../utils/syncStatus";
 import "./index.css";
 
 const SettingsPage = () => {
-  const { pages, syncEnabled, lastSyncTime, localModifiedTime } = useSettingsState();
-  const { importSettings, toggleSync, injectError, clearErrors } = useSettingsActions();
+  const { pages, syncEnabled, lastSyncTime, localModifiedTime, historyEnabled } = useSettingsState();
+  const { importSettings, toggleSync, injectError, clearErrors, toggleHistoryEnabled } = useSettingsActions();
   const syncStatus = getSyncStatus(lastSyncTime, localModifiedTime);
   return (
     <div className="settings-page">
@@ -74,6 +74,30 @@ const SettingsPage = () => {
             {syncStatus.label}
           </p>
         )}
+      </div>
+
+      <Divider />
+
+      <div className="settings-page__section">
+        <h2>Experimental Settings</h2>
+        <p>Opt-in features still under evaluation.</p>
+
+        <label className="settings-page__toggle">
+          <input
+            type="checkbox"
+            className="settings-page__toggle-input"
+            checked={historyEnabled}
+            onChange={toggleHistoryEnabled}
+            data-testid="history-toggle-button"
+          />
+          <span className="settings-page__toggle-content">
+            <span className="settings-page__toggle-title">Undo / Redo</span>
+            <span className="settings-page__toggle-description">
+              Track header, filter, and page edits so they can be undone with
+              Ctrl+Z (Ctrl+Shift+Z to redo).
+            </span>
+          </span>
+        </label>
       </div>
 
       {import.meta.env.DEV && (

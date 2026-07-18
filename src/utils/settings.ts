@@ -2,13 +2,14 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
 import { z } from "zod";
-import { SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, ERRORS_STATE_KEY, LAST_MERGE_TIME_KEY, LAST_SYNC_TIME_KEY, LOCAL_MODIFIED_TIME_KEY } from "../constants";
+import { SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, ERRORS_STATE_KEY, LAST_MERGE_TIME_KEY, LAST_SYNC_TIME_KEY, LOCAL_MODIFIED_TIME_KEY, HISTORY_ENABLED_KEY } from "../constants";
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage";
 import { log } from "./log";
 import { normalizePage } from "./headers";
 import { mergeSyncState, createTombstone, synthesizeFallbackPage, applyTombstones, pruneExpiredTombstones, type PageTombstone } from "./pageMerge";
 import { readPageStorage } from "./pageStorage";
 import { AppError, addStoredError, clearStoredErrors, getStoredErrors, injectTestError, ErrorCategory } from "./errors";
+import usePageHistory from "./usePageHistory";
 
 export enum SettingsErrorType {
   None = "None",
@@ -181,7 +182,20 @@ function useFlexHeaderSettings() {
   const [localModifiedTime, setLocalModifiedTime] = useState<number | null>(null);
   const isSavingRef = useRef<boolean>(false);
   const hasPendingSaveRef = useRef<boolean>(false);
+  const [historyEnabled, setHistoryEnabled] = useState(true);
   const alertContext = useAlert();
+
+  const {
+    recordHistory,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    resetHistory,
+    clearPendingBursts,
+    loadPersistedHistory,
+    reconcileAfterMerge,
+  } = usePageHistory({ enabled: historyEnabled, pagesData, setPagesData, hasInitialized });
 
   /**
    * Handles saving data to local storage and manages cleanup of extra pages
@@ -347,8 +361,25 @@ function useFlexHeaderSettings() {
 
   /**
    * Loads the settings from storage and sets the state
+   * @param isExternalReload True when triggered by the LAST_MERGE_TIME_KEY
+   * listener (a background sync merge landed), as opposed to the initial
+   * mount call - only that case should reconcile undo/redo history, since
+   * retrieveSettings's identity (and so the mount effect that calls it) gets
+   * recreated on unrelated re-renders too (it depends on alertContext via
+   * saveToStorages, and alertContext changes on every alert), which would
+   * otherwise touch history after almost any user action that shows a toast.
    */
-  const retrieveSettings = useCallback(async () => {
+  const retrieveSettings = useCallback(async (isExternalReload = false) => {
+    if (isExternalReload) {
+      // A (re)load replaces pagesData wholesale from an external source. Any
+      // in-flight debounce burst was keyed against the pre-reload pagesData,
+      // so drop it - undo/redo history itself is reconciled below, once the
+      // merged pages/tombstones are known, since a merge only invalidates
+      // the specific stack entries whose pages it actually touched or
+      // removed (see reconcileHistoryAfterMerge in usePageHistory).
+      clearPendingBursts();
+    }
+
     // Load dark mode setting - local only. This is a per-device preference
     // (a user may want dark mode on one browser and light on another), not
     // shared truth, so it's never synced (see background.ts's
@@ -371,6 +402,22 @@ function useFlexHeaderSettings() {
       setSyncEnabled(syncEnabledValue);
     } catch (error) {
       console.error("Failed to load sync preference:", error);
+    }
+
+    // Load undo/redo feature preference - local only, per-device.
+    try {
+      const historyEnabledValue = await loadFromStorage(HISTORY_ENABLED_KEY, true, ['local']);
+      setHistoryEnabled(historyEnabledValue);
+    } catch (error) {
+      console.error("Failed to load undo/redo history preference:", error);
+    }
+
+    // Restore undo/redo history - local only, per-device (see UNDO_STACK_KEY).
+    // Skipped on an external reload: that path reconciles the in-memory
+    // stacks (already restored at mount) against the merge instead, via
+    // reconcileAfterMerge below.
+    if (!isExternalReload) {
+      await loadPersistedHistory();
     }
 
     try {
@@ -421,6 +468,10 @@ function useFlexHeaderSettings() {
 
         setTombstones(loadedTombstones);
 
+        if (isExternalReload) {
+          reconcileAfterMerge(pages, loadedTombstones);
+        }
+
         if (pages.length === 0) {
           // No pages found, use default
           setPagesData({
@@ -453,6 +504,12 @@ function useFlexHeaderSettings() {
         selectedPage: defaultPage.id,
       });
       setTombstones([]);
+      // No merged-pages info to reconcile history against here - fall back
+      // to the old conservative wipe rather than risk restoring a snapshot
+      // for pages that turn out not to exist.
+      if (isExternalReload) {
+        resetHistory();
+      }
       setHasInitialized(true);
 
     } catch (error) {
@@ -474,6 +531,9 @@ function useFlexHeaderSettings() {
         selectedPage: defaultPage.id,
       });
       setTombstones([]);
+      if (isExternalReload) {
+        resetHistory();
+      }
       setHasInitialized(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -491,6 +551,7 @@ function useFlexHeaderSettings() {
       selectedPage: defaultPage.id,
     });
     setTombstones([]);
+    resetHistory();
   };
 
   /**
@@ -573,6 +634,8 @@ function useFlexHeaderSettings() {
    * @param page The page object to update
    */
   const updatePage = (page: Page) => {
+    recordHistory(`page:${page.id}`);
+
     const newPages = pagesData.pages.map((p) => (p.id === page.id ? { ...page, lastModified: Date.now() } : p));
 
     setPagesData((prev) => ({
@@ -676,6 +739,8 @@ function useFlexHeaderSettings() {
    * @param id The id of the header to remove
    */
   const removeHeader = (pageId: number, id: string) => {
+    recordHistory(null);
+
     const newPages = pagesData.pages.map((page) =>
       page.id === pageId
         ? {
@@ -719,6 +784,8 @@ function useFlexHeaderSettings() {
    * @param header The new header object, the id should match the header to update
    */
   const updateHeader = (pageId: number, header: HeaderSetting) => {
+    recordHistory(`header:${pageId}:${header.id}`);
+
     const newPages = pagesData.pages.map((page) =>
       page.id === pageId
         ? {
@@ -770,6 +837,8 @@ function useFlexHeaderSettings() {
    * @param filterId | The id of the filter to remove
    */
   const removeFilter = (pageId: number, filterId: string) => {
+    recordHistory(null);
+
     const newPages = pagesData.pages.map((page) =>
       page.id === pageId
         ? {
@@ -795,6 +864,8 @@ function useFlexHeaderSettings() {
     pageId: number,
     filter: Omit<HeaderFilter, "valid">
   ) => {
+    recordHistory(`filter:${pageId}:${filter.id}`);
+
     filterIsValid(filter, (result) => {
       const newPages = pagesData.pages.map((page) =>
         page.id === pageId
@@ -828,6 +899,20 @@ function useFlexHeaderSettings() {
       setDarkModeEnabled(newDarkMode);
     } catch (error) {
       console.error("Error toggling dark mode:", error);
+    }
+  };
+
+  /**
+   * Toggle the undo/redo history feature on or off (per-device preference).
+   */
+  const toggleHistoryEnabled = async () => {
+    try {
+      const newHistoryEnabled = !historyEnabled;
+
+      await saveToStorage(HISTORY_ENABLED_KEY, newHistoryEnabled, 'local');
+      setHistoryEnabled(newHistoryEnabled);
+    } catch (error) {
+      console.error("Error toggling undo/redo history:", error);
     }
   };
 
@@ -877,6 +962,9 @@ function useFlexHeaderSettings() {
           }
           selectedPage = newSelectedPage;
 
+          // An externally-merged view, not a user edit - clear history so
+          // undo can't revert back through a cross-browser merge.
+          resetHistory();
           setPagesData({ pages: merged.pages, selectedPage });
         }
 
@@ -1064,7 +1152,7 @@ function useFlexHeaderSettings() {
     const listener = (changes: Record<string, browser.Storage.StorageChange>) => {
       if (LAST_MERGE_TIME_KEY in changes) {
         log("SETTINGS: Detected changes merged in from sync storage, reloading", "info");
-        retrieveSettings();
+        retrieveSettings(true);
       }
     };
 
@@ -1111,6 +1199,12 @@ function useFlexHeaderSettings() {
     importSettings,
     toggleDarkMode,
     toggleSync,
+    historyEnabled,
+    toggleHistoryEnabled,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   };
 }
 

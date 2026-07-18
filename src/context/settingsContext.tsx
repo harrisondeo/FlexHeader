@@ -20,6 +20,9 @@ type SettingsStateContextValue = {
   lastSyncTime: number | null;
   localModifiedTime: number | null;
   errors: AppError[];
+  canUndo: boolean;
+  canRedo: boolean;
+  historyEnabled: boolean;
 };
 
 type SettingsActionsContextValue = {
@@ -52,6 +55,9 @@ type SettingsActionsContextValue = {
   toggleSync: () => Promise<void>;
   clearErrors: (category?: AppError["category"]) => Promise<void>;
   injectError: (category?: ErrorCategory) => Promise<void>;
+  undo: () => void;
+  redo: () => void;
+  toggleHistoryEnabled: () => Promise<void>;
 };
 
 const SettingsStateContext = createContext<SettingsStateContextValue | null>(
@@ -81,6 +87,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       lastSyncTime: settings.lastSyncTime,
       localModifiedTime: settings.localModifiedTime,
       errors: settings.errors,
+      canUndo: settings.canUndo,
+      canRedo: settings.canRedo,
+      historyEnabled: settings.historyEnabled,
     }),
     [
       settings.pages,
@@ -91,6 +100,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       settings.lastSyncTime,
       settings.localModifiedTime,
       settings.errors,
+      settings.canUndo,
+      settings.canRedo,
+      settings.historyEnabled,
     ]
   );
 
@@ -113,6 +125,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       toggleSync: settings.toggleSync,
       clearErrors: settings.clearErrors,
       injectError: settings.injectError,
+      undo: settings.undo,
+      redo: settings.redo,
+      toggleHistoryEnabled: settings.toggleHistoryEnabled,
     }),
     [
       settings.addHeader,
@@ -132,6 +147,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       settings.toggleSync,
       settings.clearErrors,
       settings.injectError,
+      settings.undo,
+      settings.redo,
+      settings.toggleHistoryEnabled,
     ]
   );
 
