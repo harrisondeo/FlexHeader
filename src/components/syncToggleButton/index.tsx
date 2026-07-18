@@ -1,4 +1,5 @@
 import "./index.css";
+import Sync from "../icons/Sync";
 
 export interface SyncToggleButtonProps {
   syncEnabled: boolean;
@@ -34,7 +35,7 @@ const SyncToggleButton = ({
         aria-pressed={syncEnabled}
         data-testid="sync-toggle-button"
       >
-        <img src="/icons/sync.svg" alt="" aria-hidden="true" />
+        <Sync aria-hidden="true" />
         <span>{syncEnabled ? "Disable Sync" : "Enable Sync"}</span>
       </button>
     );
@@ -50,7 +51,7 @@ const SyncToggleButton = ({
       aria-pressed={syncEnabled}
       data-testid="sync-toggle-button"
     >
-      <img src="/icons/sync.svg" alt="" aria-hidden="true" />
+      <Sync aria-hidden="true" />
       {syncEnabled && (
         <span className="sync-toggle-button__active-dot" aria-hidden="true" />
       )}

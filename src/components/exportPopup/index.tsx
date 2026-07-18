@@ -5,6 +5,7 @@ import { Page } from "../../utils/settings";
 import Divider from "../divider";
 import { downloadJSONFile } from "../../utils/io/download";
 import { useAlert } from "../../context/alertContext";
+import Export from "../icons/Export";
 
 const ExportPopup = ({ pages }: { pages: Page[] }) => {
   const [show, setShow] = useState(false);
@@ -55,12 +56,7 @@ const ExportPopup = ({ pages }: { pages: Page[] }) => {
       <Button
         content={
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <img
-              src="/icons/export.svg"
-              alt="Add Page"
-              width={16}
-              height={16}
-            />
+            <Export role="img" aria-label="Add Page" width={16} height={16} />
             <span>Export</span>
           </div>
         }
@@ -105,12 +101,7 @@ const ExportPopup = ({ pages }: { pages: Page[] }) => {
               <div
                 style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
               >
-                <img
-                  src="/icons/export.svg"
-                  alt="Export Pages"
-                  width={16}
-                  height={16}
-                />
+                <Export role="img" aria-label="Export Pages" width={16} height={16} />
                 <span>Export</span>
               </div>
             }

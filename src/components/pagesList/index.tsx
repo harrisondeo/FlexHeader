@@ -2,6 +2,7 @@ import { useEffect, useState, MouseEventHandler } from "react";
 import { Page } from "../../utils/settings";
 import Button from "../button";
 import PageContextMenu from "../pageContextMenu";
+import CollapseArrow from "../icons/CollapseArrow";
 import "./index.css";
 import {
   useSettingsState,
@@ -56,22 +57,11 @@ export const PagesList = () => {
           )}
           <Button
             content={
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+              <CollapseArrow
                 className={`pages-list__collapse-icon ${
                   collapsed ? "" : "pages-list__collapse-icon--expanded"
                 }`}
-              >
-                <path d="M11 19L17 12L11 5" />
-                <path d="M7 19L13 12L7 5" />
-              </svg>
+              />
             }
             size="small"
             color="secondary"

@@ -23,7 +23,7 @@
   background-color: var(--background-tertiary);
 }
 
-.sync-toggle-button--icon img {
+.sync-toggle-button--icon svg {
   width: 1.25rem;
   height: 1.25rem;
 }
@@ -52,7 +52,7 @@
   background-color: var(--background-tertiary);
 }
 
-.sync-toggle-button--labeled img {
+.sync-toggle-button--labeled svg {
   width: 1.1rem;
   height: 1.1rem;
 }
