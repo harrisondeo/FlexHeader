@@ -1,4 +1,4 @@
-import type { HeaderFilter, HeaderSetting, Page } from "./settings";
+import type { HeaderFilter, HeaderSetting, Page } from "./schemas";
 
 /**
  * Normalizes a header parsed from legacy storage or an imported file so that it

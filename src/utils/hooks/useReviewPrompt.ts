@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import browser from "webextension-polyfill";
-import { REVIEW_PROMPT_KEY } from "../constants";
+import { REVIEW_PROMPT_KEY } from "../../constants";
 
 export interface ReviewPromptData {
   installDate: number;

@@ -1,8 +1,8 @@
 import type browser from "webextension-polyfill";
-import { SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY } from "../constants";
-import type { Page, SettingsV3Meta } from "./settings";
-import { normalizePage } from "./headers";
-import type { PageTombstone } from "./pageMerge";
+import { SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY } from "../../constants";
+import type { Page, SettingsV3Meta } from "../domain/schemas";
+import { normalizePage } from "../domain/headers";
+import type { PageTombstone } from "../domain/pageMerge";
 
 export interface StoredPageSettings {
   meta: SettingsV3Meta;

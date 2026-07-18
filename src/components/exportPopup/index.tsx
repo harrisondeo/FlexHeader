@@ -3,7 +3,7 @@ import Button from "../button";
 import "./index.css";
 import { Page } from "../../utils/settings";
 import Divider from "../divider";
-import { downloadJSONFile } from "../../utils/download";
+import { downloadJSONFile } from "../../utils/io/download";
 import { useAlert } from "../../context/alertContext";
 
 const ExportPopup = ({ pages }: { pages: Page[] }) => {

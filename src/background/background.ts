@@ -2,12 +2,12 @@ import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, PAGE_TOMBSTONES_KEY, SYNC_INTERV
 import type { Page, SettingsV3Meta } from "../utils/settings";
 import { defaultPage } from "../utils/settings";
 import browser from "webextension-polyfill";
-import { getAllFromStorage, saveToStorage, getDataSizeInBytes, loadFromStorage } from "../utils/storage";
+import { getAllFromStorage, saveToStorage, getDataSizeInBytes, loadFromStorage } from "../utils/storage/storage";
 import { log } from "../utils/log";
-import { normalizePage } from "../utils/headers";
-import { mergeSyncState, mergeTombstones, applyTombstones, synthesizeFallbackPage, pruneExpiredTombstones, type PageTombstone } from "../utils/pageMerge";
-import { readPageStorage } from "../utils/pageStorage";
-import { addStoredError, clearStoredErrors } from "../utils/errors";
+import { normalizePage } from "../utils/domain/headers";
+import { mergeSyncState, mergeTombstones, applyTombstones, synthesizeFallbackPage, pruneExpiredTombstones, type PageTombstone } from "../utils/domain/pageMerge";
+import { readPageStorage } from "../utils/storage/pageStorage";
+import { addStoredError, clearStoredErrors } from "../utils/storage/errors";
 
 import { buildRulesFromPages } from "./rules";
 

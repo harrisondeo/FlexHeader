@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { ISSUES_URL } from "../../constants";
-import { AppError, formatErrorReport } from "../../utils/errors";
+import { AppError, formatErrorReport } from "../../utils/storage/errors";
 import "./index.css";
 
 export type ErrorsIconProps = {

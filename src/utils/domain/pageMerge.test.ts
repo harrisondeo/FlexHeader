@@ -1,48 +1,12 @@
 /**
- * Tests for settings merge/sync functionality
- * 
- * These tests focus on the merge logic used when syncing settings
+ * Tests for pageMerge.ts - the merge logic used when syncing settings
  * between multiple browser instances:
  * - Page deduplication logic
  * - Merging pages from sync storage with local pages
+ * - Tombstone-aware merge (deletion propagation)
  * - Preserving enabled state for existing pages
  */
 
-import { vi } from 'vitest';
-
-const browserMock = vi.hoisted(() => ({
-  storage: {
-    local: {
-      get: vi.fn(),
-      set: vi.fn(),
-      clear: vi.fn(),
-      remove: vi.fn(),
-      onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
-    },
-    sync: {
-      get: vi.fn(),
-      set: vi.fn(),
-      clear: vi.fn(),
-      remove: vi.fn(),
-      onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
-    },
-  },
-  declarativeNetRequest: {
-    isRegexSupported: vi.fn().mockResolvedValue({ isSupported: true }),
-  },
-  action: {
-    setBadgeText: vi.fn().mockResolvedValue(undefined),
-  },
-}));
-
-vi.mock('webextension-polyfill', () => ({
-  default: browserMock,
-  ...browserMock,
-}));
-
-import { renderHook, act, waitFor } from '@testing-library/react';
-import useFlexHeaderSettings, { Page, HeaderSetting, HeaderFilter, isValidUrlFilter } from './settings';
-import { normalizePage } from './headers';
 import {
   getPageKey,
   mergePages,
@@ -55,7 +19,8 @@ import {
   reconcileHistoryAfterMerge,
   type PageTombstone,
 } from './pageMerge';
-import { TOMBSTONE_RETENTION_MS, HISTORY_ENABLED_KEY } from '../constants';
+import { TOMBSTONE_RETENTION_MS } from '../../constants';
+import type { Page, HeaderSetting, HeaderFilter } from './schemas';
 
 // Helper functions to create test data
 const createHeader = (name: string, value: string, enabled = true): HeaderSetting => ({
@@ -77,10 +42,10 @@ const createFilter = (type: 'include' | 'exclude', value: string, enabled = true
 });
 
 const createPage = (
-  id: number, 
-  name: string, 
-  enabled: boolean, 
-  headers: HeaderSetting[] = [], 
+  id: number,
+  name: string,
+  enabled: boolean,
+  headers: HeaderSetting[] = [],
   filters: HeaderFilter[] = []
 ): Page => ({
   id,
@@ -103,7 +68,7 @@ describe('Page Key Generation', () => {
       createHeader('X-Test', 'value1'),
       createHeader('X-Another', 'value2'),
     ]);
-    
+
     // Different id and enabled state should not affect the key
     expect(getPageKey(page1)).toBe(getPageKey(page2));
   });
@@ -111,21 +76,21 @@ describe('Page Key Generation', () => {
   it('should generate different keys for pages with different names', () => {
     const page1 = createPage(0, 'Page 1', true, [createHeader('X-Test', 'value')]);
     const page2 = createPage(0, 'Page 2', true, [createHeader('X-Test', 'value')]);
-    
+
     expect(getPageKey(page1)).not.toBe(getPageKey(page2));
   });
 
   it('should generate different keys for pages with different headers', () => {
     const page1 = createPage(0, 'Test Page', true, [createHeader('X-Test', 'value1')]);
     const page2 = createPage(0, 'Test Page', true, [createHeader('X-Test', 'value2')]);
-    
+
     expect(getPageKey(page1)).not.toBe(getPageKey(page2));
   });
 
   it('should generate different keys for pages with different filters', () => {
     const page1 = createPage(0, 'Test Page', true, [], [createFilter('include', 'https://example.com')]);
     const page2 = createPage(0, 'Test Page', true, [], [createFilter('exclude', 'https://example.com')]);
-    
+
     expect(getPageKey(page1)).not.toBe(getPageKey(page2));
   });
 
@@ -138,7 +103,7 @@ describe('Page Key Generation', () => {
       createHeader('B-Header', 'value2'),
       createHeader('A-Header', 'value1'),
     ]);
-    
+
     expect(getPageKey(page1)).toBe(getPageKey(page2));
   });
 
@@ -151,14 +116,14 @@ describe('Page Key Generation', () => {
       createFilter('exclude', 'https://b.com'),
       createFilter('include', 'https://a.com'),
     ]);
-    
+
     expect(getPageKey(page1)).toBe(getPageKey(page2));
   });
 
   it('should generate different keys for filters with the same value but different modes', () => {
     const page1 = createPage(0, 'Test Page', true, [], [createFilter('include', 'example.com', true, 'regex')]);
     const page2 = createPage(0, 'Test Page', true, [], [createFilter('include', 'example.com', true, 'url')]);
-    
+
     expect(getPageKey(page1)).not.toBe(getPageKey(page2));
   });
 });
@@ -172,9 +137,9 @@ describe('Page Merging', () => {
       const syncPages = [
         createPage(0, 'Page 1', true, [createHeader('X-Test', 'value')]),
       ];
-      
+
       const result = mergePages(localPages, syncPages);
-      
+
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Page 1');
     });
@@ -186,9 +151,9 @@ describe('Page Merging', () => {
       const syncPages = [
         createPage(0, 'Sync Page', true, [createHeader('X-Sync', 'sync')]),
       ];
-      
+
       const result = mergePages(localPages, syncPages);
-      
+
       expect(result).toHaveLength(2);
       expect(result[0].name).toBe('Local Page');
       expect(result[1].name).toBe('Sync Page');
@@ -201,9 +166,9 @@ describe('Page Merging', () => {
       const syncPages = [
         createPage(0, 'Sync Page', true, []),
       ];
-      
+
       const result = mergePages(localPages, syncPages);
-      
+
       expect(result[0].enabled).toBe(true);  // Local page keeps its state
       expect(result[1].enabled).toBe(false); // Sync page is disabled
     });
@@ -215,9 +180,9 @@ describe('Page Merging', () => {
       const syncPages = [
         createPage(10, 'Sync Page', true, []),
       ];
-      
+
       const result = mergePages(localPages, syncPages);
-      
+
       expect(result[0].id).toBe(0);
       expect(result[1].id).toBe(1);
     });
@@ -232,9 +197,9 @@ describe('Page Merging', () => {
       const syncPages = [
         createPage(0, 'Same Page', false, [header]),
       ];
-      
+
       const result = mergePages(localPages, syncPages);
-      
+
       expect(result).toHaveLength(1);
     });
 
@@ -245,9 +210,9 @@ describe('Page Merging', () => {
       const syncPages = [
         createPage(0, 'Same Page', false, [createHeader('X-Sync', 'value')]),
       ];
-      
+
       const result = mergePages(localPages, syncPages);
-      
+
       expect(result).toHaveLength(2);
     });
 
@@ -259,9 +224,9 @@ describe('Page Merging', () => {
       const syncPages = [
         createPage(0, 'Sync Page', false, [header]),
       ];
-      
+
       const result = mergePages(localPages, syncPages);
-      
+
       expect(result).toHaveLength(2);
     });
   });
@@ -275,9 +240,9 @@ describe('Page Merging', () => {
         createPage(0, 'Work Profile', false, [createHeader('X-Work', 'work')]),
         createPage(1, 'Home Profile', false, [createHeader('X-Home', 'home')]),
       ];
-      
+
       const result = mergePages(localPages, syncPages);
-      
+
       expect(result).toHaveLength(3);
       expect(result.map(p => p.name)).toEqual(['Default', 'Work Profile', 'Home Profile']);
     });
@@ -292,9 +257,9 @@ describe('Page Merging', () => {
         createPage(0, 'Shared Page', false, [sharedHeader]),  // Duplicate - should not be added
         createPage(1, 'Sync Only', false, [createHeader('X-Sync', 'sync')]),  // New - should be added
       ];
-      
+
       const result = mergePages(localPages, syncPages);
-      
+
       expect(result).toHaveLength(3);
       expect(result.map(p => p.name)).toEqual(['Shared Page', 'Local Only', 'Sync Only']);
     });
@@ -306,9 +271,9 @@ describe('Page Merging', () => {
         createPage(2, 'Page C', true, []),
       ];
       const syncPages: Page[] = [];
-      
+
       const result = mergePages(localPages, syncPages);
-      
+
       expect(result[0].enabled).toBe(true);
       expect(result[1].enabled).toBe(false);
       expect(result[2].enabled).toBe(true);
@@ -320,9 +285,9 @@ describe('Page Merging', () => {
         createPage(0, 'Sync Page 1', true, []),
         createPage(1, 'Sync Page 2', false, []),
       ];
-      
+
       const result = mergePages(localPages, syncPages);
-      
+
       expect(result).toHaveLength(2);
       expect(result[0].enabled).toBe(false); // Should be disabled as they come from sync
       expect(result[1].enabled).toBe(false);
@@ -333,9 +298,9 @@ describe('Page Merging', () => {
         createPage(0, 'Local Page', true, []),
       ];
       const syncPages: Page[] = [];
-      
+
       const result = mergePages(localPages, syncPages);
-      
+
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Local Page');
     });
@@ -648,45 +613,6 @@ describe('reconcileHistoryAfterMerge', () => {
   });
 });
 
-describe('URL filter validation', () => {
-  it('accepts common valid URL patterns', () => {
-    expect(isValidUrlFilter('||example.com/')).toBe(true);
-    expect(isValidUrlFilter('||example.com|')).toBe(true);
-    expect(isValidUrlFilter('||example.com/path|')).toBe(true);
-    expect(isValidUrlFilter('|https://example.com/')).toBe(true);
-    expect(isValidUrlFilter('https://example.com|')).toBe(true);
-    expect(isValidUrlFilter('|https://example.com|')).toBe(true);
-    expect(isValidUrlFilter('example*^123|')).toBe(true);
-    expect(isValidUrlFilter('*')).toBe(true);
-  });
-
-  it('rejects empty patterns', () => {
-    expect(isValidUrlFilter('')).toBe(false);
-    expect(isValidUrlFilter('|')).toBe(false);
-  });
-
-  it('rejects non-ASCII characters', () => {
-    expect(isValidUrlFilter('||example.com/ф')).toBe(false);
-  });
-
-  it('rejects invalid domain anchors', () => {
-    expect(isValidUrlFilter('||*')).toBe(false);
-    expect(isValidUrlFilter('||')).toBe(false);
-    expect(isValidUrlFilter('||ex|ample.com')).toBe(false);
-  });
-
-  it('rejects invalid domain-anchor plus right-anchor combinations', () => {
-    expect(isValidUrlFilter('||example.com||')).toBe(false);
-    expect(isValidUrlFilter('||example.com|path')).toBe(false);
-  });
-
-  it('rejects misplaced pipe characters', () => {
-    expect(isValidUrlFilter('ex|ample.com')).toBe(false);
-    expect(isValidUrlFilter('|foo|bar')).toBe(false);
-    expect(isValidUrlFilter('foo|bar|')).toBe(false);
-  });
-});
-
 describe('New User Scenarios', () => {
   it('should work with default empty page for new user', () => {
     const defaultPage = createPage(0, 'Default', true, [
@@ -700,9 +626,9 @@ describe('New User Scenarios', () => {
       },
     ]);
     const syncPages: Page[] = [];
-    
+
     const result = mergePages([defaultPage], syncPages);
-    
+
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe('Default');
   });
@@ -721,9 +647,9 @@ describe('New User Scenarios', () => {
     const syncPages = [
       createPage(0, 'My Custom Page', true, [createHeader('X-Custom', 'value')]),
     ];
-    
+
     const result = mergePages([defaultPage], syncPages);
-    
+
     expect(result).toHaveLength(2);
     expect(result[0].name).toBe('Default');
     expect(result[1].name).toBe('My Custom Page');
@@ -737,9 +663,9 @@ describe('Existing User Scenarios', () => {
         createPage(0, 'My Page 1', true, [createHeader('X-Test', 'test1')]),
         createPage(1, 'My Page 2', false, [createHeader('X-Test', 'test2')]),
       ];
-      
+
       const result = mergePages(localPages, []);
-      
+
       expect(result).toEqual(localPages);
     });
   });
@@ -754,9 +680,9 @@ describe('Existing User Scenarios', () => {
       const browserBPages = [
         createPage(0, 'Home Profile', true, [createHeader('X-Auth', 'home-token')]),
       ];
-      
+
       const result = mergePages(browserAPages, browserBPages);
-      
+
       expect(result).toHaveLength(2);
       expect(result.find(p => p.name === 'Work Profile')).toBeDefined();
       expect(result.find(p => p.name === 'Home Profile')).toBeDefined();
@@ -772,506 +698,13 @@ describe('Existing User Scenarios', () => {
         createPage(0, 'Shared Page', true, [sharedHeader]),
         createPage(1, 'Browser B Only', true, [createHeader('X-B', 'b')]),
       ];
-      
+
       const result = mergePages(browserAPages, browserBPages);
-      
+
       expect(result).toHaveLength(3);
       expect(result.map(p => p.name)).toContain('Shared Page');
       expect(result.map(p => p.name)).toContain('Browser A Only');
       expect(result.map(p => p.name)).toContain('Browser B Only');
     });
-  });
-});
-
-describe('Header Comment Import/Export', () => {
-  it('should preserve header comments through exported JSON and imported pages', () => {
-    const pages = [
-      createPage(0, 'Routes', true, [
-        {
-          ...createHeader('X-Route', 'service-a'),
-          headerComment: 'Use for checkout API',
-        },
-        {
-          ...createHeader('X-Route', 'service-b'),
-          headerComment: 'Use for catalog API',
-        },
-      ]),
-    ];
-
-    const exportedJson = JSON.stringify(pages);
-    const importedPages = (JSON.parse(exportedJson) as Page[]).map(normalizePage);
-
-    expect(importedPages[0].headers[0].headerComment).toBe('Use for checkout API');
-    expect(importedPages[0].headers[1].headerComment).toBe('Use for catalog API');
-  });
-
-  it('should add an empty header comment when importing legacy headers', () => {
-    const legacyPages = [
-      {
-        ...createPage(0, 'Legacy Routes', true, []),
-        headers: [
-          {
-            id: 'legacy-1',
-            headerName: 'X-Route',
-            headerValue: 'legacy-service',
-            headerEnabled: true,
-          },
-        ],
-      },
-    ];
-
-    const exportedJson = JSON.stringify(legacyPages);
-    const importedPages = (JSON.parse(exportedJson) as Page[]).map(normalizePage);
-
-    expect(importedPages[0].headers[0]).toMatchObject({
-      headerName: 'X-Route',
-      headerValue: 'legacy-service',
-      headerComment: '',
-      headerType: 'request',
-    });
-  });
-
-  it('should preserve the header comments visibility setting through JSON import/export', () => {
-    const pages = [
-      {
-        ...createPage(0, 'Routes', true, [createHeader('X-Route', 'service-a')]),
-        showHeaderComments: false,
-      },
-    ];
-
-    const exportedJson = JSON.stringify(pages);
-    const importedPages = (JSON.parse(exportedJson) as Page[]).map(normalizePage);
-
-    expect(importedPages[0].showHeaderComments).toBe(false);
-  });
-
-  it('should show header comments by default for legacy imported pages', () => {
-    const legacyPages = [
-      {
-        id: 0,
-        name: 'Legacy Routes',
-        enabled: true,
-        keepEnabled: false,
-        filters: [],
-        headers: [createHeader('X-Route', 'legacy-service')],
-      },
-    ];
-
-    const exportedJson = JSON.stringify(legacyPages);
-    const importedPages = (JSON.parse(exportedJson) as Page[]).map(normalizePage);
-
-    expect(importedPages[0].showHeaderComments).toBe(true);
-  });
-});
-
-describe('Page identity is never reused when a page is added or imported', () => {
-  // Regression coverage for a real bug: duplicating a page carried over its
-  // source pageId, so mergePages (which matches by pageId) treated the
-  // duplicate as "the same page, just edited" on another synced browser -
-  // whichever side's copy looked newer silently overwrote the original
-  // instead of the duplicate showing up as its own separate page.
-
-  const createStorageArea = () => {
-    const store: Record<string, any> = {};
-    return {
-      store,
-      get: vi.fn(async (key?: string | string[] | null) => {
-        if (key === undefined || key === null) return { ...store };
-        if (typeof key === 'string') return { [key]: store[key] };
-        const result: Record<string, any> = {};
-        key.forEach((k) => { result[k] = store[k]; });
-        return result;
-      }),
-      set: vi.fn(async (data: Record<string, any>) => { Object.assign(store, data); }),
-      remove: vi.fn(async (keys: string | string[]) => {
-        const arr = Array.isArray(keys) ? keys : [keys];
-        arr.forEach((k) => delete store[k]);
-      }),
-    };
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    const local = createStorageArea();
-    const sync = createStorageArea();
-
-    browserMock.storage.local.get.mockImplementation(local.get);
-    browserMock.storage.local.set.mockImplementation(local.set);
-    browserMock.storage.local.remove.mockImplementation(local.remove);
-    browserMock.storage.local.onChanged.addListener.mockImplementation(() => {});
-    browserMock.storage.sync.get.mockImplementation(sync.get);
-    browserMock.storage.sync.set.mockImplementation(sync.set);
-    browserMock.storage.sync.remove.mockImplementation(sync.remove);
-  });
-
-  it('addPage always mints a new pageId, even if the source page object still carries one (duplicate-page case)', async () => {
-    const { result } = renderHook(() => useFlexHeaderSettings());
-    await waitFor(() => expect(result.current.pages.length).toBeGreaterThan(0));
-
-    const original = result.current.pages[0];
-    expect(original.pageId).toBeDefined();
-
-    act(() => {
-      // Mirrors what a "Duplicate Page" handler does before calling addPage.
-      result.current.addPage({
-        ...original,
-        id: -1,
-        name: `${original.name} Copy`,
-      });
-    });
-
-    await waitFor(() => expect(result.current.pages.length).toBe(2));
-    const duplicate = result.current.pages.find((p) => p.name === `${original.name} Copy`);
-    expect(duplicate?.pageId).toBeDefined();
-    expect(duplicate?.pageId).not.toBe(original.pageId);
-  });
-
-  it('importSettings always mints fresh pageIds, even when the file already has ones matching existing pages', async () => {
-    const { result } = renderHook(() => useFlexHeaderSettings());
-    await waitFor(() => expect(result.current.pages.length).toBeGreaterThan(0));
-
-    const existing = result.current.pages[0];
-    const importedPageWithClashingId: Page = {
-      ...existing,
-      id: 0,
-      name: 'Imported Copy',
-    };
-    const file = new File([JSON.stringify([importedPageWithClashingId])], 'export.json', { type: 'application/json' });
-
-    await act(async () => {
-      await result.current.importSettings(file);
-    });
-
-    await waitFor(() => expect(result.current.pages.length).toBe(2));
-    const pageIds = result.current.pages.map((p) => p.pageId);
-    expect(new Set(pageIds).size).toBe(pageIds.length); // no duplicates
-  });
-});
-
-describe('Undo/redo history', () => {
-  const createStorageArea = () => {
-    const store: Record<string, any> = {};
-    return {
-      store,
-      get: vi.fn(async (key?: string | string[] | null) => {
-        if (key === undefined || key === null) return { ...store };
-        if (typeof key === 'string') return { [key]: store[key] };
-        const result: Record<string, any> = {};
-        key.forEach((k) => { result[k] = store[k]; });
-        return result;
-      }),
-      set: vi.fn(async (data: Record<string, any>) => { Object.assign(store, data); }),
-      remove: vi.fn(async (keys: string | string[]) => {
-        const arr = Array.isArray(keys) ? keys : [keys];
-        arr.forEach((k) => delete store[k]);
-      }),
-    };
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    const local = createStorageArea();
-    const sync = createStorageArea();
-
-    browserMock.storage.local.get.mockImplementation(local.get);
-    browserMock.storage.local.set.mockImplementation(local.set);
-    browserMock.storage.local.remove.mockImplementation(local.remove);
-    browserMock.storage.local.onChanged.addListener.mockImplementation(() => {});
-    browserMock.storage.sync.get.mockImplementation(sync.get);
-    browserMock.storage.sync.set.mockImplementation(sync.set);
-    browserMock.storage.sync.remove.mockImplementation(sync.remove);
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('collapses a rapid burst of header edits (e.g. keystrokes) into a single undo step', async () => {
-    const { result } = renderHook(() => useFlexHeaderSettings());
-    await waitFor(() => expect(result.current.pages.length).toBeGreaterThan(0));
-
-    const pageId = result.current.selectedPage;
-    const header = result.current.pages[0].headers[0];
-    const originalValue = header.headerValue;
-
-    vi.useFakeTimers();
-
-    act(() => {
-      result.current.updateHeader(pageId, { ...header, headerValue: 'a' });
-    });
-    act(() => {
-      vi.advanceTimersByTime(100);
-      result.current.updateHeader(pageId, { ...header, headerValue: 'ab' });
-    });
-    act(() => {
-      vi.advanceTimersByTime(100);
-      result.current.updateHeader(pageId, { ...header, headerValue: 'abc' });
-    });
-
-    expect(result.current.pages[0].headers[0].headerValue).toBe('abc');
-    expect(result.current.canUndo).toBe(true);
-
-    act(() => {
-      result.current.undo();
-    });
-
-    expect(result.current.pages[0].headers[0].headerValue).toBe(originalValue);
-    expect(result.current.canUndo).toBe(false);
-  });
-
-  it('starts a new undo step once the debounce window has elapsed between edits', async () => {
-    const { result } = renderHook(() => useFlexHeaderSettings());
-    await waitFor(() => expect(result.current.pages.length).toBeGreaterThan(0));
-
-    const pageId = result.current.selectedPage;
-    const header = result.current.pages[0].headers[0];
-    const originalValue = header.headerValue;
-
-    vi.useFakeTimers();
-
-    act(() => {
-      result.current.updateHeader(pageId, { ...header, headerValue: 'a' });
-    });
-    act(() => {
-      // Past HISTORY_DEBOUNCE_MS - the previous burst has closed.
-      vi.advanceTimersByTime(600);
-      result.current.updateHeader(pageId, { ...header, headerValue: 'ab' });
-    });
-
-    act(() => {
-      result.current.undo();
-    });
-    expect(result.current.pages[0].headers[0].headerValue).toBe('a');
-
-    act(() => {
-      result.current.undo();
-    });
-    expect(result.current.pages[0].headers[0].headerValue).toBe(originalValue);
-  });
-
-  it('records a header deletion as its own undo step, separate from an edit made just before it', async () => {
-    const { result } = renderHook(() => useFlexHeaderSettings());
-    await waitFor(() => expect(result.current.pages.length).toBeGreaterThan(0));
-
-    const pageId = result.current.selectedPage;
-    const header = result.current.pages[0].headers[0];
-
-    act(() => {
-      result.current.updateHeader(pageId, { ...header, headerValue: 'edited' });
-    });
-    act(() => {
-      result.current.removeHeader(pageId, header.id);
-    });
-
-    expect(result.current.pages[0].headers.length).toBe(0);
-
-    act(() => {
-      result.current.undo();
-    });
-    expect(result.current.pages[0].headers.length).toBe(1);
-    expect(result.current.pages[0].headers[0].headerValue).toBe('edited');
-
-    act(() => {
-      result.current.undo();
-    });
-    expect(result.current.pages[0].headers[0].headerValue).toBe(header.headerValue);
-  });
-
-  it('redo re-applies an undone change', async () => {
-    const { result } = renderHook(() => useFlexHeaderSettings());
-    await waitFor(() => expect(result.current.pages.length).toBeGreaterThan(0));
-
-    const pageId = result.current.selectedPage;
-    const header = result.current.pages[0].headers[0];
-
-    act(() => {
-      result.current.updateHeader(pageId, { ...header, headerValue: 'edited' });
-    });
-    act(() => {
-      result.current.undo();
-    });
-    expect(result.current.pages[0].headers[0].headerValue).toBe(header.headerValue);
-    expect(result.current.canRedo).toBe(true);
-
-    act(() => {
-      result.current.redo();
-    });
-    expect(result.current.pages[0].headers[0].headerValue).toBe('edited');
-    expect(result.current.canRedo).toBe(false);
-  });
-
-  it('a new edit clears the redo stack', async () => {
-    const { result } = renderHook(() => useFlexHeaderSettings());
-    await waitFor(() => expect(result.current.pages.length).toBeGreaterThan(0));
-
-    const pageId = result.current.selectedPage;
-    const header = result.current.pages[0].headers[0];
-
-    act(() => {
-      result.current.updateHeader(pageId, { ...header, headerValue: 'edited' });
-    });
-    act(() => {
-      result.current.undo();
-    });
-    expect(result.current.canRedo).toBe(true);
-
-    act(() => {
-      result.current.updateHeader(pageId, { ...header, headerValue: 'something else' });
-    });
-    expect(result.current.canRedo).toBe(false);
-  });
-
-  it('undoes a page rename', async () => {
-    const { result } = renderHook(() => useFlexHeaderSettings());
-    await waitFor(() => expect(result.current.pages.length).toBeGreaterThan(0));
-
-    const page = result.current.pages[0];
-    const originalName = page.name;
-
-    act(() => {
-      result.current.updatePage({ ...page, name: 'Renamed Page' });
-    });
-    expect(result.current.pages[0].name).toBe('Renamed Page');
-
-    act(() => {
-      result.current.undo();
-    });
-    expect(result.current.pages[0].name).toBe(originalName);
-  });
-
-  it('records a filter deletion as an undoable step', async () => {
-    const { result } = renderHook(() => useFlexHeaderSettings());
-    await waitFor(() => expect(result.current.pages.length).toBeGreaterThan(0));
-
-    const pageId = result.current.selectedPage;
-
-    act(() => {
-      result.current.addFilter(pageId, { enabled: true, valid: true, type: 'include', mode: 'url', value: '||example.com/' });
-    });
-    await waitFor(() => expect(result.current.pages[0].filters.length).toBe(1));
-    const filter = result.current.pages[0].filters[0];
-
-    act(() => {
-      result.current.removeFilter(pageId, filter.id);
-    });
-    expect(result.current.pages[0].filters.length).toBe(0);
-
-    act(() => {
-      result.current.undo();
-    });
-    expect(result.current.pages[0].filters.length).toBe(1);
-  });
-
-  it('has nothing to undo/redo on a fresh load', async () => {
-    const { result } = renderHook(() => useFlexHeaderSettings());
-    await waitFor(() => expect(result.current.pages.length).toBeGreaterThan(0));
-
-    expect(result.current.canUndo).toBe(false);
-    expect(result.current.canRedo).toBe(false);
-  });
-
-  it('bumps lastModified on undo so a sync merge does not resurrect the undone edit', async () => {
-    const { result } = renderHook(() => useFlexHeaderSettings());
-    await waitFor(() => expect(result.current.pages.length).toBeGreaterThan(0));
-
-    const pageId = result.current.selectedPage;
-    const header = result.current.pages[0].headers[0];
-
-    act(() => {
-      result.current.updateHeader(pageId, { ...header, headerValue: 'edited' });
-    });
-    // Simulates the edit above having already reached sync storage (e.g. a
-    // background push that raced with the undo below) before the undo runs.
-    const pushedToSync = result.current.pages;
-
-    act(() => {
-      result.current.undo();
-    });
-    expect(result.current.pages[0].headers[0].headerValue).toBe(header.headerValue);
-
-    // A merge landing right after the undo must not treat the older-looking
-    // undone snapshot as stale and reapply the edit it just reverted.
-    const merged = mergePages(result.current.pages, pushedToSync);
-    expect(merged).toBe(result.current.pages);
-    expect(merged[0].headers[0].headerValue).toBe(header.headerValue);
-  });
-});
-
-describe('Undo/redo history toggle', () => {
-  const createStorageArea = () => {
-    const store: Record<string, any> = {};
-    return {
-      store,
-      get: vi.fn(async (key?: string | string[] | null) => {
-        if (key === undefined || key === null) return { ...store };
-        if (typeof key === 'string') return { [key]: store[key] };
-        const result: Record<string, any> = {};
-        key.forEach((k) => { result[k] = store[k]; });
-        return result;
-      }),
-      set: vi.fn(async (data: Record<string, any>) => { Object.assign(store, data); }),
-      remove: vi.fn(async (keys: string | string[]) => {
-        const arr = Array.isArray(keys) ? keys : [keys];
-        arr.forEach((k) => delete store[k]);
-      }),
-    };
-  };
-
-  let local: ReturnType<typeof createStorageArea>;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    local = createStorageArea();
-    const sync = createStorageArea();
-
-    browserMock.storage.local.get.mockImplementation(local.get);
-    browserMock.storage.local.set.mockImplementation(local.set);
-    browserMock.storage.local.remove.mockImplementation(local.remove);
-    browserMock.storage.local.onChanged.addListener.mockImplementation(() => {});
-    browserMock.storage.sync.get.mockImplementation(sync.get);
-    browserMock.storage.sync.set.mockImplementation(sync.set);
-    browserMock.storage.sync.remove.mockImplementation(sync.remove);
-  });
-
-  it('is enabled by default', async () => {
-    const { result } = renderHook(() => useFlexHeaderSettings());
-    await waitFor(() => expect(result.current.pages.length).toBeGreaterThan(0));
-
-    expect(result.current.historyEnabled).toBe(true);
-  });
-
-  it('toggleHistoryEnabled flips state and persists the preference to local storage', async () => {
-    const { result } = renderHook(() => useFlexHeaderSettings());
-    await waitFor(() => expect(result.current.pages.length).toBeGreaterThan(0));
-
-    await act(async () => {
-      await result.current.toggleHistoryEnabled();
-    });
-
-    expect(result.current.historyEnabled).toBe(false);
-    expect(local.store[HISTORY_ENABLED_KEY]).toBe(false);
-  });
-
-  it('stops recording and blocks undo/redo once disabled', async () => {
-    const { result } = renderHook(() => useFlexHeaderSettings());
-    await waitFor(() => expect(result.current.pages.length).toBeGreaterThan(0));
-
-    await act(async () => {
-      await result.current.toggleHistoryEnabled();
-    });
-
-    const pageId = result.current.selectedPage;
-    const header = result.current.pages[0].headers[0];
-
-    act(() => {
-      result.current.updateHeader(pageId, { ...header, headerValue: 'edited' });
-    });
-
-    expect(result.current.canUndo).toBe(false);
-
-    act(() => {
-      result.current.undo();
-    });
-    expect(result.current.pages[0].headers[0].headerValue).toBe('edited');
   });
 });

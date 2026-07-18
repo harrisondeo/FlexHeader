@@ -7,7 +7,7 @@ import {
   useSettingsState,
   useSettingsActions,
 } from "../../context/settingsContext";
-import { getSyncStatus } from "../../utils/syncStatus";
+import { getSyncStatus } from "../../utils/sync/syncStatus";
 import "./index.css";
 
 const SettingsPage = () => {

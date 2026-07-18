@@ -1,5 +1,5 @@
-import type { Page, PagesData } from "./settings";
-import { TOMBSTONE_RETENTION_MS } from "../constants";
+import type { Page, PagesData } from "./schemas";
+import { TOMBSTONE_RETENTION_MS } from "../../constants";
 
 export interface PageTombstone {
   pageId: string;

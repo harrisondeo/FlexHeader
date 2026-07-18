@@ -7,7 +7,7 @@
 
 import { buildHeaderRules, buildRulesFromPages, allResourceTypes } from './rules';
 import type { HeaderFilter, HeaderSetting, Page } from '../utils/settings';
-import { normalizePage } from '../utils/headers';
+import { normalizePage } from '../utils/domain/headers';
 import { compareWithFixture, shouldUpdateFixtures } from './__fixtures__/fixtureHelpers';
 
 const createHeader = (overrides: Partial<HeaderSetting> = {}): HeaderSetting => ({
