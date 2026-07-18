@@ -1,80 +1,28 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
-import { z } from "zod";
-import { SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, ERRORS_STATE_KEY, LAST_MERGE_TIME_KEY, LAST_SYNC_TIME_KEY, LOCAL_MODIFIED_TIME_KEY, HISTORY_ENABLED_KEY } from "../constants";
+import { SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, LAST_MERGE_TIME_KEY, LOCAL_MODIFIED_TIME_KEY, HISTORY_ENABLED_KEY } from "../constants";
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage";
 import { log } from "./log";
 import { normalizePage } from "./headers";
-import { mergeSyncState, createTombstone, synthesizeFallbackPage, applyTombstones, pruneExpiredTombstones, type PageTombstone } from "./pageMerge";
-import { readPageStorage } from "./pageStorage";
-import { AppError, addStoredError, clearStoredErrors, getStoredErrors, injectTestError, ErrorCategory } from "./errors";
+import { applyTombstones, pruneExpiredTombstones, type PageTombstone } from "./pageMerge";
+import { addStoredError, clearStoredErrors } from "./errors";
 import usePageHistory from "./usePageHistory";
+import useStoredErrors from "./useStoredErrors";
+import useSyncStatus from "./useSyncStatus";
+import useFilterOperations from "./useFilterOperations";
+import useHeaderOperations from "./useHeaderOperations";
+import usePageOperations from "./usePageOperations";
+import useSyncToggle from "./useSyncToggle";
+import { importSettingsFile } from "./importSettings";
+import type { Page, PagesData, SettingsV3Meta } from "./schemas";
+
+export * from "./schemas";
 
 export enum SettingsErrorType {
   None = "None",
   SaveError = "SaveError",
 }
-
-export const filterTypeSchema = z.enum(["include", "exclude"]);
-export const filterModeSchema = z.enum(["regex", "url"]);
-
-export const headerSettingSchema = z.object({
-  id: z.string(),
-  headerName: z.string(),
-  headerValue: z.string(),
-  headerComment: z.string().default(""),
-  headerEnabled: z.boolean(),
-  headerType: z.enum(["request", "response"]).default("request"),
-});
-
-export const headerFilterSchema = z.object({
-  id: z.string(),
-  enabled: z.boolean(),
-  valid: z.boolean(),
-  type: filterTypeSchema,
-  mode: filterModeSchema.default("regex"),
-  value: z.string(),
-});
-
-export const pageSchema = z.object({
-  id: z.number(),
-  // Stable identity so mergePages can match "the same page" across browsers
-  // even after an edit changes its content. Optional (not zod-defaulted)
-  // because a default here would fabricate a fresh id on every parse -
-  // legacy pages are backfilled once instead, in retrieveSettings.
-  pageId: z.string().optional(),
-  name: z.string().min(1),
-  enabled: z.boolean(),
-  keepEnabled: z.boolean(),
-  showHeaderComments: z.boolean().default(true),
-  filtersExpanded: z.boolean().default(true),
-  filters: z.array(headerFilterSchema).default([]),
-  headers: z.array(headerSettingSchema).default([]),
-  // Resolves which side wins when the same page is edited on two synced
-  // browsers. Optional rather than defaulted so legacy pages don't need one -
-  // readers treat a missing value as 0, the oldest possible timestamp.
-  lastModified: z.number().optional(),
-});
-
-export const pagesDataSchema = z.object({
-  pages: z.array(pageSchema),
-  selectedPage: z.number(),
-});
-
-export const settingsV3MetaSchema = z.object({
-  version: z.literal(3),
-  selectedPage: z.number(),
-  pageCount: z.number(),
-});
-
-export type FilterType = z.infer<typeof filterTypeSchema>;
-export type FilterMode = z.infer<typeof filterModeSchema>;
-export type HeaderSetting = z.infer<typeof headerSettingSchema>;
-export type HeaderFilter = z.infer<typeof headerFilterSchema>;
-export type Page = z.infer<typeof pageSchema>;
-export type PagesData = z.infer<typeof pagesDataSchema>;
-export type SettingsV3Meta = z.infer<typeof settingsV3MetaSchema>;
 
 /**
  * The debouncing logic has been moved into the component to allow access to the timeout ref
@@ -106,62 +54,6 @@ export const defaultPage: Page = {
   ],
 };
 
-/**
- * Validates a URL pattern (urlFilter) for declarativeNetRequest.
- * urlFilter syntax: '*' wildcard, '|' left/right anchor, '||' domain anchor,
- * '^' separator. Must be non-empty, ASCII only, and use anchors correctly.
- */
-export const isValidUrlFilter = (value: string): boolean => {
-  if (!value || value.length === 0) return false;
-
-  // ASCII only
-  if (/[^\x20-\x7E]/.test(value)) return false;
-
-  // Domain anchor
-  if (value.startsWith("||")) {
-    if (value === "||*" || value === "||") return false;
-    // Optional right anchor: the only other '|' allowed is a single trailing one
-    const afterDomain = value.slice(2);
-    const trailingPipe = afterDomain.endsWith("|");
-    const core = trailingPipe ? afterDomain.slice(0, -1) : afterDomain;
-    if (core.length === 0) return false;
-    if (core.includes("|")) return false;
-    return true;
-  }
-
-  // Left and/or right anchors: '|' can only appear at start or end, and must not be the only character
-  const pipes = value.split("|").length - 1;
-  if (pipes > 2) return false;
-  if (pipes === 1) {
-    if (value.length === 1) return false;
-    if (value[0] !== "|" && value[value.length - 1] !== "|") return false;
-  }
-  if (pipes === 2 && (value[0] !== "|" || value[value.length - 1] !== "|")) return false;
-  return true;
-};
-
-const filterIsValid = async (
-  filter: Omit<HeaderFilter, "valid">,
-  callback: (valid: boolean) => void
-) => {
-  if (filter.mode === "url") {
-    callback(isValidUrlFilter(filter.value));
-    return;
-  }
-
-  try {
-    browser.declarativeNetRequest
-      .isRegexSupported({
-        regex: filter.value,
-      })
-      .then((result) => {
-        callback(result.isSupported);
-      });
-  } catch (error) {
-    callback(false);
-  }
-};
-
 export const clearStoredSettings = async () => {
   await clearStorage('both');
 };
@@ -177,9 +69,6 @@ function useFlexHeaderSettings() {
   const [syncEnabled, setSyncEnabled] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [saveVersion, setSaveVersion] = useState(0);
-  const [errors, setErrors] = useState<AppError[]>([]);
-  const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
-  const [localModifiedTime, setLocalModifiedTime] = useState<number | null>(null);
   const isSavingRef = useRef<boolean>(false);
   const hasPendingSaveRef = useRef<boolean>(false);
   const [historyEnabled, setHistoryEnabled] = useState(true);
@@ -196,6 +85,20 @@ function useFlexHeaderSettings() {
     loadPersistedHistory,
     reconcileAfterMerge,
   } = usePageHistory({ enabled: historyEnabled, pagesData, setPagesData, hasInitialized });
+
+  const { errors, clearErrors, injectError } = useStoredErrors();
+  const { lastSyncTime, localModifiedTime } = useSyncStatus();
+
+  const { addFilter, removeFilter, updateFilter } = useFilterOperations({ pagesData, setPagesData, recordHistory });
+  const { addHeader, removeHeader, saveHeaders, updateHeader } = useHeaderOperations({ pagesData, setPagesData, recordHistory });
+  const { addPage, removePage, updatePage, changeSelectedPage, changePageIndex } = usePageOperations({
+    pagesData,
+    setPagesData,
+    setTombstones,
+    defaultPage,
+    alertContext,
+    recordHistory,
+  });
 
   /**
    * Handles saving data to local storage and manages cleanup of extra pages
@@ -287,6 +190,19 @@ function useFlexHeaderSettings() {
       });
     }
   }, [alertContext]);
+
+  const { toggleSync } = useSyncToggle({
+    pagesData,
+    tombstones,
+    setPagesData,
+    setTombstones,
+    syncEnabled,
+    setSyncEnabled,
+    resetHistory,
+    saveToStorages,
+    alertContext,
+    defaultPage,
+  });
 
   useEffect(() => {
     const selectedPage = pagesData.pages.find((page) => page.enabled);
@@ -555,338 +471,6 @@ function useFlexHeaderSettings() {
   };
 
   /**
-   * Page functions
-   */
-
-  /**
-   * Creates a new page, enabled it and saves it to storage
-   * @param page The page object to add
-   */
-  const addPage = (page: Page) => {
-    const newPages = [
-      ...pagesData.pages.map((p) => ({ ...p, enabled: false })),
-      {
-        ...page,
-        id: pagesData.pages.length,
-        enabled: true,
-        // Always mint a fresh identity, even if the caller's page object
-        // still carries one (e.g. a duplicated page) - addPage always
-        // creates a distinct page, and reusing an existing pageId here is
-        // exactly the bug class that made a duplicated page get merged back
-        // into the original on another synced browser instead of appearing
-        // as a separate page.
-        pageId: crypto.randomUUID(),
-        lastModified: Date.now(),
-      },
-    ];
-    const testData = {
-      pages: newPages,
-      selectedPage: newPages.length - 1,
-    };
-
-    setPagesData(testData);
-  };
-
-  /**
-   * Will delete a page and save the new pages to storage
-   * @param id The ID of the page to remove
-   * @param autoSelectPage Whether to automatically select the next page after removing the current one
-   */
-  const removePage = (id: number, autoSelectPage: boolean) => {
-    const removedPage = pagesData.pages.find((page) => page.id === id);
-    let newPages = pagesData.pages.filter((page) => page.id !== id);
-
-    // if there are no pages left after removing the page, add a fresh default
-    // page - NOT the defaultPage constant itself, since it shares its fixed
-    // pageId with the page we may have just tombstoned below, which would
-    // make the very next sync merge immediately re-exclude it.
-    if (newPages.length === 0) {
-      newPages.push(synthesizeFallbackPage(defaultPage));
-    }
-
-    newPages = newPages.map((page, index) => ({ ...page, id: index }));
-
-    const newPageId = autoSelectPage
-      ? newPages[newPages.length - 1].id
-      : pagesData.selectedPage;
-
-    newPages = _changeSelectedPage(newPageId, newPages);
-
-    setPagesData({
-      pages: newPages,
-      selectedPage: newPageId,
-    });
-
-    const tombstone = removedPage && createTombstone(removedPage);
-    if (tombstone) {
-      setTombstones((prev) => [...prev, tombstone]);
-    }
-
-    alertContext.setAlert({
-      alertType: "info",
-      alertText: "Page removed.",
-      location: "bottom",
-    });
-  };
-
-  /**
-   * Updated a pages data and saves it to storage
-   * @param page The page object to update
-   */
-  const updatePage = (page: Page) => {
-    recordHistory(`page:${page.id}`);
-
-    const newPages = pagesData.pages.map((p) => (p.id === page.id ? { ...page, lastModified: Date.now() } : p));
-
-    setPagesData((prev) => ({
-      ...prev,
-      pages: newPages,
-    }));
-  };
-
-  /**
-   * INTERNAL ONLY - Update pages object to change the selected page
-   * @param id
-   * @param pages
-   * @param save
-   */
-  const _changeSelectedPage = (id: number, pages: Page[]): Page[] =>
-    pages.map((page) => ({
-      ...page,
-      enabled: page.id === id,
-    }));
-
-  /**
-   * EXTERNAL - Used for external components to change the selected page
-   * @param id The ID of the page to select
-   */
-  const changeSelectedPage = (id: number) => {
-    const pagesToEdit = _changeSelectedPage(id, [...pagesData.pages]);
-
-    setPagesData({
-      pages: pagesToEdit,
-      selectedPage: id,
-    });
-  };
-
-  const changePageIndex = (oldIndex: number, newIndex: number) => {
-    const newPages = [...pagesData.pages];
-    const [removed] = newPages.splice(oldIndex, 1);
-
-    newPages.splice(Math.max(newIndex, 0), 0, removed);
-
-    const updatedPages = newPages.map((page, index) => ({
-      ...page,
-      id: index,
-    }));
-
-    setPagesData({
-      pages: updatedPages,
-      selectedPage: newIndex,
-    });
-  };
-
-  /**
-   * Header functions
-   */
-
-  /**
-   * INTERNAL ONLY - Re-indexes the headers after one is removed or added
-   * @param headers
-   * @returns reindexed headers
-   */
-  const _reIndexHeaders = (headers: HeaderSetting[]): HeaderSetting[] =>
-    headers.map((header, index) => ({
-      ...header,
-      id: `${header.id.split("-")[0]}-${index + 1}`,
-    }));
-
-  /**
-   * Adds a new header to a given page
-   * @param pageId The page that the header will be added to
-   * @param header The header object to add
-   */
-  const addHeader = (pageId: number, header: Omit<HeaderSetting, "id">) => {
-    const newPages = pagesData.pages.map((page) =>
-      page.id === pageId
-        ? {
-          ...page,
-          lastModified: Date.now(),
-          headers: [
-            ...page.headers,
-            {
-              ...header,
-              headerType: header.headerType || "request",
-              headerComment: header.headerComment || "",
-              id: `${pageId}-${page.headers.length + 1}`,
-            },
-          ],
-        }
-        : page
-    );
-
-    setPagesData((prev) => ({
-      ...prev,
-      pages: newPages,
-    }));
-
-    return newPages.find((page) => page.id === pageId)?.headers.slice(-1)[0];
-  };
-
-  /**
-   * Removes a header from a given page
-   * @param pageId The page that the header will be removed from
-   * @param id The id of the header to remove
-   */
-  const removeHeader = (pageId: number, id: string) => {
-    recordHistory(null);
-
-    const newPages = pagesData.pages.map((page) =>
-      page.id === pageId
-        ? {
-          ...page,
-          lastModified: Date.now(),
-          headers: _reIndexHeaders(
-            page.headers.filter((header) => header.id !== id)
-          ),
-        }
-        : page
-    );
-
-    setPagesData((prev) => ({
-      ...prev,
-      pages: newPages,
-    }));
-  };
-
-  /**
-   * Allows you to save the headers data after a change.
-   * The function WILL re-index the headers to avoid conflicts
-   * @param newHeaders | The new headers array to save
-   * @param pageId | The page that the headers belong to
-   */
-  const saveHeaders = (newHeaders: HeaderSetting[], pageId: number) => {
-    const reIndexedHeaders = _reIndexHeaders(newHeaders);
-
-    const newPages = pagesData.pages.map((page) =>
-      page.id === pageId ? { ...page, headers: reIndexedHeaders, lastModified: Date.now() } : page
-    );
-
-    setPagesData((prev) => ({
-      ...prev,
-      pages: newPages,
-    }));
-  };
-
-  /**
-   * Updates the values of a header
-   * @param pageId The page that the header belongs to
-   * @param header The new header object, the id should match the header to update
-   */
-  const updateHeader = (pageId: number, header: HeaderSetting) => {
-    recordHistory(`header:${pageId}:${header.id}`);
-
-    const newPages = pagesData.pages.map((page) =>
-      page.id === pageId
-        ? {
-          ...page,
-          lastModified: Date.now(),
-          headers: page.headers.map((h) => (h.id === header.id ? header : h)),
-        }
-        : page
-    );
-
-    setPagesData((prev) => ({
-      ...prev,
-      pages: newPages,
-    }));
-  };
-
-  /**
-   * Filter functions
-   */
-
-  /**
-   * Adds a new filter to a given page
-   * @param pageId | The page that the filter will be added to
-   * @param filter | The filter object to add
-   */
-  const addFilter = (pageId: number, filter: Omit<HeaderFilter, "id">) => {
-    const newPages = pagesData.pages.map((page) =>
-      page.id === pageId
-        ? {
-          ...page,
-          lastModified: Date.now(),
-          filters: [
-            ...page.filters,
-            { ...filter, id: `${pageId}-${page.filters.length + 1}` },
-          ],
-        }
-        : page
-    );
-
-    setPagesData((prev) => ({
-      ...prev,
-      pages: newPages,
-    }));
-  };
-
-  /**
-   * Removes a filter from a page
-   * @param pageId | The page that the filter belongs to
-   * @param filterId | The id of the filter to remove
-   */
-  const removeFilter = (pageId: number, filterId: string) => {
-    recordHistory(null);
-
-    const newPages = pagesData.pages.map((page) =>
-      page.id === pageId
-        ? {
-          ...page,
-          lastModified: Date.now(),
-          filters: page.filters.filter((filter) => filter.id !== filterId),
-        }
-        : page
-    );
-
-    setPagesData((prev) => ({
-      ...prev,
-      pages: newPages,
-    }));
-  };
-
-  /**
-   * Updates the values of a filter
-   * @param pageId | The page that the filter belongs to
-   * @param filter | The new filter object, the id should match the filter to update
-   */
-  const updateFilter = (
-    pageId: number,
-    filter: Omit<HeaderFilter, "valid">
-  ) => {
-    recordHistory(`filter:${pageId}:${filter.id}`);
-
-    filterIsValid(filter, (result) => {
-      const newPages = pagesData.pages.map((page) =>
-        page.id === pageId
-          ? {
-            ...page,
-            lastModified: Date.now(),
-            filters: page.filters.map((f) =>
-              f.id === filter.id ? { ...filter, valid: result } : f
-            ),
-          }
-          : page
-      );
-
-      setPagesData((prev) => ({
-        ...prev,
-        pages: newPages,
-      }));
-    });
-  };
-
-  /**
    * Dark Mode
    */
   const toggleDarkMode = async () => {
@@ -916,234 +500,12 @@ function useFlexHeaderSettings() {
     }
   };
 
-  /**
-   * Toggle sync feature
-   * When enabling sync, merges sync data with local data to avoid data loss
-   */
-  const toggleSync = async () => {
-    try {
-      const newSyncEnabled = !syncEnabled;
-
-      // Save sync preference first to avoid race conditions with auto-save
-      await saveToStorage(SYNC_ENABLED_KEY, newSyncEnabled, 'local');
-      setSyncEnabled(newSyncEnabled);
-
-      if (newSyncEnabled) {
-        // Enabling sync - merge with whatever already exists in sync storage.
-        // Runs unconditionally (no one-shot "already migrated" gate) since
-        // mergeSyncState is idempotent - a no-op merge is cheap and this way
-        // any tombstones/edits made while sync was off still reconcile
-        // immediately on re-enable instead of waiting for the next interval.
-        log("SETTINGS: Enabling sync, checking for existing sync data to merge", "info");
-
-        const syncSettings = await readPageStorage(browser.storage.sync);
-
-        const merged = mergeSyncState(
-          { pages: pagesData.pages, tombstones },
-          { pages: syncSettings?.pages ?? [], tombstones: syncSettings?.tombstones ?? [] },
-          defaultPage
-        );
-
-        const pagesChanged = merged.pages !== pagesData.pages;
-        const tombstonesChanged = merged.tombstones !== tombstones;
-        let selectedPage = pagesData.selectedPage;
-
-        if (pagesChanged) {
-          // Try to preserve the selected page, or select the first enabled page
-          const currentSelectedPage = pagesData.pages[pagesData.selectedPage];
-          let newSelectedPage = currentSelectedPage
-            ? merged.pages.findIndex((p) => p.name === currentSelectedPage.name)
-            : -1;
-          if (newSelectedPage === -1) {
-            newSelectedPage = merged.pages.findIndex((p) => p.enabled);
-          }
-          if (newSelectedPage === -1) {
-            newSelectedPage = 0; // fallback
-          }
-          selectedPage = newSelectedPage;
-
-          // An externally-merged view, not a user edit - clear history so
-          // undo can't revert back through a cross-browser merge.
-          resetHistory();
-          setPagesData({ pages: merged.pages, selectedPage });
-        }
-
-        if (tombstonesChanged) {
-          setTombstones(merged.tombstones);
-        }
-
-        if (pagesChanged || tombstonesChanged) {
-          const newPagesCount = merged.pages.length - pagesData.pages.length;
-          log(`SETTINGS: Merged sync storage data (${Math.max(newPagesCount, 0)} new page(s))`, "info");
-          await saveToStorages({ pages: merged.pages, selectedPage }, merged.tombstones);
-
-          alertContext.setAlert({
-            alertType: "info",
-            alertText: newPagesCount > 0
-              ? `Sync enabled! ${newPagesCount} page(s) merged from other browsers.`
-              : "Sync enabled! Existing pages were updated from other browsers.",
-            location: "bottom",
-          });
-        } else {
-          alertContext.setAlert({
-            alertType: "success",
-            alertText: "Sync enabled! Your settings will now sync across browsers.",
-            location: "bottom",
-          });
-        }
-      } else {
-        // Disabling sync
-        alertContext.setAlert({
-          alertType: "info",
-          alertText: "Sync disabled. Settings will only be stored locally.",
-          location: "bottom",
-        });
-      }
-    } catch (error) {
-      console.error("Error toggling sync:", error);
-      const message = error instanceof Error ? error.message : "Failed to toggle sync";
-      await addStoredError(
-        "sync",
-        message,
-        error instanceof Error ? error.stack : undefined
-      );
-      alertContext.setAlert({
-        alertType: "error",
-        alertText: "Failed to toggle sync. Please try again.",
-        location: "bottom",
-      });
-    }
-  };
-
-  const importedPayloadSchema = z
-    .array(pageSchema)
-    .min(1, "Imported file does not contain any pages.");
-
-  /**
-   * Import json file
-   */
-  const importSettings = (file: File): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(new Error("Failed to read file."));
-      reader.onload = (e) => {
-        try {
-          const result = e.target?.result;
-
-          if (typeof result !== "string") {
-            reject(new Error("Unable to read file contents."));
-            return;
-          }
-
-          const parsed = importedPayloadSchema.parse(JSON.parse(result));
-
-          // remap the ids to avoid conflicts
-          setPagesData((prev) => {
-            const importedPages = parsed.map(normalizePage).map((page) => ({
-              ...page,
-              // Always a fresh id, even if the file already has one (e.g.
-              // re-importing a previous export, or a file exported from a
-              // device this one already syncs with) - import always appends
-              // alongside existing pages (never replaces), so reusing an
-              // existing pageId would put two pages sharing one identity in
-              // the same local list, which is exactly the bug class that
-              // made a duplicated page collide with its original on sync.
-              pageId: crypto.randomUUID(),
-              lastModified: page.lastModified || Date.now(),
-            }));
-            const combinedPages = [...prev.pages, ...importedPages];
-            const newPages = combinedPages.map((page, index) => ({
-              ...page,
-              id: index,
-            }));
-
-            return {
-              ...prev,
-              pages: newPages,
-            };
-          });
-
-          alertContext.setAlert({
-            alertType: "success",
-            alertText: "Settings imported.",
-            location: "bottom",
-          });
-
-          resolve();
-        } catch (error) {
-          const err =
-            error instanceof z.ZodError
-              ? new Error(
-                  "Invalid settings file. Please export settings from FlexHeaders and try again."
-                )
-              : error instanceof Error
-                ? error
-                : new Error("Failed to import settings.");
-
-          alertContext.setAlert({
-            alertType: "error",
-            alertText: err.message,
-            location: "bottom",
-          });
-
-          reject(err);
-        }
-      };
-      reader.readAsText(file);
-    });
-  };
+  const importSettings = (file: File): Promise<void> =>
+    importSettingsFile(file, { setPagesData, alertContext });
 
   useEffect(() => {
     retrieveSettings();
   }, [retrieveSettings]);
-
-  // Keep errors in sync with local storage so they can be surfaced in the UI
-  useEffect(() => {
-    const loadErrors = async () => {
-      const stored = await getStoredErrors();
-      setErrors(stored);
-    };
-    loadErrors();
-
-    const listener = (changes: Record<string, browser.Storage.StorageChange>) => {
-      if (ERRORS_STATE_KEY in changes) {
-        const newState = changes[ERRORS_STATE_KEY].newValue as { errors: AppError[] } | undefined;
-        setErrors(newState?.errors ?? []);
-      }
-    };
-
-    browser.storage.local.onChanged.addListener(listener);
-    return () => browser.storage.local.onChanged.removeListener(listener);
-  }, []);
-
-  // Sync status: comparing localModifiedTime (bumped on every local write, by
-  // this hook and by the background worker) against LAST_SYNC_TIME_KEY
-  // (stamped only after a successful push) tells the UI "pending" vs
-  // "synced" without needing a new dedicated flag - both timestamps already
-  // existed, just weren't read anywhere until now.
-  useEffect(() => {
-    const loadSyncStatus = async () => {
-      const [syncTime, modifiedTime] = await Promise.all([
-        loadFromStorage<number | null>(LAST_SYNC_TIME_KEY, null, ['local']),
-        loadFromStorage<number | null>(LOCAL_MODIFIED_TIME_KEY, null, ['local']),
-      ]);
-      setLastSyncTime(syncTime);
-      setLocalModifiedTime(modifiedTime);
-    };
-    loadSyncStatus();
-
-    const listener = (changes: Record<string, browser.Storage.StorageChange>) => {
-      if (LAST_SYNC_TIME_KEY in changes) {
-        setLastSyncTime(changes[LAST_SYNC_TIME_KEY].newValue as number | null);
-      }
-      if (LOCAL_MODIFIED_TIME_KEY in changes) {
-        setLocalModifiedTime(changes[LOCAL_MODIFIED_TIME_KEY].newValue as number | null);
-      }
-    };
-
-    browser.storage.local.onChanged.addListener(listener);
-    return () => browser.storage.local.onChanged.removeListener(listener);
-  }, []);
 
   // LAST_MERGE_TIME_KEY is stamped only by the background worker's merge
   // writes, never by this hook's own saves - an unambiguous "reload" signal
@@ -1159,18 +521,6 @@ function useFlexHeaderSettings() {
     browser.storage.local.onChanged.addListener(listener);
     return () => browser.storage.local.onChanged.removeListener(listener);
   }, [retrieveSettings]);
-
-  const clearErrors = useCallback(async (category?: AppError["category"]) => {
-    await clearStoredErrors(category);
-    const stored = await getStoredErrors();
-    setErrors(stored);
-  }, []);
-
-  const injectError = useCallback(async (category?: ErrorCategory) => {
-    await injectTestError(category);
-    const stored = await getStoredErrors();
-    setErrors(stored);
-  }, []);
 
   return {
     pages: pagesData.pages,

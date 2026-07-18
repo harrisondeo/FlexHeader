@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 
 import { saveToStorage, loadFromStorage } from "./storage";
 import { UNDO_STACK_KEY, REDO_STACK_KEY } from "../constants";
 import { reconcileHistoryAfterMerge, type PageTombstone } from "./pageMerge";
-import type { Page, PagesData } from "./settings";
+import type { Page, PagesData } from "./schemas";
 
 // How long an edit burst (e.g. a run of keystrokes) can pause before the next
 // change starts a new undo step, so backspacing through a whole value only

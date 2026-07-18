@@ -1,4 +1,25 @@
 import { normalizeFilter, normalizeHeader, normalizePage } from './headers';
+import type { HeaderSetting, Page } from './schemas';
+
+const createHeader = (name: string, value: string, enabled = true): HeaderSetting => ({
+  id: `test-${Date.now()}-${Math.random()}`,
+  headerName: name,
+  headerValue: value,
+  headerComment: '',
+  headerEnabled: enabled,
+  headerType: 'request',
+});
+
+const createPage = (id: number, name: string, enabled: boolean, headers: HeaderSetting[] = []): Page => ({
+  id,
+  name,
+  enabled,
+  keepEnabled: false,
+  showHeaderComments: true,
+  filtersExpanded: true,
+  headers,
+  filters: [],
+});
 
 describe('normalizeFilter', () => {
   it('defaults a missing mode to regex', () => {
@@ -97,5 +118,86 @@ describe('normalizePage', () => {
     };
 
     expect(normalizePage(page).filtersExpanded).toBe(true);
+  });
+});
+
+describe('Header Comment Import/Export', () => {
+  it('should preserve header comments through exported JSON and imported pages', () => {
+    const pages = [
+      createPage(0, 'Routes', true, [
+        {
+          ...createHeader('X-Route', 'service-a'),
+          headerComment: 'Use for checkout API',
+        },
+        {
+          ...createHeader('X-Route', 'service-b'),
+          headerComment: 'Use for catalog API',
+        },
+      ]),
+    ];
+
+    const exportedJson = JSON.stringify(pages);
+    const importedPages = (JSON.parse(exportedJson) as Page[]).map(normalizePage);
+
+    expect(importedPages[0].headers[0].headerComment).toBe('Use for checkout API');
+    expect(importedPages[0].headers[1].headerComment).toBe('Use for catalog API');
+  });
+
+  it('should add an empty header comment when importing legacy headers', () => {
+    const legacyPages = [
+      {
+        ...createPage(0, 'Legacy Routes', true, []),
+        headers: [
+          {
+            id: 'legacy-1',
+            headerName: 'X-Route',
+            headerValue: 'legacy-service',
+            headerEnabled: true,
+          },
+        ],
+      },
+    ];
+
+    const exportedJson = JSON.stringify(legacyPages);
+    const importedPages = (JSON.parse(exportedJson) as Page[]).map(normalizePage);
+
+    expect(importedPages[0].headers[0]).toMatchObject({
+      headerName: 'X-Route',
+      headerValue: 'legacy-service',
+      headerComment: '',
+      headerType: 'request',
+    });
+  });
+
+  it('should preserve the header comments visibility setting through JSON import/export', () => {
+    const pages = [
+      {
+        ...createPage(0, 'Routes', true, [createHeader('X-Route', 'service-a')]),
+        showHeaderComments: false,
+      },
+    ];
+
+    const exportedJson = JSON.stringify(pages);
+    const importedPages = (JSON.parse(exportedJson) as Page[]).map(normalizePage);
+
+    expect(importedPages[0].showHeaderComments).toBe(false);
+  });
+
+  it('should show header comments by default for legacy imported pages', () => {
+    const legacyPages = [
+      {
+        id: 0,
+        name: 'Legacy Routes',
+        enabled: true,
+        keepEnabled: false,
+        filters: [],
+        headers: [createHeader('X-Route', 'legacy-service')],
+      },
+    ];
+
+    const exportedJson = JSON.stringify(legacyPages);
+    const importedPages = (JSON.parse(exportedJson) as Page[]).map(normalizePage);
+
+    expect(importedPages[0].showHeaderComments).toBe(true);
   });
 });

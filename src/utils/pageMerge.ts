@@ -1,4 +1,4 @@
-import type { Page, PagesData } from "./settings";
+import type { Page, PagesData } from "./schemas";
 import { TOMBSTONE_RETENTION_MS } from "../constants";
 
 export interface PageTombstone {
