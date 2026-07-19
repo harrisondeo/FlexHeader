@@ -214,6 +214,7 @@ const HeaderRow = ({
             value={headerComment}
             onChange={updateComment}
             onFocus={handleFocus}
+            data-testid="header-comment"
           />
         </div>
       )}

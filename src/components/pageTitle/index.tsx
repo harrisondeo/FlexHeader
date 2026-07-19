@@ -8,10 +8,12 @@ import {
 } from "../../context/settingsContext";
 import { useAlert } from "../../context/alertContext";
 import CommentToggle from "../icons/CommentToggle";
+import SortHeadersDropdown from "../sortHeadersDropdown";
+import { HeaderSetting } from "../../utils/settings";
 
 const PageTitle = () => {
   const { pages, currentPage } = useSettingsState();
-  const { updatePage, changePageIndex } = useSettingsActions();
+  const { updatePage, changePageIndex, saveHeaders } = useSettingsActions();
   const alertContext = useAlert();
 
   const name = currentPage.name;
@@ -31,6 +33,10 @@ const PageTitle = () => {
       ...currentPage,
       showHeaderComments: !currentPage.showHeaderComments,
     });
+  };
+
+  const onSort = (sortedHeaders: HeaderSetting[]) => {
+    saveHeaders(sortedHeaders, currentPage.id);
   };
 
   const onMoveLeft = () =>
@@ -113,7 +119,9 @@ const PageTitle = () => {
               <CommentToggle className="page-title__toggle-icon" />
             </span>
           }
+          testId="toggle-header-comments"
         />
+        <SortHeadersDropdown headers={currentPage.headers} onSort={onSort} />
         <Button onClick={onMoveLeft} content="<" testId="page-move-left" />
         <Button onClick={onMoveRight} content=">" testId="page-move-right" />
       </div>
