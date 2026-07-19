@@ -58,6 +58,15 @@ export class PageSection {
     await this.page.getByTestId("page-context-duplicate").click();
   }
 
+  /**
+   * Toggles the current page's pause state - overrides both "selected" and
+   * "run in background" so its headers stop applying regardless of either.
+   */
+  async togglePause(): Promise<void> {
+    await this.openContextMenu();
+    await this.page.getByTestId("page-context-toggle-pause").click();
+  }
+
   async renamePage(name: string): Promise<void> {
     await this.page.getByTestId("page-title").click();
     const input = this.page.getByTestId("page-title-input");

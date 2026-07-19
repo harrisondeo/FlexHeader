@@ -68,6 +68,21 @@
   border-color: rgba(0, 168, 46, 0.4);
 }
 
+.page-context-menu__button--paused {
+  color: var(--text-color);
+}
+
+.page-context-menu__button--paused-active {
+  background-color: rgba(255, 152, 0, 0.12);
+  border-color: rgba(255, 152, 0, 0.3);
+  color: var(--color-warning);
+}
+
+.page-context-menu__button--paused-active:hover {
+  background-color: rgba(255, 152, 0, 0.2);
+  border-color: rgba(255, 152, 0, 0.4);
+}
+
 .page-context-menu__button--duplicate {
   background-color: rgba(33, 150, 243, 0.08);
   border-color: rgba(33, 150, 243, 0.15);

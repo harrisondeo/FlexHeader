@@ -76,3 +76,27 @@ export async function waitForHeaderRule(page: Page, headerName: string): Promise
     { timeout: 5000 }
   );
 }
+
+/**
+ * Waits until no dynamic DNR rule touches the given header name - the
+ * counterpart to waitForHeaderRule, used after pausing/disabling a page to
+ * confirm the background worker actually retracted its rules rather than
+ * just checking the request once (which could pass on a stale rule that
+ * hasn't been removed yet).
+ */
+export async function waitForNoHeaderRule(page: Page, headerName: string): Promise<void> {
+  await page.waitForFunction(
+    async (name: string) => {
+      const rules = await chrome.declarativeNetRequest.getDynamicRules();
+      return !rules.some((rule) => {
+        const action = rule.action as
+          | { requestHeaders?: Array<{ header: string }>; responseHeaders?: Array<{ header: string }> }
+          | undefined;
+        const headers = action?.requestHeaders ?? action?.responseHeaders ?? [];
+        return headers.some((h) => h.header === name);
+      });
+    },
+    headerName,
+    { timeout: 5000 }
+  );
+}

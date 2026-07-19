@@ -119,6 +119,35 @@ describe('normalizePage', () => {
 
     expect(normalizePage(page).filtersExpanded).toBe(true);
   });
+
+  it('defaults a missing paused to false', () => {
+    const page = {
+      id: 0,
+      name: 'Default',
+      enabled: true,
+      keepEnabled: false,
+      showHeaderComments: true,
+      filters: [],
+      headers: [],
+    };
+
+    expect(normalizePage(page).paused).toBe(false);
+  });
+
+  it('preserves an existing paused value', () => {
+    const page = {
+      id: 0,
+      name: 'Default',
+      enabled: true,
+      keepEnabled: false,
+      paused: true,
+      showHeaderComments: true,
+      filters: [],
+      headers: [],
+    };
+
+    expect(normalizePage(page).paused).toBe(true);
+  });
 });
 
 describe('Header Comment Import/Export', () => {

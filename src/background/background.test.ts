@@ -562,4 +562,24 @@ describe('buildRulesFromPages migration regression', () => {
 
     expect(rules).toHaveLength(0);
   });
+
+  it('skips a paused page even when it is the selected page and keepEnabled is set', () => {
+    const pausedPage: Page = {
+      id: 0,
+      name: 'Default',
+      enabled: true,
+      keepEnabled: true,
+      paused: true,
+      showHeaderComments: true,
+      filtersExpanded: true,
+      filters: [],
+      headers: [
+        createHeader({ headerName: 'X-Paused', headerValue: 'off' }),
+      ],
+    };
+
+    const rules = buildRulesFromPages([pausedPage], getNextId);
+
+    expect(rules).toHaveLength(0);
+  });
 });

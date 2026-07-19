@@ -1,6 +1,6 @@
 import { test, expect } from "./baseTest";
 import { fetchRequestHeaders, getResponseHeader } from "./fixtures/network";
-import { waitForHeaderRule } from "./fixtures/extension";
+import { waitForHeaderRule, waitForNoHeaderRule } from "./fixtures/extension";
 
 const RESPONSE_HEADER_URL = (name: string, value = "original") =>
   `/response-header?header=${encodeURIComponent(name)}&value=${encodeURIComponent(value)}`;
@@ -129,6 +129,24 @@ test.describe("Header application via declarativeNetRequest", () => {
 
     const nonMatching = await fetchRequestHeaders(popupPage.page.context(), "/other");
     expect(nonMatching["x-e2e-request"]).toBe("disabled-filter");
+  });
+
+  test("pausing the selected page stops its headers from applying", async ({ popupPage }) => {
+    await popupPage.pages.addEmptyPage();
+    await popupPage.headers.addHeader("X-E2E-Paused", "applied");
+    await waitForHeaderRule(popupPage.page, "X-E2E-Paused");
+
+    const beforePause = await fetchRequestHeaders(popupPage.page.context(), "/match");
+    expect(beforePause["x-e2e-paused"]).toBe("applied");
+
+    // Pausing must stop the header even though this page is still the
+    // selected (currently open) page - that's the whole point of pause as
+    // distinct from the "run in background" toggle.
+    await popupPage.pages.togglePause();
+    await waitForNoHeaderRule(popupPage.page, "X-E2E-Paused");
+
+    const afterPause = await fetchRequestHeaders(popupPage.page.context(), "/match");
+    expect(afterPause["x-e2e-paused"]).toBeUndefined();
   });
 
   test("invalid include filter is ignored", async ({ popupPage }) => {

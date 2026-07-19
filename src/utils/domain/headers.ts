@@ -34,6 +34,7 @@ export const normalizePage = (page: any): Page => ({
   lastModified: page.lastModified ?? 0,
   showHeaderComments: page.showHeaderComments ?? true,
   filtersExpanded: page.filtersExpanded ?? true,
+  paused: page.paused ?? false,
   headers: page.headers?.map(normalizeHeader) || [],
   filters: page.filters?.map(normalizeFilter) || [],
 });

@@ -3,6 +3,7 @@ import { Page } from "../../utils/settings";
 import Button from "../button";
 import PageContextMenu from "../pageContextMenu";
 import CollapseArrow from "../icons/CollapseArrow";
+import Pause from "../icons/Pause";
 import "./index.css";
 import {
   useSettingsState,
@@ -14,16 +15,24 @@ export const PagesList = () => {
   const { addPage, changeSelectedPage } = useSettingsActions();
   const [collapsed, setCollapsed] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
-    page: Page;
+    pageId: number;
     x: number;
     y: number;
   } | null>(null);
+  // Looked up live from `pages` (rather than snapshotting the page object at
+  // right-click time) so the menu's toggle buttons reflect the latest
+  // paused/keepEnabled state after a click - otherwise a second click would
+  // toggle from the stale pre-click value instead of the current one.
+  const contextMenuPage = contextMenu
+    ? pages.find((page) => page.id === contextMenu.pageId)
+    : undefined;
 
   const handleAddPage = () => {
     addPage({
       id: pages.length,
       enabled: true,
       keepEnabled: false,
+      paused: false,
       showHeaderComments: true,
       filtersExpanded: true,
       name: "New Page",
@@ -79,15 +88,16 @@ export const PagesList = () => {
           collapsed={collapsed}
           active={page.id === currentPage.id}
           backgroundActive={page.keepEnabled}
+          paused={!!page.paused}
           onClick={changeSelectedPage}
           onContextMenu={(event) => {
             event.preventDefault();
-            setContextMenu({ page, x: event.clientX, y: event.clientY });
+            setContextMenu({ pageId: page.id, x: event.clientX, y: event.clientY });
           }}
         />
       ))}
       <PageContextMenu
-        page={contextMenu?.page}
+        page={contextMenuPage}
         visible={!!contextMenu}
         x={contextMenu?.x ?? 0}
         y={contextMenu?.y ?? 0}
@@ -102,6 +112,7 @@ const PageListItem = ({
   collapsed,
   active,
   backgroundActive,
+  paused,
   onClick,
   onContextMenu,
 }: {
@@ -109,6 +120,7 @@ const PageListItem = ({
   collapsed: boolean;
   active: boolean;
   backgroundActive: boolean;
+  paused: boolean;
   onClick: (id: number) => void;
   onContextMenu: MouseEventHandler<HTMLDivElement>;
 }) => {
@@ -118,12 +130,14 @@ const PageListItem = ({
     <div
       className={`page-list-item ${backgroundActive ? "background" : ""} ${
         active ? "active" : ""
-      } ${collapsed ? "page-list-item--collapsed" : ""}`}
+      } ${paused ? "paused" : ""} ${
+        collapsed ? "page-list-item--collapsed" : ""
+      }`}
       onClick={() => onClick(page.id)}
       onContextMenu={onContextMenu}
       data-testid="page-list-item"
       data-page-id={page.id}
-      title={page.name}
+      title={paused ? `${page.name} (paused)` : page.name}
     >
       <div
         className={`page-list-item__background__indicator ${
@@ -133,7 +147,12 @@ const PageListItem = ({
       {collapsed ? (
         <span className="page-list-item__initial">{initial}</span>
       ) : (
-        <h3>{page.name}</h3>
+        <>
+          <h3>{page.name}</h3>
+          {paused && (
+            <Pause className="page-list-item__paused-icon" aria-label="Paused" />
+          )}
+        </>
       )}
     </div>
   );

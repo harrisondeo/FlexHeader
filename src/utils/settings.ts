@@ -38,6 +38,7 @@ export const defaultPage: Page = {
   name: "Default",
   enabled: true,
   keepEnabled: false,
+  paused: false,
   showHeaderComments: true,
   filtersExpanded: true,
   filters: [],
@@ -206,7 +207,7 @@ function useFlexHeaderSettings() {
 
   useEffect(() => {
     const selectedPage = pagesData.pages.find((page) => page.enabled);
-    if (selectedPage) {
+    if (selectedPage && !selectedPage.paused) {
       const activeHeaders = selectedPage.headers.filter(
         (header) => header.headerEnabled
       );

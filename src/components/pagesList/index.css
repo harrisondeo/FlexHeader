@@ -89,16 +89,34 @@
 }
 
 .page-list-item h3 {
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
   font-size: 0.9rem;
   font-weight: 500;
+}
+
+.page-list-item__paused-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex-shrink: 0;
+  color: var(--color-warning);
+}
+
+.page-list-item.active .page-list-item__paused-icon {
+  color: #ffffff;
 }
 
 .page-list-item.background {
   background-color: var(--primary-soft);
   border-color: rgba(0, 168, 46, 0.25);
+}
+
+.page-list-item.paused {
+  opacity: 0.55;
 }
 
 .page-list-item:hover {
