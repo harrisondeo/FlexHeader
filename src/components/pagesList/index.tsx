@@ -14,10 +14,11 @@ export const PagesList = () => {
   const { addPage, changeSelectedPage } = useSettingsActions();
   const [collapsed, setCollapsed] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
-    page: Page;
+    pageId: number;
     x: number;
     y: number;
   } | null>(null);
+  const contextMenuPage = pages.find((page) => page.id === contextMenu?.pageId);
 
   const handleAddPage = () => {
     addPage({
@@ -82,12 +83,12 @@ export const PagesList = () => {
           onClick={changeSelectedPage}
           onContextMenu={(event) => {
             event.preventDefault();
-            setContextMenu({ page, x: event.clientX, y: event.clientY });
+            setContextMenu({ pageId: page.id, x: event.clientX, y: event.clientY });
           }}
         />
       ))}
       <PageContextMenu
-        page={contextMenu?.page}
+        page={contextMenuPage}
         visible={!!contextMenu}
         x={contextMenu?.x ?? 0}
         y={contextMenu?.y ?? 0}

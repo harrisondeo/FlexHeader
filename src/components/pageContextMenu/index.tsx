@@ -96,13 +96,13 @@ export const PageContextMenu = ({
           onClick={handleToggle}
           aria-label={
             page.keepEnabled
-              ? "Disable background running"
-              : "Enable background running"
+              ? "Only apply headers when this page is selected"
+              : "Always apply headers, even when this page is not selected"
           }
           data-testid="page-context-toggle-background"
         >
           <Power className="page-context-menu__icon" />
-          Run in background
+          Always apply
         </button>
       </div>
       <div className="page-context-menu__item">
