@@ -7,6 +7,15 @@ Install from the [Chrome Webstore](https://chromewebstore.google.com/detail/gffp
 
 <img width="1400" height="560" alt="marquee" src="https://github.com/user-attachments/assets/ad610565-8ca8-4a01-bcbc-851a5f5dcb89" />
 
+#### Storage architecture
+
+Settings are split across local and sync storage with a merge/tombstone
+system behind them. If you're wondering why it's not a single
+`storage.set(data)` call, see [docs/storage-architecture.md](docs/storage-architecture.md).
+
+#### Filter syntax
+
+Filters can match URLs using either Regex or URL pattern syntax. See [docs/filter-rule-syntax.md](docs/filter-rule-syntax.md) for full details.
 
 #### Getting started
 
@@ -120,7 +129,3 @@ Notes:
 - Tests navigate to `chrome-extension://<id>/app.html?flexheader-popup=1` to force the popup layout in a tab.
 - Selectors use `data-testid` attributes; update the attributes in the React components if the UI changes.
 - A local HTTP server (`e2e/server.mjs`) is started automatically for tests that assert headers are really modified by `declarativeNetRequest`.
-
-##### Filter syntax
-
-Filters can match URLs using either Regex or URL pattern syntax. See [docs/filter-rule-syntax.md](docs/filter-rule-syntax.md) for full details.
