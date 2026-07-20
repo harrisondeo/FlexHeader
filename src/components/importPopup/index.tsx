@@ -6,7 +6,7 @@ import DragDropFile from "../dragDropFile";
 import Import from "../icons/Import";
 
 interface ImportPopupProps {
-  importSettings: (file: File) => Promise<void>;
+  importSettings: (file: File) => Promise<{ warnings: string[] }>;
 }
 
 const ImportPopup = ({ importSettings }: ImportPopupProps) => {

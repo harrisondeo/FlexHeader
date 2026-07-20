@@ -50,7 +50,7 @@ type SettingsActionsContextValue = {
   changeSelectedPage: (id: number) => void;
   changePageIndex: (oldIndex: number, newIndex: number) => void;
 
-  importSettings: (file: File) => Promise<void>;
+  importSettings: (file: File) => Promise<{ warnings: string[] }>;
   toggleDarkMode: () => Promise<void>;
   toggleSync: () => Promise<void>;
   clearErrors: (category?: AppError["category"]) => Promise<void>;

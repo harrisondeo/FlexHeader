@@ -1,6 +1,9 @@
+import * as path from "path";
 import { test, expect } from "./baseTest";
 import { Page as FlexHeaderPage } from "../src/utils/settings";
 import { clearExtensionStorage, gotoPopup } from "./fixtures/extension";
+
+const MODHEADER_FIXTURE = path.join(__dirname, "fixtures", "modheader-export.json");
 
 const buildSamplePage = (overrides: Partial<FlexHeaderPage> = {}): FlexHeaderPage => ({
   id: 0,
@@ -134,6 +137,34 @@ test.describe("Export / Import", () => {
     await expect(popupPage.headers.getHeaderValue(0)).resolves.toBe("trip-value");
     await expect(popupPage.headers.getHeaderType(0)).resolves.toBe("response");
     await expect(popupPage.filters.getFilterMode(0)).resolves.toBe("regex");
+  });
+
+  test("imports a ModHeader export, converting it to a FlexHeader page", async ({ popupPage }) => {
+    await popupPage.exportImport.openImportPopup();
+    await popupPage.exportImport.importFixture(MODHEADER_FIXTURE);
+
+    await expect(
+      popupPage.page.locator(".drag-drop-file__status--success")
+    ).toBeVisible();
+
+    await expect(popupPage.pages.listItem("Testing Env")).toBeVisible();
+    await popupPage.pages.selectPage("Testing Env");
+
+    // alwaysOn -> keepEnabled, so the page shows as active without being
+    // individually enabled/selected as "the" page.
+    await expect(popupPage.headers.rows).toHaveCount(4);
+    await expect(popupPage.headers.getHeaderName(0)).resolves.toBe("test");
+    await expect(popupPage.headers.getHeaderValue(0)).resolves.toBe("asdf");
+    await expect(popupPage.headers.isHeaderEnabled(0)).resolves.toBe(true);
+    await expect(popupPage.headers.isHeaderEnabled(1)).resolves.toBe(false);
+
+    await expect(popupPage.filters.rows).toHaveCount(2);
+    await expect(popupPage.filters.getFilterType(0)).resolves.toBe("include");
+    await expect(popupPage.filters.getFilterMode(0)).resolves.toBe("regex");
+    await expect(popupPage.filters.getFilterValue(0)).resolves.toBe(
+      ".*://localhost:8080/.*"
+    );
+    await expect(popupPage.filters.isFilterValid(0)).resolves.toBe(true);
   });
 
   test("shows an error when importing an invalid JSON file", async ({ popupPage }) => {

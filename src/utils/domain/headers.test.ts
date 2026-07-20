@@ -16,7 +16,6 @@ const createPage = (id: number, name: string, enabled: boolean, headers: HeaderS
   enabled,
   keepEnabled: false,
   showHeaderComments: true,
-  filtersExpanded: true,
   headers,
   filters: [],
 });
@@ -104,20 +103,6 @@ describe('normalizePage', () => {
 
     expect(normalized.filters[0].mode).toBe('regex');
     expect(normalized.headers[0].headerType).toBe('request');
-  });
-
-  it('defaults a missing filtersExpanded to true', () => {
-    const page = {
-      id: 0,
-      name: 'Default',
-      enabled: true,
-      keepEnabled: false,
-      showHeaderComments: true,
-      filters: [],
-      headers: [],
-    };
-
-    expect(normalizePage(page).filtersExpanded).toBe(true);
   });
 });
 

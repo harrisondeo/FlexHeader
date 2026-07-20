@@ -44,7 +44,6 @@ const makePage = (overrides: Partial<Page> = {}): Page => ({
   enabled: true,
   keepEnabled: false,
   showHeaderComments: true,
-  filtersExpanded: true,
   filters: [],
   headers: [],
   lastModified: 100,

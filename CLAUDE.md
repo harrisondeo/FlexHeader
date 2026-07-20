@@ -31,7 +31,21 @@ changed" rot the moment the PR merges.
   owning all page/header/filter state and its persistence. Exposed via
   `src/context/settingsContext.tsx` to the popup/options UI.
 - `src/background/rules.ts` — turns pages/headers/filters into
-  `declarativeNetRequest` rules (`buildRulesFromPages`).
+  `declarativeNetRequest` rules (`buildRulesFromPages`). A filter only
+  contributes to rule generation when `filter.valid === true`
+  (`buildHeaderRules`); the UI normally sets this via
+  `src/utils/domain/filterValidation.ts`'s `filterIsValid` (which calls
+  `browser.declarativeNetRequest.isRegexSupported` for regex mode). Any code
+  that constructs `HeaderFilter`s outside that flow - e.g. an importer
+  converting a third-party format - must run them through `filterIsValid`
+  too, or the filter silently no-ops instead of erroring.
+- `src/utils/io/modHeaderImport.ts` — converts a ModHeader JSON export
+  (plain array of profile objects, no wrapper) into FlexHeader pages;
+  `src/utils/io/importSettings.ts` tries the native FlexHeader schema first
+  and falls back to this. The conversion is lossy (no append-mode headers,
+  no HTTP-method filters, no field-level exclude precedence) so converted
+  pages import with `enabled: false` pending review; `alwaysOn` maps to
+  `keepEnabled` since both mean "stay active regardless of page selection".
 - `src/utils/pageStorage.ts` — `readPageStorage(area)`, the one place that
   knows how to read the v3 distributed page format (`settings_v3_meta` +
   `page_N` keys + tombstones) out of a storage area. Used by both
