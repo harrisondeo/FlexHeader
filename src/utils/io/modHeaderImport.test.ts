@@ -64,6 +64,16 @@ describe('isModHeaderExport', () => {
     expect(isModHeaderExport({})).toBe(false);
     expect(isModHeaderExport([])).toBe(false);
   });
+
+  it('recognizes a profile with only URL filters configured, no headers yet', () => {
+    const filtersOnlyProfile = [
+      {
+        title: 'Filters only',
+        urlFilters: [{ enabled: true, urlRegex: '.*example\\.com.*' }],
+      },
+    ];
+    expect(isModHeaderExport(filtersOnlyProfile)).toBe(true);
+  });
 });
 
 describe('convertModHeaderProfile', () => {

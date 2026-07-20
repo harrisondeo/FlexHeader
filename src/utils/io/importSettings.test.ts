@@ -76,7 +76,7 @@ describe('importSettingsFile', () => {
     expect(alertContext.setAlert).toHaveBeenCalledWith(expect.objectContaining({ alertType: 'error' }));
   });
 
-  it('converts a ModHeader export into pages, imported disabled with a warning alert', async () => {
+  it('converts a ModHeader export into pages, imported disabled with warnings returned (not alerted)', async () => {
     let pagesData: PagesData = { pages: [], selectedPage: 0 };
     const setPagesData: Dispatch<SetStateAction<PagesData>> = vi.fn((updater) => {
       pagesData = typeof updater === 'function' ? updater(pagesData) : updater;
@@ -95,7 +95,7 @@ describe('importSettingsFile', () => {
     ];
     const file = new File([JSON.stringify(modHeaderExport)], 'modheader-export.json', { type: 'application/json' });
 
-    await importSettingsFile(file, { setPagesData, alertContext });
+    const { warnings } = await importSettingsFile(file, { setPagesData, alertContext });
 
     expect(pagesData.pages).toHaveLength(1);
     expect(pagesData.pages[0]).toMatchObject({
@@ -105,9 +105,8 @@ describe('importSettingsFile', () => {
       filters: [expect.objectContaining({ type: 'include', mode: 'regex', valid: true })],
     });
     expect(pagesData.pages[0].pageId).toBeTruthy();
-    expect(alertContext.setAlert).toHaveBeenCalledWith(
-      expect.objectContaining({ alertType: 'warning', alertText: expect.stringContaining('append mode') })
-    );
+    expect(warnings).toEqual([expect.stringContaining('append mode')]);
+    expect(alertContext.setAlert).not.toHaveBeenCalled();
   });
 
   it('rejects a file that matches neither FlexHeader nor ModHeader shape', async () => {

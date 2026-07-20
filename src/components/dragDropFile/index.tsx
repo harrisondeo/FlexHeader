@@ -3,9 +3,10 @@ import "./index.css";
 import Import from "../icons/Import";
 import Check from "../icons/Check";
 import ErrorIcon from "../icons/ErrorIcon";
+import WarningIcon from "../icons/Warning";
 
 interface DragDropFileProps {
-  importSettings: (file: File) => Promise<void>;
+  importSettings: (file: File) => Promise<{ warnings: string[] }>;
   closeCallback?: () => void;
   variant?: "compact" | "large";
 }
@@ -19,16 +20,25 @@ const DragDropFile = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [status, setStatus] = useState<
-    { type: "success"; message: string } | { type: "error"; message: string } | null
+    | { type: "success"; message: string }
+    | { type: "warning"; message: string }
+    | { type: "error"; message: string }
+    | null
   >(null);
 
   const runImport = async (file: File) => {
     setStatus(null);
 
     try {
-      await importSettings(file);
-      setStatus({ type: "success", message: "Import successful" });
-      closeCallback?.();
+      const { warnings } = await importSettings(file);
+      if (warnings.length > 0) {
+        // Keep the popup open so the warnings are actually seen, rather than
+        // closing immediately the way a clean import does.
+        setStatus({ type: "warning", message: warnings.join(" ") });
+      } else {
+        setStatus({ type: "success", message: "Import successful" });
+        closeCallback?.();
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Import failed";
       setStatus({ type: "error", message });
@@ -116,16 +126,16 @@ const DragDropFile = ({
 
       {status && (
         <div
-          className={`drag-drop-file__status ${
-            status.type === "success"
-              ? "drag-drop-file__status--success"
-              : "drag-drop-file__status--error"
-          }`}
+          className={`drag-drop-file__status drag-drop-file__status--${status.type}`}
           data-testid="drag-drop-file-status"
         >
-          {status.type === "success" ? (
+          {status.type === "success" && (
             <Check role="img" aria-label="Import successful" width={16} height={16} />
-          ) : (
+          )}
+          {status.type === "warning" && (
+            <WarningIcon role="img" aria-label="Import completed with warnings" width={16} height={16} />
+          )}
+          {status.type === "error" && (
             <ErrorIcon role="img" aria-label="Import failed" width={16} height={16} />
           )}
           <span>{status.message}</span>

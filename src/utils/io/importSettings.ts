@@ -52,7 +52,7 @@ export const importSettingsFile = (
     setPagesData: Dispatch<SetStateAction<PagesData>>;
     alertContext: AlertContextType;
   }
-): Promise<void> => {
+): Promise<{ warnings: string[] }> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Failed to read file."));
@@ -86,21 +86,15 @@ export const importSettingsFile = (
           };
         });
 
-        alertContext.setAlert(
-          warnings.length > 0
-            ? {
-                alertType: "warning",
-                alertText: `Imported from ModHeader with some limitations: ${warnings.join(" ")}`,
-                location: "bottom",
-              }
-            : {
-                alertType: "success",
-                alertText: "Settings imported.",
-                location: "bottom",
-              }
-        );
+        if (warnings.length === 0) {
+          alertContext.setAlert({
+            alertType: "success",
+            alertText: "Settings imported.",
+            location: "bottom",
+          });
+        }
 
-        resolve();
+        resolve({ warnings });
       } catch (error) {
         const err = error instanceof Error ? error : new Error("Failed to import settings.");
 

@@ -115,6 +115,10 @@
   filter: brightness(0) saturate(100%) invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%);
 }
 
+.drag-drop-file__status--warning img {
+  filter: brightness(0) saturate(100%) invert(75%) sepia(60%) saturate(1000%) hue-rotate(0deg) brightness(103%) contrast(101%);
+}
+
 .drag-drop-file__status--error img {
   filter: brightness(0) saturate(100%) invert(32%) sepia(90%) saturate(7450%) hue-rotate(348deg) brightness(93%) contrast(101%);
 }

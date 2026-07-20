@@ -32,7 +32,9 @@ interface ModHeaderProfile {
  * version marker at the array level). Distinguished from a FlexHeader export
  * by the absence of `showHeaderComments` - a field every FlexHeader page has
  * carried since before this importer existed - combined with the presence of
- * a ModHeader-shaped header list.
+ * a ModHeader-shaped header/filter list. `urlFilters`/`filters`/
+ * `excludeUrlFilters` are checked too, not just `headers`/`respHeaders`, so a
+ * profile that only has filters configured (no headers yet) still counts.
  */
 export const isModHeaderExport = (data: unknown): data is ModHeaderProfile[] =>
   Array.isArray(data) &&
@@ -41,7 +43,13 @@ export const isModHeaderExport = (data: unknown): data is ModHeaderProfile[] =>
     if (typeof item !== "object" || item === null) return false;
     const p = item as Record<string, unknown>;
     if ("showHeaderComments" in p) return false;
-    return Array.isArray(p.headers) || Array.isArray(p.respHeaders);
+    return (
+      Array.isArray(p.headers) ||
+      Array.isArray(p.respHeaders) ||
+      Array.isArray(p.urlFilters) ||
+      Array.isArray(p.filters) ||
+      Array.isArray(p.excludeUrlFilters)
+    );
   });
 
 const convertHeaders = (
@@ -137,7 +145,7 @@ export const convertModHeaderProfile = async (
 
   if (filters.some((filter) => !filter.valid)) {
     warnings.add(
-      "Some URL filters use regex Chrome doesn't support and were imported disabled."
+      "Some URL filters use regex Chrome doesn't support and won't apply until fixed."
     );
   }
 
