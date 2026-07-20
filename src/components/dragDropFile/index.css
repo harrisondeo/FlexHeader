@@ -12,6 +12,7 @@
 }
 
 .drag-drop-file__title,
+.drag-drop-file__hint,
 .drag-drop-file__subtitle {
   display: none;
 }
@@ -76,6 +77,7 @@
 }
 
 .drag-drop-file--large .drag-drop-file__title,
+.drag-drop-file--large .drag-drop-file__hint,
 .drag-drop-file--large .drag-drop-file__subtitle {
   display: block;
 }
@@ -83,6 +85,11 @@
 .drag-drop-file--large .drag-drop-file__title {
   font-size: 1rem;
   font-weight: 600;
+}
+
+.drag-drop-file--large .drag-drop-file__hint {
+  font-size: 0.8rem;
+  opacity: 0.6;
 }
 
 .drag-drop-file--large .drag-drop-file__subtitle {

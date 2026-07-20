@@ -32,7 +32,6 @@ export const pageSchema = z.object({
   enabled: z.boolean(),
   keepEnabled: z.boolean(),
   showHeaderComments: z.boolean().default(true),
-  filtersExpanded: z.boolean().default(true),
   filters: z.array(headerFilterSchema).default([]),
   headers: z.array(headerSettingSchema).default([]),
   // Resolves which side wins when the same page is edited on two synced

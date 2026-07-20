@@ -25,7 +25,6 @@ export const PagesList = () => {
       enabled: true,
       keepEnabled: false,
       showHeaderComments: true,
-      filtersExpanded: true,
       name: "New Page",
       headers: [],
       filters: [],

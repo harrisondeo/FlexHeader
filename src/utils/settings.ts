@@ -39,7 +39,6 @@ export const defaultPage: Page = {
   enabled: true,
   keepEnabled: false,
   showHeaderComments: true,
-  filtersExpanded: true,
   filters: [],
   lastModified: 0,
   headers: [

@@ -103,6 +103,9 @@ const DragDropFile = ({
             <p className="drag-drop-file__title">
               Drag & drop your exported .json file here
             </p>
+            <p className="drag-drop-file__hint">
+              Accepts a FlexHeader export or a ModHeader export
+            </p>
             <p className="drag-drop-file__subtitle">or</p>
             <button type="button" className="upload-button" onClick={onButtonClick} data-testid="drag-drop-file-upload-button">
               Click to upload a file

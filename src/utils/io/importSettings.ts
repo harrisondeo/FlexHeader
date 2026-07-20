@@ -1,12 +1,40 @@
 import { z } from "zod";
 import type { Dispatch, SetStateAction } from "react";
 import type { AlertContextType } from "../../context/alertContext";
-import { pageSchema, type PagesData } from "../domain/schemas";
+import { pageSchema, type Page, type PagesData } from "../domain/schemas";
 import { normalizePage } from "../domain/headers";
+import { convertModHeaderProfile, isModHeaderExport } from "./modHeaderImport";
 
 const importedPayloadSchema = z
   .array(pageSchema)
   .min(1, "Imported file does not contain any pages.");
+
+const INVALID_FILE_MESSAGE =
+  "Invalid settings file. Please export settings from FlexHeader or ModHeader and try again.";
+
+/**
+ * Accepts either a FlexHeader settings export or a ModHeader profile export.
+ * FlexHeader's own schema is tried first; a file that doesn't match it falls
+ * back to ModHeader detection rather than failing outright.
+ */
+const parseImportedPages = async (
+  parsedJson: unknown
+): Promise<{ pages: Page[]; warnings: string[] }> => {
+  const flexHeaderResult = importedPayloadSchema.safeParse(parsedJson);
+  if (flexHeaderResult.success) {
+    return { pages: flexHeaderResult.data.map(normalizePage), warnings: [] };
+  }
+
+  if (isModHeaderExport(parsedJson)) {
+    const warnings = new Set<string>();
+    const pages = await Promise.all(
+      parsedJson.map((profile, index) => convertModHeaderProfile(profile, index, warnings))
+    );
+    return { pages, warnings: [...warnings] };
+  }
+
+  throw new Error(INVALID_FILE_MESSAGE);
+};
 
 /**
  * Parses an exported settings JSON file and appends its pages to the
@@ -28,7 +56,7 @@ export const importSettingsFile = (
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Failed to read file."));
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const result = e.target?.result;
 
@@ -37,11 +65,11 @@ export const importSettingsFile = (
           return;
         }
 
-        const parsed = importedPayloadSchema.parse(JSON.parse(result));
+        const { pages: parsedPages, warnings } = await parseImportedPages(JSON.parse(result));
 
         // remap the ids to avoid conflicts
         setPagesData((prev) => {
-          const importedPages = parsed.map(normalizePage).map((page) => ({
+          const importedPages = parsedPages.map((page) => ({
             ...page,
             pageId: crypto.randomUUID(),
             lastModified: page.lastModified || Date.now(),
@@ -58,22 +86,23 @@ export const importSettingsFile = (
           };
         });
 
-        alertContext.setAlert({
-          alertType: "success",
-          alertText: "Settings imported.",
-          location: "bottom",
-        });
+        alertContext.setAlert(
+          warnings.length > 0
+            ? {
+                alertType: "warning",
+                alertText: `Imported from ModHeader with some limitations: ${warnings.join(" ")}`,
+                location: "bottom",
+              }
+            : {
+                alertType: "success",
+                alertText: "Settings imported.",
+                location: "bottom",
+              }
+        );
 
         resolve();
       } catch (error) {
-        const err =
-          error instanceof z.ZodError
-            ? new Error(
-                "Invalid settings file. Please export settings from FlexHeaders and try again."
-              )
-            : error instanceof Error
-              ? error
-              : new Error("Failed to import settings.");
+        const err = error instanceof Error ? error : new Error("Failed to import settings.");
 
         alertContext.setAlert({
           alertType: "error",

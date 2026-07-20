@@ -101,4 +101,12 @@ export class ExportImportSection {
     fs.writeFileSync(tmpFile, JSON.stringify(content), "utf-8");
     await this.importFileInput.setInputFiles(tmpFile);
   }
+
+  /**
+   * Imports a fixture file directly (e.g. a ModHeader export), without
+   * round-tripping it through FlexHeader's own Page type.
+   */
+  async importFixture(fixturePath: string): Promise<void> {
+    await this.importFileInput.setInputFiles(fixturePath);
+  }
 }

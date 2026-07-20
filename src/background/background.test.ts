@@ -475,7 +475,6 @@ describe('buildRulesFromPages migration regression', () => {
       enabled: true,
       keepEnabled: false,
       showHeaderComments: true,
-      filtersExpanded: true,
       filters: [
         {
           id: 'filter-1',
@@ -517,7 +516,6 @@ describe('buildRulesFromPages migration regression', () => {
       enabled: true,
       keepEnabled: false,
       showHeaderComments: true,
-      filtersExpanded: true,
       filters: [],
       headers: [
         {
@@ -544,7 +542,6 @@ describe('buildRulesFromPages migration regression', () => {
       enabled: false,
       keepEnabled: false,
       showHeaderComments: true,
-      filtersExpanded: true,
       filters: [],
       headers: [
         {

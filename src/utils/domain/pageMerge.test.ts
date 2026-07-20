@@ -53,7 +53,6 @@ const createPage = (
   enabled,
   keepEnabled: false,
   showHeaderComments: true,
-  filtersExpanded: true,
   headers,
   filters,
 });
