@@ -95,7 +95,7 @@ const convertFilters = (
       enabled: filter.enabled !== false,
       type,
       mode: "regex" as const,
-      value: filter.urlRegex as string,
+      value: (filter.urlRegex as string).trim(),
     }));
 };
 
