@@ -58,6 +58,40 @@ test.describe("Header Sort", () => {
     await expect(popupPage.headers.getHeaderComment(2)).resolves.toBe("third");
   });
 
+  test("sorts headers by enabled ascending (disabled first)", async ({ popupPage }) => {
+    await popupPage.pages.addEmptyPage();
+    await popupPage.headers.addHeader("Alpha", "a-value");
+    await popupPage.headers.addHeader("Bravo", "b-value");
+    await popupPage.headers.addHeader("Charlie", "c-value");
+
+    // All headers start enabled by default; disable the first two.
+    await popupPage.headers.toggleHeader(0);
+    await popupPage.headers.toggleHeader(1);
+
+    await popupPage.headers.sortBy("headerEnabled", "asc");
+
+    await expect(popupPage.headers.isHeaderEnabled(0)).resolves.toBe(false);
+    await expect(popupPage.headers.isHeaderEnabled(1)).resolves.toBe(false);
+    await expect(popupPage.headers.isHeaderEnabled(2)).resolves.toBe(true);
+    await expect(popupPage.headers.getHeaderName(2)).resolves.toBe("Charlie");
+  });
+
+  test("sorts headers by enabled descending (enabled first)", async ({ popupPage }) => {
+    await popupPage.pages.addEmptyPage();
+    await popupPage.headers.addHeader("Alpha", "a-value");
+    await popupPage.headers.addHeader("Bravo", "b-value");
+    await popupPage.headers.addHeader("Charlie", "c-value");
+
+    await popupPage.headers.toggleHeader(1);
+
+    await popupPage.headers.sortBy("headerEnabled", "desc");
+
+    await expect(popupPage.headers.isHeaderEnabled(0)).resolves.toBe(true);
+    await expect(popupPage.headers.isHeaderEnabled(1)).resolves.toBe(true);
+    await expect(popupPage.headers.isHeaderEnabled(2)).resolves.toBe(false);
+    await expect(popupPage.headers.getHeaderName(2)).resolves.toBe("Bravo");
+  });
+
   test("sort is a one-time operation, not persisted as a setting", async ({ popupPage }) => {
     await popupPage.pages.addEmptyPage();
     await popupPage.headers.addHeader("Zebra", "z-value");
