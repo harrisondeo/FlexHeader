@@ -149,6 +149,21 @@ test.describe("Header application via declarativeNetRequest", () => {
     expect(afterPause["x-e2e-paused"]).toBeUndefined();
   });
 
+  test("pausing via the page title toolbar button stops its headers from applying", async ({ popupPage }) => {
+    await popupPage.pages.addEmptyPage();
+    await popupPage.headers.addHeader("X-E2E-Toolbar-Paused", "applied");
+    await waitForHeaderRule(popupPage.page, "X-E2E-Toolbar-Paused");
+
+    const beforePause = await fetchRequestHeaders(popupPage.page.context(), "/match");
+    expect(beforePause["x-e2e-toolbar-paused"]).toBe("applied");
+
+    await popupPage.pages.togglePauseFromToolbar();
+    await waitForNoHeaderRule(popupPage.page, "X-E2E-Toolbar-Paused");
+
+    const afterPause = await fetchRequestHeaders(popupPage.page.context(), "/match");
+    expect(afterPause["x-e2e-toolbar-paused"]).toBeUndefined();
+  });
+
   test("invalid include filter is ignored", async ({ popupPage }) => {
     await popupPage.pages.addEmptyPage();
     await popupPage.headers.addHeader("X-E2E-Request", "invalid-filter");
