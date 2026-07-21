@@ -95,7 +95,7 @@ export class HeaderSection {
    * The popup closes itself on apply.
    */
   async sortBy(
-    field: "headerName" | "headerValue" | "headerComment",
+    field: "headerName" | "headerValue" | "headerComment" | "headerEnabled",
     direction: "asc" | "desc" = "asc"
   ): Promise<void> {
     await this.sortButton.click();

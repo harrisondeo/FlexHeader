@@ -4,13 +4,18 @@ import Button from "../button";
 import Sort from "../icons/Sort";
 import "./index.css";
 
-type SortField = "headerName" | "headerValue" | "headerComment";
+type SortField =
+  | "headerName"
+  | "headerValue"
+  | "headerComment"
+  | "headerEnabled";
 type SortDirection = "asc" | "desc";
 
 const FIELD_OPTIONS: { value: SortField; label: string }[] = [
   { value: "headerName", label: "Header Name" },
   { value: "headerValue", label: "Header Value" },
   { value: "headerComment", label: "Comment" },
+  { value: "headerEnabled", label: "Enabled" },
 ];
 
 const SortHeadersDropdown = ({
@@ -54,9 +59,12 @@ const SortHeadersDropdown = ({
 
   const _handleSort = () => {
     const sorted = [...headers].sort((a, b) => {
-      const result = a[field].localeCompare(b[field], undefined, {
-        sensitivity: "base",
-      });
+      const result =
+        field === "headerEnabled"
+          ? Number(a.headerEnabled) - Number(b.headerEnabled)
+          : a[field].localeCompare(b[field], undefined, {
+              sensitivity: "base",
+            });
       return direction === "asc" ? result : -result;
     });
     onSort(sorted);
