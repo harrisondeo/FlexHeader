@@ -81,7 +81,6 @@ const createPage = (
   enabled: id === 0,
   keepEnabled: false,
   showHeaderComments: true,
-  filtersExpanded: true,
   filters: [],
   ...identity,
   headers: [

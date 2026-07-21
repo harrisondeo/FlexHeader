@@ -12,6 +12,7 @@
 }
 
 .drag-drop-file__title,
+.drag-drop-file__hint,
 .drag-drop-file__subtitle {
   display: none;
 }
@@ -76,6 +77,7 @@
 }
 
 .drag-drop-file--large .drag-drop-file__title,
+.drag-drop-file--large .drag-drop-file__hint,
 .drag-drop-file--large .drag-drop-file__subtitle {
   display: block;
 }
@@ -83,6 +85,11 @@
 .drag-drop-file--large .drag-drop-file__title {
   font-size: 1rem;
   font-weight: 600;
+}
+
+.drag-drop-file--large .drag-drop-file__hint {
+  font-size: 0.8rem;
+  opacity: 0.6;
 }
 
 .drag-drop-file--large .drag-drop-file__subtitle {
@@ -106,6 +113,10 @@
 
 .drag-drop-file__status--success img {
   filter: brightness(0) saturate(100%) invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%);
+}
+
+.drag-drop-file__status--warning img {
+  filter: brightness(0) saturate(100%) invert(75%) sepia(60%) saturate(1000%) hue-rotate(0deg) brightness(103%) contrast(101%);
 }
 
 .drag-drop-file__status--error img {

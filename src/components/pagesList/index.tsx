@@ -34,7 +34,6 @@ export const PagesList = () => {
       keepEnabled: false,
       paused: false,
       showHeaderComments: true,
-      filtersExpanded: true,
       name: "New Page",
       headers: [],
       filters: [],

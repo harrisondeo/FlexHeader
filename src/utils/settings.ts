@@ -40,7 +40,6 @@ export const defaultPage: Page = {
   keepEnabled: false,
   paused: false,
   showHeaderComments: true,
-  filtersExpanded: true,
   filters: [],
   lastModified: 0,
   headers: [
@@ -501,7 +500,7 @@ function useFlexHeaderSettings() {
     }
   };
 
-  const importSettings = (file: File): Promise<void> =>
+  const importSettings = (file: File): Promise<{ warnings: string[] }> =>
     importSettingsFile(file, { setPagesData, alertContext });
 
   useEffect(() => {

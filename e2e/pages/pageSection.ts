@@ -32,7 +32,7 @@ export class PageSection {
   }
 
   async getActivePageName(): Promise<string> {
-    return this.page.locator(".page-list-item.active h3").textContent();
+    return (await this.page.locator(".page-list-item.active h3").textContent()) ?? "";
   }
 
   async addNewPage(): Promise<void> {

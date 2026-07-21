@@ -1,0 +1,45 @@
+[
+    {
+        "alwaysOn": true,
+        "headers": [
+            {
+                "appendMode": false,
+                "enabled": true,
+                "name": "test",
+                "value": "asdf",
+                "comment": "Testing 2"
+            },
+            {
+                "appendMode": false,
+                "enabled": false,
+                "name": "test",
+                "value": "abcd"
+            },
+            {
+                "enabled": false,
+                "name": "test",
+                "value": "abc",
+                "comment": "Testing"
+            },
+            {
+                "enabled": false,
+                "name": "test",
+                "value": "qwerty"
+            }
+        ],
+        "shortTitle": "G",
+        "title": "Testing Env",
+        "urlFilters": [
+            {
+                "enabled": false,
+                "urlRegex": ".*://localhost:8080/.*"
+            },
+            {
+                "enabled": false,
+                "urlRegex": ".*://localhost:8000/.*"
+            }
+        ],
+        "version": 2,
+        "hideComment": false
+    }
+]

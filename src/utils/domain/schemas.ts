@@ -36,7 +36,6 @@ export const pageSchema = z.object({
   // defaulted so legacy pages don't need one - normalizePage backfills it.
   paused: z.boolean().optional(),
   showHeaderComments: z.boolean().default(true),
-  filtersExpanded: z.boolean().default(true),
   filters: z.array(headerFilterSchema).default([]),
   headers: z.array(headerSettingSchema).default([]),
   // Resolves which side wins when the same page is edited on two synced
