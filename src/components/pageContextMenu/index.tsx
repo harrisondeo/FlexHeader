@@ -3,6 +3,7 @@ import { Page } from "../../utils/settings";
 import "./index.css";
 import { useSettingsActions } from "../../context/settingsContext";
 import Power from "../icons/Power";
+import Pause from "../icons/Pause";
 import Duplicate from "../icons/Duplicate";
 import Delete from "../icons/Delete";
 
@@ -15,7 +16,7 @@ interface PageContextMenuProps {
 }
 
 const MENU_WIDTH = 190;
-const MENU_HEIGHT = 152;
+const MENU_HEIGHT = 200;
 
 export const PageContextMenu = ({
   page,
@@ -62,6 +63,10 @@ export const PageContextMenu = ({
     updatePage({ ...page, keepEnabled: !page.keepEnabled });
   };
 
+  const handleTogglePause = () => {
+    updatePage({ ...page, paused: !page.paused });
+  };
+
   const handleDuplicate = () => {
     addPage({
       ...page,
@@ -103,6 +108,22 @@ export const PageContextMenu = ({
         >
           <Power className="page-context-menu__icon" />
           Run in background
+        </button>
+      </div>
+      <div className="page-context-menu__item">
+        <button
+          type="button"
+          className={`page-context-menu__button ${
+            page.paused
+              ? "page-context-menu__button--paused-active"
+              : "page-context-menu__button--paused"
+          }`}
+          onClick={handleTogglePause}
+          aria-label={page.paused ? "Resume page" : "Pause page"}
+          data-testid="page-context-toggle-pause"
+        >
+          <Pause className="page-context-menu__icon" />
+          {page.paused ? "Resume Page" : "Pause Page"}
         </button>
       </div>
       <div className="page-context-menu__item">

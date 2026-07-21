@@ -176,6 +176,7 @@ export function buildRulesFromPages(
   const rules: browser.DeclarativeNetRequest.Rule[] = [];
 
   pages.forEach((page) => {
+    if (page.paused) return;
     if (!page.enabled && !page.keepEnabled) return;
 
     page.headers.forEach((header) => {

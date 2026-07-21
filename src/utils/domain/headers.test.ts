@@ -104,6 +104,35 @@ describe('normalizePage', () => {
     expect(normalized.filters[0].mode).toBe('regex');
     expect(normalized.headers[0].headerType).toBe('request');
   });
+
+  it('defaults a missing paused to false', () => {
+    const page = {
+      id: 0,
+      name: 'Default',
+      enabled: true,
+      keepEnabled: false,
+      showHeaderComments: true,
+      filters: [],
+      headers: [],
+    };
+
+    expect(normalizePage(page).paused).toBe(false);
+  });
+
+  it('preserves an existing paused value', () => {
+    const page = {
+      id: 0,
+      name: 'Default',
+      enabled: true,
+      keepEnabled: false,
+      paused: true,
+      showHeaderComments: true,
+      filters: [],
+      headers: [],
+    };
+
+    expect(normalizePage(page).paused).toBe(true);
+  });
 });
 
 describe('Header Comment Import/Export', () => {

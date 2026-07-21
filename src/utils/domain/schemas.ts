@@ -31,6 +31,10 @@ export const pageSchema = z.object({
   name: z.string().min(1),
   enabled: z.boolean(),
   keepEnabled: z.boolean(),
+  // Hard override: suppresses this page's rules even while it's the
+  // selected page (enabled) or has keepEnabled set. Optional rather than
+  // defaulted so legacy pages don't need one - normalizePage backfills it.
+  paused: z.boolean().optional(),
   showHeaderComments: z.boolean().default(true),
   filters: z.array(headerFilterSchema).default([]),
   headers: z.array(headerSettingSchema).default([]),

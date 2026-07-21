@@ -8,6 +8,8 @@ import {
 } from "../../context/settingsContext";
 import { useAlert } from "../../context/alertContext";
 import CommentToggle from "../icons/CommentToggle";
+import Pause from "../icons/Pause";
+import Play from "../icons/Play";
 import SortHeadersDropdown from "../sortHeadersDropdown";
 import { HeaderSetting } from "../../utils/settings";
 
@@ -18,6 +20,7 @@ const PageTitle = () => {
 
   const name = currentPage.name;
   const showHeaderComments = currentPage.showHeaderComments;
+  const paused = !!currentPage.paused;
 
   const onRename = (newName: string) => {
     updatePage({ ...currentPage, name: newName });
@@ -33,6 +36,10 @@ const PageTitle = () => {
       ...currentPage,
       showHeaderComments: !currentPage.showHeaderComments,
     });
+  };
+
+  const onTogglePause = () => {
+    updatePage({ ...currentPage, paused: !currentPage.paused });
   };
 
   const onSort = (sortedHeaders: HeaderSetting[]) => {
@@ -106,6 +113,21 @@ const PageTitle = () => {
         </h2>
       )}
       <div className="page-title__actions">
+        <Button
+          onClick={onTogglePause}
+          color={paused ? "warning" : "secondary"}
+          title={paused ? "Resume page" : "Pause page"}
+          content={
+            <span className="page-title__toggle-button-content">
+              {paused ? (
+                <Play className="page-title__toggle-icon" />
+              ) : (
+                <Pause className="page-title__toggle-icon" />
+              )}
+            </span>
+          }
+          testId="toggle-page-pause"
+        />
         <Button
           onClick={onToggleShowHeaderComments}
           color={showHeaderComments ? "primary" : "secondary"}

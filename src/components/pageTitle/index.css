@@ -14,18 +14,21 @@ input.app__page-title.app__page-title--input {
   box-sizing: border-box;
   text-align: left;
   height: 34px;
-  width: 400px;
-  max-width: 400px;
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
   border: 1.5px solid transparent;
   border-radius: var(--radius-md);
   padding: 0.2rem 0.55rem;
   margin: 0 0 0 -0.55rem;
   transition: border-color 0.15s ease;
-  flex-shrink: 0;
 }
 
 .app__page-title--editable {
   cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .app__page-title--editable:hover {
@@ -48,6 +51,7 @@ input.app__page-title.app__page-title--input:focus {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .page-title__toggle-button-content {
@@ -62,7 +66,8 @@ input.app__page-title.app__page-title--input:focus {
 }
 
 .button.color-primary .page-title__toggle-icon,
-.button.color-secondary .page-title__toggle-icon {
+.button.color-secondary .page-title__toggle-icon,
+.button.color-warning .page-title__toggle-icon {
   color: #ffffff;
 }
 
