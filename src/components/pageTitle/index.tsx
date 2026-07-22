@@ -12,6 +12,7 @@ import Pause from "../icons/Pause";
 import Play from "../icons/Play";
 import SortHeadersDropdown from "../sortHeadersDropdown";
 import { HeaderSetting } from "../../utils/settings";
+import ClearableInput from "../clearableInput";
 
 const PageTitle = () => {
   const { pages, currentPage } = useSettingsState();
@@ -92,7 +93,7 @@ const PageTitle = () => {
   return (
     <div className="page-title">
       {editing ? (
-        <input
+        <ClearableInput
           ref={inputRef}
           type="text"
           className="app__page-title app__page-title--input"
@@ -101,6 +102,8 @@ const PageTitle = () => {
           onBlur={commit}
           onKeyDown={handleKeyDown}
           data-testid="page-title-input"
+          wrapperClassName="clearable-input--page-title"
+          onClear={() => setValue("")}
         />
       ) : (
         <h2
