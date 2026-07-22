@@ -3,6 +3,7 @@
   "version": "1.9.3",
   "private": true,
   "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",

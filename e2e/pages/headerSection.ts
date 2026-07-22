@@ -29,6 +29,10 @@ export class HeaderSection {
     return this.rows.nth(index);
   }
 
+  dragHandle(index: number): Locator {
+    return this.row(index).getByTestId("header-drag-handle");
+  }
+
   async addHeader(name: string, value: string, type: "request" | "response" = "request"): Promise<void> {
     await this.addButton.click();
     const newRow = this.rows.last();
@@ -104,6 +108,35 @@ export class HeaderSection {
     await this.sortDirectionSelect.selectOption(direction);
     await this.sortApplyButton.click();
     await this.sortDropdown.waitFor({ state: "hidden" });
+  }
+
+  async dragHeaderTo(fromIndex: number, toIndex: number): Promise<void> {
+    const sourceBox = await this.dragHandle(fromIndex).boundingBox();
+    const targetBox = await this.row(toIndex).boundingBox();
+    if (!sourceBox || !targetBox) {
+      throw new Error("Could not measure drag handle or target row for drag-and-drop");
+    }
+
+    const startX = sourceBox.x + sourceBox.width / 2;
+    const startY = sourceBox.y + sourceBox.height / 2;
+    const endX = targetBox.x + targetBox.width / 2;
+    const endY = targetBox.y + targetBox.height / 2;
+
+    await this.page.mouse.move(startX, startY);
+    await this.page.mouse.down();
+    await this.page.waitForTimeout(100);
+
+    const steps = 20;
+    for (let i = 1; i <= steps; i++) {
+      await this.page.mouse.move(
+        startX + ((endX - startX) * i) / steps,
+        startY + ((endY - startY) * i) / steps
+      );
+      await this.page.waitForTimeout(50);
+    }
+    await this.page.waitForTimeout(150);
+
+    await this.page.mouse.up();
   }
 
   async getAllHeaderNames(): Promise<string[]> {

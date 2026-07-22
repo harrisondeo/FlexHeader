@@ -1,10 +1,11 @@
 import { useId, useMemo, useRef, useState } from "react";
 import type * as React from "react";
+import type { DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { HeaderSetting } from "../../utils/settings";
 import { POPULAR_HEADER_NAMES } from "../../constants";
 import Button from "../button";
 import "./index.css";
-import Draggable from "../icons/Draggable";
+import DraggableIcon from "../icons/Draggable";
 import Basket from "../icons/Basket";
 
 const HeaderRow = ({
@@ -17,24 +18,14 @@ const HeaderRow = ({
   onRemove,
   onUpdate,
   showComment,
-  index,
   isDragging,
-  isDragOver,
-  onDragStart,
-  onDragEnter,
-  onDragEnd,
-  onDrop,
+  dragHandleProps,
 }: HeaderSetting & {
   showComment: boolean;
   onRemove: (id: string) => void;
   onUpdate: (header: HeaderSetting) => void;
-  index: number;
   isDragging: boolean;
-  isDragOver: boolean;
-  onDragStart: () => void;
-  onDragEnter: () => void;
-  onDragEnd: () => void;
-  onDrop: () => void;
+  dragHandleProps?: DraggableProvidedDragHandleProps | null;
 }) => {
   const updateHeader = (patch: Partial<HeaderSetting>) => {
     onUpdate({
@@ -103,50 +94,19 @@ const HeaderRow = ({
 
   return (
     <div
-      className={`header-row${showComment ? "" : " header-row--comments-hidden"}${isDragging ? " header-row--dragging" : ""}${isDragOver ? " header-row--drag-over" : ""}${!headerEnabled ? " header-row--disabled" : ""}`}
+      className={`header-row${showComment ? "" : " header-row--comments-hidden"}${isDragging ? " header-row--dragging" : ""}${!headerEnabled ? " header-row--disabled" : ""}`}
       data-headerid={id}
       data-testid="header-row"
-      onDragEnter={(e) => {
-        e.preventDefault();
-        onDragEnter();
-      }}
-      onDragOver={(e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
-      }}
-      onDrop={(e) => {
-        e.preventDefault();
-        onDrop();
-      }}
     >
       <div className="header-row__checkbox">
-        <Draggable
-          role="img"
-          aria-label="Draggable"
-          className={`draggable-icon${isDragging ? " draggable-icon--dragging" : ""}`}
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.effectAllowed = "move";
-            e.dataTransfer.setData("text/plain", String(index));
-            onDragStart();
-          }}
-          onDragEnter={(e) => {
-            e.preventDefault();
-            onDragEnter();
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = "move";
-          }}
-          onDragLeave={(e) => {
-            e.preventDefault();
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            onDrop();
-          }}
-          onDragEnd={onDragEnd}
-        />
+        <div
+          className={`draggable-icon-handle${isDragging ? " draggable-icon-handle--dragging" : ""}`}
+          aria-label="Reorder header"
+          data-testid="header-drag-handle"
+          {...dragHandleProps}
+        >
+          <DraggableIcon aria-hidden="true" className="draggable-icon" />
+        </div>
         <label className="toggle-switch">
           <input
             type="checkbox"

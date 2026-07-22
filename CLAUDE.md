@@ -214,3 +214,32 @@ browser would get silently flipped back by the other browser's next push.
 - `declarativeNetRequest` rule-generation tests compare against committed
   JSON fixtures (`src/background/__fixtures__/rules/`). Regenerate with
   `bun run test:update-fixtures` when a change is intentional.
+- Testing `@hello-pangea/dnd` (header drag-and-drop, `headersList/index.tsx`)
+  with Playwright: a single instant `mouse.move` jump from source to target
+  (or Playwright's default `dragTo()`) reads as a click, not a drag - the
+  mouse sensor only starts once the pointer clears a small threshold via real
+  intermediate `mousemove` events. Use `HeaderSection.dragHeaderTo`, which
+  moves in many small steps. `onDragEnd` (and the resulting save) also
+  settle asynchronously after the drop - assert with `expect.poll(...)`, not
+  a fixed wait or an immediate check, or the test is flaky in either
+  direction (too fast: races the commit; a guessed fixed sleep: occasionally
+  still too short). See `header-drag.spec.ts`.
+
+## Header drag-and-drop (`headersList/index.tsx`)
+
+Uses `@hello-pangea/dnd` (a maintained react-beautiful-dnd fork; the
+original is unmaintained and has known React 18+ strict-mode breakage).
+Two non-obvious requirements when touching this:
+- The drag handle element must be a real `HTMLElement`, not an `<svg>` -
+  `@hello-pangea/dnd` explicitly rejects `SVGElement` handles at runtime
+  (`drag handle needs to be a HTMLElement`). The handle is a wrapping `<div>`
+  (`.draggable-icon-handle`) that receives `dragHandleProps`; the SVG icon
+  inside it is decorative (`aria-hidden`) only.
+- `saveHeaders` (`useHeaderOperations.ts`) must NOT re-index header ids on a
+  reorder. `@hello-pangea/dnd` tracks each row by its `draggableId` (the
+  header's own id) across a drag gesture to compute the slide animation -
+  reassigning ids on the very reorder it's animating looks like "every row
+  removed, new ones added" instead of "these rows moved," breaking the
+  animation. Reordering never changes the id set or count, so leaving ids
+  alone is safe; `_reIndexHeaders` is still needed (and still used) by
+  add/removeHeader, which do change the count.

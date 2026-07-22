@@ -83,16 +83,20 @@ function useHeaderOperations({ pagesData, setPagesData, recordHistory }: UseHead
   };
 
   /**
-   * Allows you to save the headers data after a change.
-   * The function WILL re-index the headers to avoid conflicts
+   * Allows you to save a re-ordered (drag-and-drop or sort) headers array.
+   * Ids are kept as-is rather than re-indexed: @hello-pangea/dnd tracks each
+   * row by its draggableId (the header's id) across a drag gesture, so
+   * reassigning ids here on the very reorder it's animating would present as
+   * "every row removed and a new one added" instead of "these rows moved",
+   * breaking the drop animation. Safe because a reorder never changes the id
+   * set or count - only add/removeHeader do, which is what _reIndexHeaders
+   * guards against.
    * @param newHeaders | The new headers array to save
    * @param pageId | The page that the headers belong to
    */
   const saveHeaders = (newHeaders: HeaderSetting[], pageId: number) => {
-    const reIndexedHeaders = _reIndexHeaders(newHeaders);
-
     const newPages = pagesData.pages.map((page) =>
-      page.id === pageId ? { ...page, headers: reIndexedHeaders, lastModified: Date.now() } : page
+      page.id === pageId ? { ...page, headers: newHeaders, lastModified: Date.now() } : page
     );
 
     setPagesData((prev) => ({
