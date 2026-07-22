@@ -8,6 +8,7 @@ import {
   useSettingsActions,
 } from "../../context/settingsContext";
 import { getSyncStatus } from "../../utils/sync/syncStatus";
+import { cx } from "../../utils/cx";
 import "./index.css";
 
 interface SettingsPageProps {
@@ -69,11 +70,9 @@ const SettingsPage = ({ hasReviewed, onOpenReview }: SettingsPageProps) => {
         />
         {syncEnabled && (
           <p
-            className={
-              syncStatus.pending
-                ? "settings-page__sync-status settings-page__sync-status--pending"
-                : "settings-page__sync-status"
-            }
+            className={cx("settings-page__sync-status", {
+              "settings-page__sync-status--pending": syncStatus.pending,
+            })}
             data-testid="sync-status"
           >
             {syncStatus.label}

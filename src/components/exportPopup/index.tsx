@@ -6,6 +6,7 @@ import Divider from "../divider";
 import { downloadJSONFile } from "../../utils/io/download";
 import { useAlert } from "../../context/alertContext";
 import Export from "../icons/Export";
+import { cx } from "../../utils/cx";
 
 const ExportPopup = ({ pages }: { pages: Page[] }) => {
   const [show, setShow] = useState(false);
@@ -63,8 +64,8 @@ const ExportPopup = ({ pages }: { pages: Page[] }) => {
         onClick={_handleClick}
         testId="export-button"
       />
-      <div className={`export-popup__backdrop ${show ? "show" : ""}`}></div>
-      <div className={`export-popup ${show ? "show" : ""}`} ref={popupRef} data-testid="export-popup">
+      <div className={cx("export-popup__backdrop", { show })}></div>
+      <div className={cx("export-popup", { show })} ref={popupRef} data-testid="export-popup">
         <div className="export-popup__title">
           <h2>Export Pages</h2>
         </div>

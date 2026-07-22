@@ -5,6 +5,7 @@ import "./index.css";
 import Button from "../button";
 import ThreeDots from "../icons/ThreeDots";
 import Settings from "../icons/Settings";
+import { cx } from "../../utils/cx";
 
 const PageOptionsDropdown = ({
   page,
@@ -65,7 +66,7 @@ const PageOptionsDropdown = ({
         />
       </div>
       <div
-        className={`page-options-dropdown ${show && "active"}`}
+        className={cx("page-options-dropdown", { active: show })}
         ref={dropdownRef}
         style={{
           top: (optionButtonLocation?.bottom || 0) + 5,

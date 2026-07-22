@@ -1,4 +1,5 @@
 import "./index.css";
+import { cx } from "../../utils/cx";
 
 const Divider = ({
   thin = false,
@@ -9,9 +10,11 @@ const Divider = ({
 }) => {
   return (
     <div
-      className={`divider ${vertical ? "vertical" : "horizontal"} ${
-        thin ? "thin" : ""
-      }`}
+      className={cx(
+        "divider",
+        vertical ? "vertical" : "horizontal",
+        { thin }
+      )}
     ></div>
   );
 };

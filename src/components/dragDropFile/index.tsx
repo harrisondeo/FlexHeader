@@ -4,6 +4,7 @@ import Import from "../icons/Import";
 import Check from "../icons/Check";
 import ErrorIcon from "../icons/ErrorIcon";
 import WarningIcon from "../icons/Warning";
+import { cx } from "../../utils/cx";
 
 interface DragDropFileProps {
   importSettings: (file: File) => Promise<{ warnings: string[] }>;
@@ -90,7 +91,9 @@ const DragDropFile = ({
   return (
     <div className="drag-drop-file__wrapper">
       <form
-        className={`drag-drop-file ${variant === "large" ? "drag-drop-file--large" : ""}`}
+        className={cx("drag-drop-file", {
+          "drag-drop-file--large": variant === "large",
+        })}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -106,7 +109,7 @@ const DragDropFile = ({
         />
         <label
           htmlFor={inputFileId}
-          className={`drag-drop-file__label${isDragging ? " dragging" : ""}`}
+          className={cx("drag-drop-file__label", { dragging: isDragging })}
         >
           <div>
             <Import role="img" aria-label="Import" width={32} height={32} />
