@@ -12,6 +12,7 @@ import { isRunningInActionPopup } from "./utils/browserContext";
 import HeadersList from "./components/headersList";
 import PageTitle from "./components/pageTitle";
 import { useSettingsState, useSettingsActions } from "./context/settingsContext";
+import { cx } from "./utils/cx";
 
 function App() {
   const { selectedPage, currentPage, darkModeEnabled } = useSettingsState();
@@ -44,7 +45,7 @@ function App() {
 
   if (!isRunningInActionPopup()) {
     return (
-      <div className={`app app--full-page ${darkModeEnabled ? "darkmode" : ""}`}>
+      <div className={cx("app", "app--full-page", { darkmode: darkModeEnabled })}>
         <SettingsPage hasReviewed={userReviewed} onOpenReview={openReviewPage} />
         <Alert />
       </div>
@@ -52,7 +53,7 @@ function App() {
   }
 
   return (
-    <div className={`app ${darkModeEnabled ? "darkmode" : ""}`}>
+    <div className={cx("app", { darkmode: darkModeEnabled })}>
       <div className="app__container">
         <AppHeader />
         <div className="app__body">

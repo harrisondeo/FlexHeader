@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { HeaderSetting } from "../../utils/settings";
 import Button from "../button";
 import Sort from "../icons/Sort";
+import { cx } from "../../utils/cx";
 import "./index.css";
 
 type SortField =
@@ -87,7 +88,7 @@ const SortHeadersDropdown = ({
         />
       </div>
       <div
-        className={`sort-headers-dropdown ${show ? "active" : ""}`}
+        className={cx("sort-headers-dropdown", { active: show })}
         ref={dropdownRef}
         style={{
           top: (buttonLocation?.bottom || 0) + 5,

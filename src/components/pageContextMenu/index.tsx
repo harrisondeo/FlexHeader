@@ -6,6 +6,7 @@ import Power from "../icons/Power";
 import Pause from "../icons/Pause";
 import Duplicate from "../icons/Duplicate";
 import Delete from "../icons/Delete";
+import { cx } from "../../utils/cx";
 
 interface PageContextMenuProps {
   page: Page | undefined;
@@ -93,11 +94,10 @@ export const PageContextMenu = ({
       <div className="page-context-menu__item">
         <button
           type="button"
-          className={`page-context-menu__button ${
-            page.keepEnabled
-              ? "page-context-menu__button--background-active"
-              : "page-context-menu__button--background"
-          }`}
+          className={cx("page-context-menu__button", {
+            "page-context-menu__button--background-active": page.keepEnabled,
+            "page-context-menu__button--background": !page.keepEnabled,
+          })}
           onClick={handleToggle}
           aria-label={
             page.keepEnabled
@@ -113,11 +113,10 @@ export const PageContextMenu = ({
       <div className="page-context-menu__item">
         <button
           type="button"
-          className={`page-context-menu__button ${
-            page.paused
-              ? "page-context-menu__button--paused-active"
-              : "page-context-menu__button--paused"
-          }`}
+          className={cx("page-context-menu__button", {
+            "page-context-menu__button--paused-active": page.paused,
+            "page-context-menu__button--paused": !page.paused,
+          })}
           onClick={handleTogglePause}
           aria-label={page.paused ? "Resume page" : "Pause page"}
           data-testid="page-context-toggle-pause"

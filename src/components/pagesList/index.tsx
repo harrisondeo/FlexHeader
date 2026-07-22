@@ -4,6 +4,7 @@ import Button from "../button";
 import PageContextMenu from "../pageContextMenu";
 import CollapseArrow from "../icons/CollapseArrow";
 import Pause from "../icons/Pause";
+import { cx } from "../../utils/cx";
 import "./index.css";
 import {
   useSettingsState,
@@ -48,7 +49,7 @@ export const PagesList = () => {
 
   return (
     <div
-      className={`pages-list ${collapsed ? "pages-list--collapsed" : ""}`}
+      className={cx("pages-list", { "pages-list--collapsed": collapsed })}
       data-testid="pages-list"
     >
       <div className="pages-list__header">
@@ -66,9 +67,9 @@ export const PagesList = () => {
           <Button
             content={
               <CollapseArrow
-                className={`pages-list__collapse-icon ${
-                  collapsed ? "" : "pages-list__collapse-icon--expanded"
-                }`}
+                className={cx("pages-list__collapse-icon", {
+                  "pages-list__collapse-icon--expanded": !collapsed,
+                })}
               />
             }
             size="small"
@@ -127,11 +128,12 @@ const PageListItem = ({
 
   return (
     <div
-      className={`page-list-item ${backgroundActive ? "background" : ""} ${
-        active ? "active" : ""
-      } ${paused ? "paused" : ""} ${
-        collapsed ? "page-list-item--collapsed" : ""
-      }`}
+      className={cx("page-list-item", {
+        background: backgroundActive,
+        active,
+        paused,
+        "page-list-item--collapsed": collapsed,
+      })}
       onClick={() => onClick(page.id)}
       onContextMenu={onContextMenu}
       data-testid="page-list-item"
@@ -139,9 +141,9 @@ const PageListItem = ({
       title={paused ? `${page.name} (paused)` : page.name}
     >
       <div
-        className={`page-list-item__background__indicator ${
-          backgroundActive ? "active" : ""
-        }`}
+        className={cx("page-list-item__background__indicator", {
+          active: backgroundActive,
+        })}
       ></div>
       {collapsed ? (
         <span className="page-list-item__initial">{initial}</span>

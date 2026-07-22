@@ -3,6 +3,7 @@ import type * as React from "react";
 import type { DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { HeaderSetting } from "../../utils/settings";
 import { POPULAR_HEADER_NAMES } from "../../constants";
+import { cx } from "../../utils/cx";
 import Button from "../button";
 import "./index.css";
 import DraggableIcon from "../icons/Draggable";
@@ -94,13 +95,19 @@ const HeaderRow = ({
 
   return (
     <div
-      className={`header-row${showComment ? "" : " header-row--comments-hidden"}${isDragging ? " header-row--dragging" : ""}${!headerEnabled ? " header-row--disabled" : ""}`}
+      className={cx("header-row", {
+        "header-row--comments-hidden": !showComment,
+        "header-row--dragging": isDragging,
+        "header-row--disabled": !headerEnabled,
+      })}
       data-headerid={id}
       data-testid="header-row"
     >
       <div className="header-row__checkbox">
         <div
-          className={`draggable-icon-handle${isDragging ? " draggable-icon-handle--dragging" : ""}`}
+          className={cx("draggable-icon-handle", {
+            "draggable-icon-handle--dragging": isDragging,
+          })}
           aria-label="Reorder header"
           data-testid="header-drag-handle"
           {...dragHandleProps}
