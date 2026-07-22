@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { HeaderSetting } from "../../utils/settings";
 import HeaderRow from "../headerRow";
 import "./index.css";
@@ -26,8 +26,6 @@ const HeadersList = () => {
   const currentPageId = currentPage.id;
   const headers = currentPage.headers;
   const showComments = currentPage.showHeaderComments;
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const handleRemoveHeader = (id: string) => {
     removeHeader(currentPageId, id);
@@ -37,68 +35,65 @@ const HeadersList = () => {
     updateHeader(currentPageId, header);
   };
 
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index);
-  };
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
 
-  const handleDragEnter = (index: number) => {
-    setDragOverIndex(index);
-  };
+    const reorderedHeaders = reorder(
+      headers,
+      result.source.index,
+      result.destination.index
+    );
 
-  const handleDragEnd = () => {
-    setDraggedIndex(null);
-    setDragOverIndex(null);
-  };
-
-  const handleDrop = (targetIndex: number) => {
-    if (draggedIndex === null || draggedIndex === targetIndex) {
-      setDraggedIndex(null);
-      setDragOverIndex(null);
-      return;
-    }
-
-    const reorderedHeaders = reorder(headers, draggedIndex, targetIndex);
     saveHeaders(reorderedHeaders, currentPageId);
-    setDraggedIndex(null);
-    setDragOverIndex(null);
   };
 
   return (
-    <div className="app__body__headers">
-      {headers.map(
-        (
-          {
-            id,
-            headerName,
-            headerValue,
-            headerComment,
-            headerEnabled,
-            headerType,
-          },
-          index
-        ) => (
-          <HeaderRow
-            key={`header-row__${id}`}
-            id={id}
-            headerName={headerName}
-            headerValue={headerValue}
-            headerComment={headerComment}
-            headerEnabled={headerEnabled}
-            headerType={headerType}
-            showComment={showComments}
-            onRemove={handleRemoveHeader}
-            onUpdate={handleUpdateHeader}
-            index={index}
-            isDragging={draggedIndex === index}
-            isDragOver={dragOverIndex === index}
-            onDragStart={() => handleDragStart(index)}
-            onDragEnter={() => handleDragEnter(index)}
-            onDragEnd={handleDragEnd}
-            onDrop={() => handleDrop(index)}
-          />
-        )
-      )}
-    </div>
+    <DragDropContext onDragEnd={handleDragEnd}>
+      <Droppable droppableId="droppable-headers">
+        {(provided) => (
+          <div
+            {...provided.droppableProps}
+            ref={provided.innerRef}
+            className="app__body__headers"
+          >
+            {headers.map(
+              (
+                {
+                  id,
+                  headerName,
+                  headerValue,
+                  headerComment,
+                  headerEnabled,
+                  headerType,
+                },
+                index
+              ) => (
+                <Draggable key={id} draggableId={id} index={index}>
+                  {(provided, snapshot) => (
+                    <div ref={provided.innerRef} {...provided.draggableProps}>
+                      <HeaderRow
+                        id={id}
+                        headerName={headerName}
+                        headerValue={headerValue}
+                        headerComment={headerComment}
+                        headerEnabled={headerEnabled}
+                        headerType={headerType}
+                        showComment={showComments}
+                        onRemove={handleRemoveHeader}
+                        onUpdate={handleUpdateHeader}
+                        isDragging={snapshot.isDragging}
+                        dragHandleProps={provided.dragHandleProps}
+                      />
+                    </div>
+                  )}
+                </Draggable>
+              )
+            )}
+            {provided.placeholder}
+          </div>
+        )}
+      </Droppable>
+    </DragDropContext>
   );
 };
 
