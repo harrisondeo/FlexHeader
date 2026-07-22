@@ -13,7 +13,7 @@ export default defineConfig({
     firefoxDataCollection: true,
   },
   manifest: {
-    name: "HTTP Header Modifier & Request Modifier — FlexHeaders",
+    name: "Modify HTTP Header & Requests (HTTP Header) — FlexHeaders",
     description:
       "Easily modify, add, or delete HTTP request and response headers. A powerful HTTP header editor for developers.",
     icons: {
