@@ -1,6 +1,6 @@
 {
   "name": "flex-headers",
-  "version": "1.9.2",
+  "version": "1.9.3",
   "private": true,
   "dependencies": {
     "@testing-library/jest-dom": "^6.9.1",
