@@ -16,7 +16,14 @@ import { useSettingsState, useSettingsActions } from "./context/settingsContext"
 function App() {
   const { selectedPage, currentPage, darkModeEnabled } = useSettingsState();
   const { undo, redo } = useSettingsActions();
-  const { shouldShow: shouldShowReviewPrompt, loading: reviewPromptLoading, hidePrompt } = useReviewPrompt();
+  const {
+    shouldShow: shouldShowReviewPrompt,
+    loading: reviewPromptLoading,
+    hidePrompt,
+    notifyPositiveAction,
+    userReviewed,
+    openReviewPage,
+  } = useReviewPrompt();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -38,7 +45,7 @@ function App() {
   if (!isRunningInActionPopup()) {
     return (
       <div className={`app app--full-page ${darkModeEnabled ? "darkmode" : ""}`}>
-        <SettingsPage />
+        <SettingsPage hasReviewed={userReviewed} onOpenReview={openReviewPage} />
         <Alert />
       </div>
     );
@@ -65,7 +72,11 @@ function App() {
             </div>
           </div>
         </div>
-        <AppFooter />
+        <AppFooter
+          onPositiveAction={notifyPositiveAction}
+          hasReviewed={userReviewed}
+          onOpenReview={openReviewPage}
+        />
         <Alert />
         {!reviewPromptLoading && shouldShowReviewPrompt && (
           <ReviewPrompt

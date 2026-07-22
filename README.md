@@ -7,6 +7,12 @@ Install from the [Chrome Webstore](https://chromewebstore.google.com/detail/gffp
 
 <img width="1400" height="560" alt="marquee" src="https://github.com/user-attachments/assets/ad610565-8ca8-4a01-bcbc-851a5f5dcb89" />
 
+#### Enjoying FlexHeaders?
+
+If FlexHeaders has been useful to you, consider leaving a [review on the Chrome Web Store](https://chromewebstore.google.com/detail/flexheaders-modify-http-h/gffpeamhhldhibdngenbfciboinanppf/reviews?utm_source=in-extension). Reviews are one of the biggest factors in how the extension gets discovered - a higher rating and more reviews mean more people find it, which in turn means more feedback, more bug reports, and more reasons to keep improving it.
+
+I know asking for reviews can feel a bit annoying as a user, and I've tried to keep the in-app prompts small and easy to ignore for that reason. But for a solo, free, open-source project like this one, reviews are one of the few growth levers available and they genuinely help keep the project alive and maintained - so if you have a spare minute, it's appreciated.
+
 #### Storage architecture
 
 Settings are split across local and sync storage with a merge/tombstone

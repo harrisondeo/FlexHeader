@@ -11,6 +11,9 @@ export const SYNC_ENABLED_KEY = "syncEnabled"; // Whether to sync settings acros
 export const PAGE_TOMBSTONES_KEY = "page_tombstones"; // Records deleted pageIds so deletions can propagate through the additive page merge
 export const TOMBSTONE_RETENTION_MS = 90 * 24 * 60 * 60 * 1000; // How long a tombstone is kept before being pruned
 export const REVIEW_PROMPT_KEY = "reviewPrompt";
+export const REVIEW_PROMPT_MIN_DAYS_SINCE_INSTALL = 3; // Never show the prompt before the user has had this long with the extension
+export const REVIEW_PROMPT_DISMISS_COOLDOWN_DAYS = 14; // Re-show this many days after an explicit dismiss, rather than never again
+export const REVIEW_PROMPT_ENGAGEMENT_HEADER_THRESHOLD = 3; // Configuring at least this many headers is a strong enough positive signal to show the prompt sooner than REVIEW_PROMPT_MIN_DAYS_SINCE_INSTALL would otherwise allow
 export const REVIEWS_URL = "https://chromewebstore.google.com/detail/flexheaders-modify-http-h/gffpeamhhldhibdngenbfciboinanppf/reviews?utm_source=in-extension";
 export const ISSUES_URL = "https://github.com/harrisondeo/FlexHeader/issues";
 export const ERRORS_STATE_KEY = "flexheader_errors";

@@ -10,7 +10,12 @@ import {
 import { getSyncStatus } from "../../utils/sync/syncStatus";
 import "./index.css";
 
-const SettingsPage = () => {
+interface SettingsPageProps {
+  hasReviewed?: boolean;
+  onOpenReview?: () => void;
+}
+
+const SettingsPage = ({ hasReviewed, onOpenReview }: SettingsPageProps) => {
   const { pages, syncEnabled, lastSyncTime, localModifiedTime, historyEnabled } = useSettingsState();
   const { importSettings, toggleSync, injectError, clearErrors, toggleHistoryEnabled } = useSettingsActions();
   const syncStatus = getSyncStatus(lastSyncTime, localModifiedTime);
@@ -99,6 +104,22 @@ const SettingsPage = () => {
           </span>
         </label>
       </div>
+
+      {!hasReviewed && onOpenReview && (
+        <>
+          <Divider />
+          <div className="settings-page__review-nudge">
+            <button
+              type="button"
+              className="settings-page__review-nudge-button"
+              onClick={onOpenReview}
+              data-testid="review-nudge"
+            >
+              Enjoying FlexHeaders? ★ Leave a review
+            </button>
+          </div>
+        </>
+      )}
 
       {import.meta.env.DEV && (
         <>

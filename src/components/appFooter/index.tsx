@@ -10,8 +10,14 @@ import {
   useSettingsActions,
 } from "../../context/settingsContext";
 
-const AppFooter = () => {
-  const { currentPage } = useSettingsState();
+interface AppFooterProps {
+  onPositiveAction?: (engagementCount: number) => void;
+  hasReviewed?: boolean;
+  onOpenReview?: () => void;
+}
+
+const AppFooter = ({ onPositiveAction, hasReviewed, onOpenReview }: AppFooterProps) => {
+  const { pages, currentPage } = useSettingsState();
   const { addHeader, addFilter } = useSettingsActions();
   const currentPageId = currentPage.id;
   const [headerToFocus, setHeaderToFocus] = useState<string | null>(null);
@@ -41,6 +47,9 @@ const AppFooter = () => {
 
     if (newHeader?.id) {
       setHeaderToFocus(newHeader.id);
+
+      const totalHeaders = pages.reduce((sum, page) => sum + page.headers.length, 0) + 1;
+      onPositiveAction?.(totalHeaders);
     }
   };
 
@@ -60,6 +69,16 @@ const AppFooter = () => {
         <Button content="Add Header" onClick={handleAddHeader} testId="add-header" />
         <Button content="Add Filter Rule" onClick={handleAddFilter} testId="add-filter" />
       </div>
+      {!hasReviewed && onOpenReview && (
+        <button
+          type="button"
+          className="app-footer__review-nudge"
+          onClick={onOpenReview}
+          data-testid="review-nudge"
+        >
+          Enjoying FlexHeaders? ★ Leave a review
+        </button>
+      )}
     </div>
   );
 };

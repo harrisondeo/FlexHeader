@@ -1,14 +1,8 @@
 import Button from "../button";
 import { REVIEW_PROMPT_KEY, REVIEWS_URL } from "../../constants";
 import browser from "webextension-polyfill";
+import { ReviewPromptData } from "../../utils/hooks/useReviewPrompt";
 import "./index.css";
-
-export interface ReviewPromptData {
-  installDate: number;
-  lastShownDate: number;
-  userReviewed: boolean;
-  dismissed: boolean;
-}
 
 interface ReviewPromptProps {
   onDismiss: () => void;

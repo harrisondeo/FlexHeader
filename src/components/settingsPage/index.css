@@ -89,3 +89,22 @@
   font-size: 0.9rem;
   opacity: 0.9;
 }
+
+.settings-page__review-nudge {
+  padding: 0.5rem 0;
+  text-align: center;
+}
+
+.settings-page__review-nudge-button {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.settings-page__review-nudge-button:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
