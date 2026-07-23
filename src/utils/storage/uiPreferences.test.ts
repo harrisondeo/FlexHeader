@@ -1,30 +1,33 @@
-import { PAGES_LIST_COLLAPSED_KEY } from "../../constants";
-import {
-  getPagesListCollapsed,
-  setPagesListCollapsed,
-} from "./uiPreferences";
+import { getUiPreference, setUiPreference } from "./uiPreferences";
+
+const TEST_KEY = "test_ui_preference";
 
 beforeEach(() => {
   localStorage.clear();
 });
 
-describe("pages list preference", () => {
-  it("defaults to expanded", () => {
-    expect(getPagesListCollapsed()).toBe(false);
+describe("UI preferences", () => {
+  it("returns the supplied default when a preference is missing", () => {
+    expect(getUiPreference(TEST_KEY, false)).toBe(false);
   });
 
-  it("persists the collapsed state", () => {
-    setPagesListCollapsed(true);
+  it("persists and restores primitive values", () => {
+    setUiPreference(TEST_KEY, true);
 
-    expect(localStorage.getItem(PAGES_LIST_COLLAPSED_KEY)).toBe("true");
-    expect(getPagesListCollapsed()).toBe(true);
+    expect(getUiPreference(TEST_KEY, false)).toBe(true);
   });
 
-  it("persists the expanded state", () => {
-    localStorage.setItem(PAGES_LIST_COLLAPSED_KEY, "true");
+  it("supports structured preferences", () => {
+    const preference = { theme: "dark", compact: true };
 
-    setPagesListCollapsed(false);
+    setUiPreference(TEST_KEY, preference);
 
-    expect(getPagesListCollapsed()).toBe(false);
+    expect(getUiPreference(TEST_KEY, {})).toEqual(preference);
+  });
+
+  it("returns the default when stored data is invalid", () => {
+    localStorage.setItem(TEST_KEY, "not-json");
+
+    expect(getUiPreference(TEST_KEY, "default")).toBe("default");
   });
 });

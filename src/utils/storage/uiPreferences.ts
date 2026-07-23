@@ -1,17 +1,16 @@
-import { PAGES_LIST_COLLAPSED_KEY } from "../../constants";
-
-export const getPagesListCollapsed = (): boolean => {
+export const getUiPreference = <T>(key: string, defaultValue: T): T => {
   try {
-    return localStorage.getItem(PAGES_LIST_COLLAPSED_KEY) === "true";
+    const storedValue = localStorage.getItem(key);
+    return storedValue === null ? defaultValue : (JSON.parse(storedValue) as T);
   } catch {
-    return false;
+    return defaultValue;
   }
 };
 
-export const setPagesListCollapsed = (collapsed: boolean): void => {
+export const setUiPreference = <T>(key: string, value: T): void => {
   try {
-    localStorage.setItem(PAGES_LIST_COLLAPSED_KEY, String(collapsed));
+    localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // Storage failures should not prevent the sidebar from toggling.
+    // UI preference persistence should never block the related interaction.
   }
 };

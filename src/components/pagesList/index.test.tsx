@@ -3,15 +3,15 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  getPagesListCollapsed: vi.fn(),
-  setPagesListCollapsed: vi.fn(),
+  getUiPreference: vi.fn(),
+  setUiPreference: vi.fn(),
   addPage: vi.fn(),
   changeSelectedPage: vi.fn(),
 }));
 
 vi.mock("../../utils/storage/uiPreferences", () => ({
-  getPagesListCollapsed: mocks.getPagesListCollapsed,
-  setPagesListCollapsed: mocks.setPagesListCollapsed,
+  getUiPreference: mocks.getUiPreference,
+  setUiPreference: mocks.setUiPreference,
 }));
 
 vi.mock("../../context/settingsContext", () => ({
@@ -40,13 +40,13 @@ import { PagesList } from ".";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.getPagesListCollapsed.mockReturnValue(false);
+  mocks.getUiPreference.mockReturnValue(false);
   Element.prototype.scrollIntoView = vi.fn();
 });
 
 describe("PagesList collapsed state", () => {
   it("restores the saved state and persists the next toggle", async () => {
-    mocks.getPagesListCollapsed.mockReturnValue(true);
+    mocks.getUiPreference.mockReturnValue(true);
     const user = userEvent.setup();
     render(<PagesList />);
 
@@ -59,7 +59,10 @@ describe("PagesList collapsed state", () => {
     expect(screen.getByTestId("pages-list")).not.toHaveClass(
       "pages-list--collapsed"
     );
-    expect(mocks.setPagesListCollapsed).toHaveBeenCalledWith(false);
+    expect(mocks.setUiPreference).toHaveBeenCalledWith(
+      "pages_list_collapsed",
+      false
+    );
   });
 
   it("defaults to an expanded sidebar", () => {
