@@ -10,11 +10,18 @@ import {
   useSettingsState,
   useSettingsActions,
 } from "../../context/settingsContext";
+import {
+  getUiPreference,
+  setUiPreference,
+} from "../../utils/storage/uiPreferences";
+import { PAGES_LIST_COLLAPSED_KEY } from "../../constants";
 
 export const PagesList = () => {
   const { pages, currentPage } = useSettingsState();
   const { addPage, changeSelectedPage } = useSettingsActions();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() =>
+    getUiPreference(PAGES_LIST_COLLAPSED_KEY, false)
+  );
   const [contextMenu, setContextMenu] = useState<{
     pageId: number;
     x: number;
@@ -47,6 +54,12 @@ export const PagesList = () => {
     activePage?.scrollIntoView({ behavior: "instant", block: "nearest" });
   }, [currentPage]);
 
+  const toggleCollapsed = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    setUiPreference(PAGES_LIST_COLLAPSED_KEY, next);
+  };
+
   return (
     <div
       className={cx("pages-list", { "pages-list--collapsed": collapsed })}
@@ -74,7 +87,7 @@ export const PagesList = () => {
             }
             size="small"
             color="secondary"
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={toggleCollapsed}
             ariaLabel={collapsed ? "Expand pages list" : "Collapse pages list"}
             title={collapsed ? "Expand pages list" : "Collapse pages list"}
             testId="toggle-pages-list"
