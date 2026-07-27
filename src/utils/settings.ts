@@ -15,6 +15,7 @@ import useHeaderOperations from "./hooks/useHeaderOperations";
 import usePageOperations from "./hooks/usePageOperations";
 import useSyncToggle from "./hooks/useSyncToggle";
 import { importSettingsFile } from "./io/importSettings";
+import { setActionBadge, setActionIcon } from "../background/icon";
 import type { Page, PagesData, SettingsV3Meta } from "./domain/schemas";
 
 export * from "./domain/schemas";
@@ -205,19 +206,9 @@ function useFlexHeaderSettings() {
   });
 
   useEffect(() => {
-    const selectedPage = pagesData.pages.find((page) => page.enabled);
-    if (selectedPage && !selectedPage.paused) {
-      const activeHeaders = selectedPage.headers.filter(
-        (header) => header.headerEnabled
-      );
-      browser.action.setBadgeText({
-        text: activeHeaders.length.toString(),
-      });
-    } else {
-      browser.action.setBadgeText({
-        text: "",
-      });
-    }
+    const selectedPage = pagesData.pages.find((page) => page.id === pagesData.selectedPage);
+    setActionBadge(selectedPage);
+    setActionIcon(selectedPage?.paused ?? false);
   }, [pagesData]);
 
   // Create a ref to track the previous pages data to prevent unnecessary saves

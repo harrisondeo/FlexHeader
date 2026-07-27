@@ -10,6 +10,7 @@ import { readPageStorage } from "../utils/storage/pageStorage";
 import { addStoredError, clearStoredErrors } from "../utils/storage/errors";
 
 import { buildRulesFromPages } from "./rules";
+import { setActionBadge, setActionIcon } from "./icon";
 
 export async function getAndApplyHeaderRules() {
   try {
@@ -36,6 +37,14 @@ export async function getAndApplyHeaderRules() {
       removeRuleIds: oldRuleIds,
       addRules: headers,
     });
+
+    const selectedPage = localSettings
+      ? pages.find((page) => page.id === localSettings.meta.selectedPage)
+      : undefined;
+    await Promise.all([
+      setActionBadge(selectedPage),
+      setActionIcon(selectedPage?.paused ?? false),
+    ]);
 
     // Clear apply errors once rules have been successfully updated
     await clearStoredErrors("apply");
