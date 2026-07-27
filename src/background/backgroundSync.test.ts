@@ -59,6 +59,11 @@ const browserMock = vi.hoisted(() => ({
     getDynamicRules: vi.fn().mockResolvedValue([]),
     updateDynamicRules: vi.fn().mockResolvedValue(undefined),
   },
+  action: {
+    setBadgeText: vi.fn().mockResolvedValue(undefined),
+    setBadgeBackgroundColor: vi.fn().mockResolvedValue(undefined),
+    setIcon: vi.fn().mockResolvedValue(undefined),
+  },
 }));
 
 vi.mock('webextension-polyfill', () => ({
@@ -66,7 +71,8 @@ vi.mock('webextension-polyfill', () => ({
   ...browserMock,
 }));
 
-import { syncRemoteToLocalStorage, syncLocalToRemoteStorage, initBackground } from './background';
+import { syncRemoteToLocalStorage, syncLocalToRemoteStorage, initBackground, getAndApplyHeaderRules } from './background';
+import { resetActionCache } from './icon';
 import { PAGE_KEY_PREFIX, SETTINGS_V3_META_KEY, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, LAST_MERGE_TIME_KEY, SELECTED_PAGE_KEY, SETTINGS_SAVE_DEBOUNCE_TIME } from '../constants';
 import type { PageTombstone } from '../utils/domain/pageMerge';
 
@@ -571,5 +577,53 @@ describe('debounced push-on-local-change (initBackground)', () => {
     await vi.advanceTimersByTimeAsync(SETTINGS_SAVE_DEBOUNCE_TIME + 100);
 
     expect(browserMock.storage.sync.set).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('getAndApplyHeaderRules icon/badge wiring', () => {
+  let localArea: MockArea;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetActionCache();
+    localArea = createMockArea();
+    browserMock.storage.local.get.mockImplementation(localArea.get);
+    browserMock.storage.local.set.mockImplementation(localArea.set);
+    browserMock.storage.local.remove.mockImplementation(localArea.remove);
+  });
+
+  it('shows the default icon and the active header count badge for a normal selected page', async () => {
+    seedArea(localArea, [createPage(0, 'Page A')], 0);
+
+    await getAndApplyHeaderRules();
+
+    expect(browserMock.action.setIcon).toHaveBeenCalledWith({ path: '/logo128.png' });
+    expect(browserMock.action.setBadgeText).toHaveBeenCalledWith({ text: '1' });
+  });
+
+  it('shows the paused icon and clears the badge when the selected page is paused', async () => {
+    const pausedPage = { ...createPage(0, 'Page A'), paused: true };
+    seedArea(localArea, [pausedPage], 0);
+
+    await getAndApplyHeaderRules();
+
+    expect(browserMock.action.setIcon).toHaveBeenCalledWith({ path: '/logo128-paused.png' });
+    expect(browserMock.action.setBadgeText).toHaveBeenCalledWith({ text: '' });
+  });
+
+  it('reflects the selected page, not just the first page', async () => {
+    const pages = [createPage(0, 'Page A'), { ...createPage(1, 'Page B'), paused: true }];
+    seedArea(localArea, pages, 1);
+
+    await getAndApplyHeaderRules();
+
+    expect(browserMock.action.setIcon).toHaveBeenCalledWith({ path: '/logo128-paused.png' });
+  });
+
+  it('shows the default icon and clears the badge when there is no selected page', async () => {
+    await getAndApplyHeaderRules();
+
+    expect(browserMock.action.setIcon).toHaveBeenCalledWith({ path: '/logo128.png' });
+    expect(browserMock.action.setBadgeText).toHaveBeenCalledWith({ text: '' });
   });
 });

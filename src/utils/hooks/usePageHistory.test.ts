@@ -22,6 +22,8 @@ const browserMock = vi.hoisted(() => ({
   },
   action: {
     setBadgeText: vi.fn().mockResolvedValue(undefined),
+    setBadgeBackgroundColor: vi.fn().mockResolvedValue(undefined),
+    setIcon: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
