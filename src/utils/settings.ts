@@ -4,8 +4,7 @@ import browser from "webextension-polyfill";
 import { SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, LAST_MERGE_TIME_KEY, LOCAL_MODIFIED_TIME_KEY, HISTORY_ENABLED_KEY, DARK_MODE_KEY } from "../constants";
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage/storage";
 import { getUiPreference, setUiPreference } from "./storage/uiPreferences";
-import { migrateDarkModePreference } from "./migrations/darkModeMigration";
-import { migrateHistoryEnabledPreference } from "./migrations/historyEnabledMigration";
+import { migrateUiPreference } from "./migrations/uiPreferenceMigration";
 import { log } from "./log";
 import { normalizePage } from "./domain/headers";
 import { applyTombstones, pruneExpiredTombstones, type PageTombstone } from "./domain/pageMerge";
@@ -290,14 +289,12 @@ function useFlexHeaderSettings() {
       clearPendingBursts();
     }
 
-    // Load dark mode setting - local only. This is a per-device preference
-    // (a user may want dark mode on one browser and light on another), not
-    // shared truth, so it's never synced (see background.ts's
-    // syncLocalToRemoteStorage). Persisted via uiPreferences (localStorage)
-    // rather than browser.storage.local, since it only needs to be read by
-    // UI pages, never the background worker.
+    // Load dark mode setting. Per-device preference, so it's never synced
+    // (see background.ts's syncLocalToRemoteStorage) and lives in
+    // localStorage via uiPreferences rather than browser.storage.local,
+    // since only UI pages need to read it, never the background worker.
     try {
-      await migrateDarkModePreference();
+      await migrateUiPreference(DARK_MODE_KEY);
       setDarkModeEnabled(getUiPreference(DARK_MODE_KEY, false));
     } catch (error) {
       console.error("Failed to load dark mode setting:", error);
@@ -311,9 +308,10 @@ function useFlexHeaderSettings() {
       console.error("Failed to load sync preference:", error);
     }
 
-    // Load undo/redo feature preference - local only, per-device.
+    // Load undo/redo feature preference - per-device, same storage pattern
+    // as dark mode above.
     try {
-      await migrateHistoryEnabledPreference();
+      await migrateUiPreference(HISTORY_ENABLED_KEY);
       setHistoryEnabled(getUiPreference(HISTORY_ENABLED_KEY, true));
     } catch (error) {
       console.error("Failed to load undo/redo history preference:", error);

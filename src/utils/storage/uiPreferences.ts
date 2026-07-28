@@ -6,13 +6,13 @@ import { DARK_MODE_KEY, HISTORY_ENABLED_KEY, PAGES_LIST_COLLAPSED_KEY } from "..
  * getUiPreference/setUiPreference enforce the correct type at compile time
  * and reject typos or one-off keys that would silently no-op.
  */
-interface UiPreferenceTypes {
+export interface UiPreferenceTypes {
   [PAGES_LIST_COLLAPSED_KEY]: boolean;
   [DARK_MODE_KEY]: boolean;
   [HISTORY_ENABLED_KEY]: boolean;
 }
 
-type UiPreferenceKey = keyof UiPreferenceTypes;
+export type UiPreferenceKey = keyof UiPreferenceTypes;
 
 export function getUiPreference<K extends UiPreferenceKey>(
   key: K,
