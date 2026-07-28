@@ -291,6 +291,7 @@ describe('Undo/redo history toggle', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     local = createStorageArea();
     const sync = createStorageArea();
 
@@ -319,7 +320,7 @@ describe('Undo/redo history toggle', () => {
     });
 
     expect(result.current.historyEnabled).toBe(false);
-    expect(local.store[HISTORY_ENABLED_KEY]).toBe(false);
+    expect(localStorage.getItem(HISTORY_ENABLED_KEY)).toBe('false');
   });
 
   it('stops recording and blocks undo/redo once disabled', async () => {

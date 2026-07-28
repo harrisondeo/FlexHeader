@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
-import { SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, LAST_MERGE_TIME_KEY, LOCAL_MODIFIED_TIME_KEY, HISTORY_ENABLED_KEY } from "../constants";
+import { SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, LAST_MERGE_TIME_KEY, LOCAL_MODIFIED_TIME_KEY, HISTORY_ENABLED_KEY, DARK_MODE_KEY } from "../constants";
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage/storage";
+import { getUiPreference, setUiPreference } from "./storage/uiPreferences";
+import { migrateUiPreference } from "./migrations/uiPreferenceMigration";
 import { log } from "./log";
 import { normalizePage } from "./domain/headers";
 import { applyTombstones, pruneExpiredTombstones, type PageTombstone } from "./domain/pageMerge";
@@ -287,18 +289,13 @@ function useFlexHeaderSettings() {
       clearPendingBursts();
     }
 
-    // Load dark mode setting - local only. This is a per-device preference
-    // (a user may want dark mode on one browser and light on another), not
-    // shared truth, so it's never synced (see background.ts's
-    // syncLocalToRemoteStorage).
+    // Load dark mode setting. Per-device preference, so it's never synced
+    // (see background.ts's syncLocalToRemoteStorage) and lives in
+    // localStorage via uiPreferences rather than browser.storage.local,
+    // since only UI pages need to read it, never the background worker.
     try {
-      const darkModeValue = await loadFromStorage("darkMode", false, ['local']);
-      setDarkModeEnabled(darkModeValue);
-
-      // If darkMode wasn't found in either storage, save the default value
-      if (darkModeValue === false) {
-        await saveToStorage("darkMode", false, 'local');
-      }
+      await migrateUiPreference(DARK_MODE_KEY);
+      setDarkModeEnabled(getUiPreference(DARK_MODE_KEY, false));
     } catch (error) {
       console.error("Failed to load dark mode setting:", error);
     }
@@ -311,10 +308,11 @@ function useFlexHeaderSettings() {
       console.error("Failed to load sync preference:", error);
     }
 
-    // Load undo/redo feature preference - local only, per-device.
+    // Load undo/redo feature preference - per-device, same storage pattern
+    // as dark mode above.
     try {
-      const historyEnabledValue = await loadFromStorage(HISTORY_ENABLED_KEY, true, ['local']);
-      setHistoryEnabled(historyEnabledValue);
+      await migrateUiPreference(HISTORY_ENABLED_KEY);
+      setHistoryEnabled(getUiPreference(HISTORY_ENABLED_KEY, true));
     } catch (error) {
       console.error("Failed to load undo/redo history preference:", error);
     }
@@ -466,11 +464,9 @@ function useFlexHeaderSettings() {
    */
   const toggleDarkMode = async () => {
     try {
-      const darkMode = await loadFromStorage("darkMode", false, ['local']);
-      const newDarkMode = !darkMode;
+      const newDarkMode = !getUiPreference(DARK_MODE_KEY, false);
 
-      // Save to local storage only, background service worker will sync it
-      await saveToStorage("darkMode", newDarkMode, 'local');
+      setUiPreference(DARK_MODE_KEY, newDarkMode);
       setDarkModeEnabled(newDarkMode);
     } catch (error) {
       console.error("Error toggling dark mode:", error);
@@ -484,7 +480,7 @@ function useFlexHeaderSettings() {
     try {
       const newHistoryEnabled = !historyEnabled;
 
-      await saveToStorage(HISTORY_ENABLED_KEY, newHistoryEnabled, 'local');
+      setUiPreference(HISTORY_ENABLED_KEY, newHistoryEnabled);
       setHistoryEnabled(newHistoryEnabled);
     } catch (error) {
       console.error("Error toggling undo/redo history:", error);
