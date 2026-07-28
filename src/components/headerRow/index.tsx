@@ -8,7 +8,6 @@ import Button from "../button";
 import "./index.css";
 import DraggableIcon from "../icons/Draggable";
 import Basket from "../icons/Basket";
-import ClearableInput from "../clearableInput";
 
 const HeaderRow = ({
   id,
@@ -126,7 +125,7 @@ const HeaderRow = ({
         </label>
       </div>
       <div className="header-row__name header-row__name--autocomplete">
-        <ClearableInput
+        <input
           ref={nameInputRef}
           type="text"
           placeholder="Header"
@@ -141,10 +140,6 @@ const HeaderRow = ({
           role="combobox"
           autoComplete="off"
           data-testid="header-name"
-          onClear={() => {
-            updateHeader({ headerName: "" });
-            setIsDropdownOpen(false);
-          }}
         />
         {filteredSuggestions.length > 0 && (
           <ul
@@ -169,26 +164,24 @@ const HeaderRow = ({
         )}
       </div>
       <div className="header-row__value">
-        <ClearableInput
+        <input
           type="text"
           placeholder="Value"
           value={headerValue}
           onChange={updateValue}
           onFocus={handleFocus}
           data-testid="header-value"
-          onClear={() => updateHeader({ headerValue: "" })}
         />
       </div>
       {showComment && (
         <div className="header-row__comment">
-          <ClearableInput
+          <input
             type="text"
             placeholder="Comment"
             value={headerComment}
             onChange={updateComment}
             onFocus={handleFocus}
             data-testid="header-comment"
-            onClear={() => updateHeader({ headerComment: "" })}
           />
         </div>
       )}

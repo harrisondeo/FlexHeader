@@ -6,7 +6,6 @@ import Button from "../button";
 import ThreeDots from "../icons/ThreeDots";
 import Settings from "../icons/Settings";
 import { cx } from "../../utils/cx";
-import ClearableInput from "../clearableInput";
 
 const PageOptionsDropdown = ({
   page,
@@ -76,12 +75,11 @@ const PageOptionsDropdown = ({
         }}
       >
         <div className="page-options-dropdown__item">
-          <ClearableInput
+          <input
             type="text"
             value={page.name}
             onChange={(e) => updatePageName(e.target.value, page.id)}
             data-testid="page-name-input"
-            onClear={() => updatePageName("", page.id)}
           />
         </div>
         <div className="page-options-dropdown__item">

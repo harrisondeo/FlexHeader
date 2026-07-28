@@ -3,7 +3,6 @@ import { FilterMode, FilterType, HeaderFilter } from "../../utils/settings";
 import Button from "../button";
 import "./index.css";
 import Basket from "../icons/Basket";
-import ClearableInput from "../clearableInput";
 
 const FilterRow = ({
   id,
@@ -78,7 +77,7 @@ const FilterRow = ({
         </select>
       </div>
       <div className="filter-row__value">
-        <ClearableInput
+        <input
           type="text"
           placeholder={placeholder}
           value={cachedFilterValue}
@@ -93,10 +92,6 @@ const FilterRow = ({
                 }
           }
           data-testid="filter-value"
-          onClear={() => {
-            setCachedFilterValue("");
-            updateFilter({ value: "" });
-          }}
         />
       </div>
       <div className="filter-row__remove" onClick={() => onRemove(id)}>
