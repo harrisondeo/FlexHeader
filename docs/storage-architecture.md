@@ -26,10 +26,19 @@ header data anywhere. `chrome.storage.local` never leaves the device it was
 written on. Only users who deliberately want cross-device access flip
 `syncEnabled` on.
 
-This is also why `darkMode` and `historyEnabled` are hardcoded to local-only
-storage rather than following the sync toggle — they're per-device UI
-preferences, not something a privacy-conscious user would expect (or want)
-propagated anywhere.
+This is also why per-device UI preferences never follow the sync toggle —
+they're not something a privacy-conscious user would expect (or want)
+propagated anywhere. `historyEnabled` (the undo/redo stack toggle) is
+hardcoded to `chrome.storage.local`; `darkMode` and other purely-cosmetic UI
+preferences (`pages_list_collapsed`, etc.) go a step further and live in
+`localStorage` via `src/utils/storage/uiPreferences.ts` instead, since they
+only need to be read by UI pages, never the background worker (which has no
+`localStorage` - it's a service worker with no DOM). `uiPreferences.ts` types
+each key's value up front (`UiPreferenceTypes`) so a typo'd or one-off key
+can't silently no-op. Existing users' `darkMode` value is carried over from
+its old `chrome.storage.local` location by a one-time migration
+(`src/utils/migrations/darkModeMigration.ts`) - see that file for the pattern
+to follow if another preference ever needs to move storage location.
 
 ### `page_N` keys exist because of a real quota, not preference
 
