@@ -5,6 +5,7 @@ import { SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLE
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage/storage";
 import { getUiPreference, setUiPreference } from "./storage/uiPreferences";
 import { migrateDarkModePreference } from "./migrations/darkModeMigration";
+import { migrateHistoryEnabledPreference } from "./migrations/historyEnabledMigration";
 import { log } from "./log";
 import { normalizePage } from "./domain/headers";
 import { applyTombstones, pruneExpiredTombstones, type PageTombstone } from "./domain/pageMerge";
@@ -312,8 +313,8 @@ function useFlexHeaderSettings() {
 
     // Load undo/redo feature preference - local only, per-device.
     try {
-      const historyEnabledValue = await loadFromStorage(HISTORY_ENABLED_KEY, true, ['local']);
-      setHistoryEnabled(historyEnabledValue);
+      await migrateHistoryEnabledPreference();
+      setHistoryEnabled(getUiPreference(HISTORY_ENABLED_KEY, true));
     } catch (error) {
       console.error("Failed to load undo/redo history preference:", error);
     }
@@ -481,7 +482,7 @@ function useFlexHeaderSettings() {
     try {
       const newHistoryEnabled = !historyEnabled;
 
-      await saveToStorage(HISTORY_ENABLED_KEY, newHistoryEnabled, 'local');
+      setUiPreference(HISTORY_ENABLED_KEY, newHistoryEnabled);
       setHistoryEnabled(newHistoryEnabled);
     } catch (error) {
       console.error("Error toggling undo/redo history:", error);

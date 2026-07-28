@@ -1,4 +1,4 @@
-import { DARK_MODE_KEY, PAGES_LIST_COLLAPSED_KEY } from "../../constants";
+import { DARK_MODE_KEY, HISTORY_ENABLED_KEY, PAGES_LIST_COLLAPSED_KEY } from "../../constants";
 
 /**
  * Maps known UI preference keys to their persisted value types. This is the
@@ -9,6 +9,7 @@ import { DARK_MODE_KEY, PAGES_LIST_COLLAPSED_KEY } from "../../constants";
 interface UiPreferenceTypes {
   [PAGES_LIST_COLLAPSED_KEY]: boolean;
   [DARK_MODE_KEY]: boolean;
+  [HISTORY_ENABLED_KEY]: boolean;
 }
 
 type UiPreferenceKey = keyof UiPreferenceTypes;
