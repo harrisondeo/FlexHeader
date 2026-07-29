@@ -1,6 +1,6 @@
 {
   "name": "flex-headers",
-  "version": "1.9.6",
+  "version": "1.10.0",
   "private": true,
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
