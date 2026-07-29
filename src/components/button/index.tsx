@@ -31,7 +31,7 @@ const Button = ({
       className={`button ${size} width-${width} color-${color}`}
       style={style}
       onClick={onClick}
-      title={title}
+      data-tooltip={title || undefined}
       aria-label={ariaLabel || title}
       data-testid={testId}
     >

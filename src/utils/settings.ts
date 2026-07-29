@@ -93,7 +93,7 @@ function useFlexHeaderSettings() {
   const { lastSyncTime, localModifiedTime } = useSyncStatus();
 
   const { addFilter, removeFilter, updateFilter } = useFilterOperations({ pagesData, setPagesData, recordHistory });
-  const { addHeader, removeHeader, saveHeaders, updateHeader } = useHeaderOperations({ pagesData, setPagesData, recordHistory });
+  const { addHeader, removeHeader, saveHeaders, updateHeader, setAllHeadersEnabled } = useHeaderOperations({ pagesData, setPagesData, recordHistory });
   const { addPage, removePage, updatePage, changeSelectedPage, changePageIndex } = usePageOperations({
     pagesData,
     setPagesData,
@@ -527,6 +527,7 @@ function useFlexHeaderSettings() {
     removeHeader,
     updateHeader,
     saveHeaders,
+    setAllHeadersEnabled,
     addFilter,
     removeFilter,
     updateFilter,

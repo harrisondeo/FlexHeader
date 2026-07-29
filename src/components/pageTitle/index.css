@@ -84,6 +84,43 @@ input.app__page-title.app__page-title--input:focus {
   color: var(--text-color);
 }
 
+/* This row sits against the popup's right edge, and .app clips overflow -
+   a centred tooltip on the last button would be cut in half. */
+.page-title__actions .button[data-tooltip]::after {
+  left: auto;
+  right: 0;
+  transform: none;
+  text-align: left;
+}
+
+.page-title__move-group {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Square off the touching corners so the pair reads as one segmented
+   control rather than two unrelated buttons. */
+.page-title__move-group .button:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.page-title__move-group .button:last-child {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 1px solid var(--background-secondary);
+}
+
+.page-title__move-group .button {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+/* The shared :active scale would pull the halves apart mid-press. */
+.page-title__move-group .button:active {
+  transform: none;
+}
+
 .page-title__actions .button.color-primary {
   background-color: var(--primary);
 }

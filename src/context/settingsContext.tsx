@@ -33,6 +33,7 @@ type SettingsActionsContextValue = {
   updateHeader: (pageId: number, header: HeaderSetting) => void;
   removeHeader: (pageId: number, id: string) => void;
   saveHeaders: (headers: HeaderSetting[], pageId: number) => void;
+  setAllHeadersEnabled: (pageId: number, enabled: boolean) => void;
 
   addFilter: (
     pageId: number,
@@ -112,6 +113,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       updateHeader: settings.updateHeader,
       removeHeader: settings.removeHeader,
       saveHeaders: settings.saveHeaders,
+      setAllHeadersEnabled: settings.setAllHeadersEnabled,
       addFilter: settings.addFilter,
       updateFilter: settings.updateFilter,
       removeFilter: settings.removeFilter,
@@ -134,6 +136,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       settings.updateHeader,
       settings.removeHeader,
       settings.saveHeaders,
+      settings.setAllHeadersEnabled,
       settings.addFilter,
       settings.updateFilter,
       settings.removeFilter,

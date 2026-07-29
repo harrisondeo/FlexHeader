@@ -7,6 +7,9 @@ import {
   useSettingsActions,
 } from "../../context/settingsContext";
 import { useAlert } from "../../context/alertContext";
+import ArrowDown from "../icons/ArrowDown";
+import ArrowUp from "../icons/ArrowUp";
+import CircleSlash from "../icons/CircleSlash";
 import CommentToggle from "../icons/CommentToggle";
 import Pause from "../icons/Pause";
 import Play from "../icons/Play";
@@ -15,7 +18,8 @@ import { HeaderSetting } from "../../utils/settings";
 
 const PageTitle = () => {
   const { pages, currentPage } = useSettingsState();
-  const { updatePage, changePageIndex, saveHeaders } = useSettingsActions();
+  const { updatePage, changePageIndex, saveHeaders, setAllHeadersEnabled } =
+    useSettingsActions();
   const alertContext = useAlert();
 
   const name = currentPage.name;
@@ -42,13 +46,28 @@ const PageTitle = () => {
     updatePage({ ...currentPage, paused: !currentPage.paused });
   };
 
+  const anyHeaderEnabled = currentPage.headers.some(
+    (header) => header.headerEnabled
+  );
+
+  const onToggleAllHeaders = () => {
+    setAllHeadersEnabled(currentPage.id, !anyHeaderEnabled);
+    alertContext.setAlert({
+      alertText: anyHeaderEnabled
+        ? "All headers disabled"
+        : "All headers enabled",
+      alertType: "success",
+      location: "bottom",
+    });
+  };
+
   const onSort = (sortedHeaders: HeaderSetting[]) => {
     saveHeaders(sortedHeaders, currentPage.id);
   };
 
-  const onMoveLeft = () =>
+  const onMoveUp = () =>
     changePageIndex(currentPage.id, Math.max(0, currentPage.id - 1));
-  const onMoveRight = () =>
+  const onMoveDown = () =>
     changePageIndex(
       currentPage.id,
       Math.min(pages.length - 1, currentPage.id + 1)
@@ -143,9 +162,50 @@ const PageTitle = () => {
           }
           testId="toggle-header-comments"
         />
+        {currentPage.headers.length > 0 && (
+          <Button
+            onClick={onToggleAllHeaders}
+            color={anyHeaderEnabled ? "secondary" : "warning"}
+            title={
+              anyHeaderEnabled ? "Disable all headers" : "Enable all headers"
+            }
+            content={
+              <span className="page-title__toggle-button-content">
+                <CircleSlash className="page-title__toggle-icon" />
+              </span>
+            }
+            testId="toggle-all-headers"
+          />
+        )}
         <SortHeadersDropdown headers={currentPage.headers} onSort={onSort} />
-        <Button onClick={onMoveLeft} content="<" testId="page-move-left" />
-        <Button onClick={onMoveRight} content=">" testId="page-move-right" />
+        <div
+          className="page-title__move-group"
+          role="group"
+          aria-label="Reorder page"
+        >
+          <Button
+            onClick={onMoveUp}
+            color="secondary"
+            title="Move page up"
+            content={
+              <span className="page-title__toggle-button-content">
+                <ArrowUp className="page-title__toggle-icon" />
+              </span>
+            }
+            testId="page-move-up"
+          />
+          <Button
+            onClick={onMoveDown}
+            color="secondary"
+            title="Move page down"
+            content={
+              <span className="page-title__toggle-button-content">
+                <ArrowDown className="page-title__toggle-icon" />
+              </span>
+            }
+            testId="page-move-down"
+          />
+        </div>
       </div>
     </div>
   );
