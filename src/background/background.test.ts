@@ -568,7 +568,6 @@ describe('buildRulesFromPages migration regression', () => {
       keepEnabled: true,
       paused: true,
       showHeaderComments: true,
-      filtersExpanded: true,
       filters: [],
       headers: [
         createHeader({ headerName: 'X-Paused', headerValue: 'off' }),

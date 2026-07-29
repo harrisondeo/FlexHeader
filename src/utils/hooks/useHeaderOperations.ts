@@ -106,6 +106,35 @@ function useHeaderOperations({ pagesData, setPagesData, recordHistory }: UseHead
   };
 
   /**
+   * Flips headerEnabled on every header of a page at once. Records history as a
+   * single undoable step rather than one per header, which is why this doesn't
+   * just loop over updateHeader.
+   * @param pageId The page whose headers should all be toggled
+   * @param enabled The value to set every header's headerEnabled to
+   */
+  const setAllHeadersEnabled = (pageId: number, enabled: boolean) => {
+    recordHistory(null);
+
+    const newPages = pagesData.pages.map((page) =>
+      page.id === pageId
+        ? {
+          ...page,
+          lastModified: Date.now(),
+          headers: page.headers.map((header) => ({
+            ...header,
+            headerEnabled: enabled,
+          })),
+        }
+        : page
+    );
+
+    setPagesData((prev) => ({
+      ...prev,
+      pages: newPages,
+    }));
+  };
+
+  /**
    * Updates the values of a header
    * @param pageId The page that the header belongs to
    * @param header The new header object, the id should match the header to update
@@ -129,7 +158,7 @@ function useHeaderOperations({ pagesData, setPagesData, recordHistory }: UseHead
     }));
   };
 
-  return { addHeader, removeHeader, saveHeaders, updateHeader };
+  return { addHeader, removeHeader, saveHeaders, updateHeader, setAllHeadersEnabled };
 }
 
 export default useHeaderOperations;
