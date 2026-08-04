@@ -83,7 +83,7 @@ const AppHeader = () => {
         title="Undo (Ctrl+Z)"
         data-testid="undo-button"
       >
-        <Undo />
+        <Undo className="app-header__history-icon" />
       </button>
       <button
         type="button"
@@ -94,7 +94,7 @@ const AppHeader = () => {
         title="Redo (Ctrl+Shift+Z)"
         data-testid="redo-button"
       >
-        <Redo />
+        <Redo className="app-header__history-icon" />
       </button>
       <button
         type="button"
@@ -104,7 +104,11 @@ const AppHeader = () => {
         title={darkModeEnabled ? "Disable Dark Mode" : "Enable Dark Mode"}
         data-testid="dark-mode-toggle"
       >
-        {darkModeEnabled ? <LightMode /> : <DarkMode />}
+        {darkModeEnabled ? (
+          <LightMode className="app-header__theme-icon" />
+        ) : (
+          <DarkMode className="app-header__theme-icon" />
+        )}
       </button>
       <SyncToggleButton
         syncEnabled={syncEnabled}
@@ -124,6 +128,7 @@ const AppHeader = () => {
                 }}
               >
                 <ImportIcon
+                  className="app-header__transfer-icon"
                   role="img"
                   aria-label="Import Settings"
                   width={16}
@@ -149,7 +154,11 @@ const AppHeader = () => {
         title="Settings"
         data-testid="header-settings"
       >
-        <SettingsIcon role="img" aria-label="Settings" />
+        <SettingsIcon
+          className="app-header__settings-icon"
+          role="img"
+          aria-label="Settings"
+        />
       </button>
     </div>
   );

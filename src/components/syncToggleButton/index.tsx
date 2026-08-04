@@ -35,7 +35,7 @@ const SyncToggleButton = ({
         aria-pressed={syncEnabled}
         data-testid="sync-toggle-button"
       >
-        <Sync aria-hidden="true" />
+        <Sync className="sync-toggle-button__icon" aria-hidden="true" />
         <span>{syncEnabled ? "Disable Sync" : "Enable Sync"}</span>
       </button>
     );
@@ -51,7 +51,7 @@ const SyncToggleButton = ({
       aria-pressed={syncEnabled}
       data-testid="sync-toggle-button"
     >
-      <Sync aria-hidden="true" />
+      <Sync className="sync-toggle-button__icon" aria-hidden="true" />
       {syncEnabled && (
         <span className="sync-toggle-button__active-dot" aria-hidden="true" />
       )}

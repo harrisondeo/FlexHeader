@@ -189,35 +189,32 @@
 /* Equal boxes are not enough for these icons: their paths occupy very
    different portions of their viewBoxes. These optical sizes keep the
    visible glyphs consistent while preserving a shared centre point. */
-.app--slim [data-testid="undo-button"] svg,
-.app--slim [data-testid="redo-button"] svg,
-.app--slim .app-header__actions [data-testid="import-button"] svg,
-.app--slim .app-header__actions [data-testid="export-button"] svg {
+.app--slim .app-header__icon-button .app-header__history-icon,
+.app--slim .app-header__actions .app-header__transfer-icon {
   width: 1.15rem;
   height: 1.15rem;
 }
 
-.app--slim [data-testid="dark-mode-toggle"] svg,
-.app--slim [data-testid="sync-toggle-button"] svg,
-.app--slim [data-testid="header-settings"] svg {
+.app--slim .app-header__icon-button .app-header__theme-icon,
+.app--slim .sync-toggle-button--icon .sync-toggle-button__icon,
+.app--slim .app-header__icon-button .app-header__settings-icon {
   width: 0.88rem;
   height: 0.88rem;
 }
 
-.app--slim [data-testid="toggle-page-pause"] svg,
-.app--slim [data-testid="page-move-up"] svg,
-.app--slim [data-testid="page-move-down"] svg {
+.app--slim .page-title__toggle-icon--playback,
+.app--slim .page-title__toggle-icon--reorder {
   width: 1.1rem;
   height: 1.1rem;
 }
 
-.app--slim [data-testid="toggle-header-comments"] svg,
-.app--slim [data-testid="toggle-all-headers"] svg {
+.app--slim .page-title__toggle-icon--comments,
+.app--slim .page-title__toggle-icon--status {
   width: 0.82rem;
   height: 0.82rem;
 }
 
-.app--slim [data-testid="sort-headers-button"] svg {
+.app--slim .sort-headers-dropdown__toggle-icon {
   width: 0.92rem;
   height: 0.92rem;
 }
