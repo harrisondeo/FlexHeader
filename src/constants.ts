@@ -21,6 +21,7 @@ export const UNDO_STACK_KEY = "undo_stack"; // Local only - a per-device history
 export const REDO_STACK_KEY = "redo_stack";
 export const HISTORY_ENABLED_KEY = "history_enabled"; // Local only - per-device preference for the undo/redo feature
 export const PAGES_LIST_COLLAPSED_KEY = "pages_list_collapsed"; // Local-only popup layout preference
+export const SLIM_MODE_KEY = "slim_mode"; // Local-only compact popup layout preference
 export const DARK_MODE_KEY = "darkMode"; // Local-only per-device preference (see CLAUDE.md on why this is never synced)
 
 export const POPULAR_HEADER_NAMES = [

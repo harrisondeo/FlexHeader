@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
-import { SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, LAST_MERGE_TIME_KEY, LOCAL_MODIFIED_TIME_KEY, HISTORY_ENABLED_KEY, DARK_MODE_KEY } from "../constants";
+import { SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, LAST_MERGE_TIME_KEY, LOCAL_MODIFIED_TIME_KEY, HISTORY_ENABLED_KEY, DARK_MODE_KEY, SLIM_MODE_KEY } from "../constants";
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage/storage";
 import { getUiPreference, setUiPreference } from "./storage/uiPreferences";
 import { migrateUiPreference } from "./migrations/uiPreferenceMigration";
@@ -69,6 +69,12 @@ function useFlexHeaderSettings() {
   });
   const [tombstones, setTombstones] = useState<PageTombstone[]>([]);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
+  // This preference is synchronous localStorage state. Reading it in the
+  // initializer prevents a collapsed sidebar from first rendering at the
+  // regular width and then visibly animating to the slim width.
+  const [slimModeEnabled, setSlimModeEnabled] = useState(() =>
+    getUiPreference(SLIM_MODE_KEY, false)
+  );
   const [syncEnabled, setSyncEnabled] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [saveVersion, setSaveVersion] = useState(0);
@@ -300,6 +306,8 @@ function useFlexHeaderSettings() {
       console.error("Failed to load dark mode setting:", error);
     }
 
+    setSlimModeEnabled(getUiPreference(SLIM_MODE_KEY, false));
+
     // Load sync preference
     try {
       const syncEnabledValue = await loadFromStorage(SYNC_ENABLED_KEY, false, ['local']);
@@ -473,6 +481,13 @@ function useFlexHeaderSettings() {
     }
   };
 
+  /** Toggle the compact popup layout for this browser profile. */
+  const toggleSlimMode = async () => {
+    const newSlimMode = !getUiPreference(SLIM_MODE_KEY, false);
+    setUiPreference(SLIM_MODE_KEY, newSlimMode);
+    setSlimModeEnabled(newSlimMode);
+  };
+
   /**
    * Toggle the undo/redo history feature on or off (per-device preference).
    */
@@ -513,6 +528,7 @@ function useFlexHeaderSettings() {
     pages: pagesData.pages,
     selectedPage: pagesData.selectedPage,
     darkModeEnabled,
+    slimModeEnabled,
     syncEnabled,
     isSaving: isSavingRef.current,
     lastSyncTime,
@@ -536,6 +552,7 @@ function useFlexHeaderSettings() {
     changePageIndex,
     importSettings,
     toggleDarkMode,
+    toggleSlimMode,
     toggleSync,
     historyEnabled,
     toggleHistoryEnabled,

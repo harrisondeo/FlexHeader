@@ -1,4 +1,4 @@
-import { DARK_MODE_KEY, HISTORY_ENABLED_KEY, PAGES_LIST_COLLAPSED_KEY } from "../../constants";
+import { DARK_MODE_KEY, HISTORY_ENABLED_KEY, PAGES_LIST_COLLAPSED_KEY, SLIM_MODE_KEY } from "../../constants";
 
 /**
  * Maps known UI preference keys to their persisted value types. This is the
@@ -8,6 +8,7 @@ import { DARK_MODE_KEY, HISTORY_ENABLED_KEY, PAGES_LIST_COLLAPSED_KEY } from "..
  */
 export interface UiPreferenceTypes {
   [PAGES_LIST_COLLAPSED_KEY]: boolean;
+  [SLIM_MODE_KEY]: boolean;
   [DARK_MODE_KEY]: boolean;
   [HISTORY_ENABLED_KEY]: boolean;
 }

@@ -12,7 +12,9 @@ import { addStoredError, clearStoredErrors } from "../utils/storage/errors";
 import { buildRulesFromPages } from "./rules";
 import { setActionBadge, setActionIcon } from "./icon";
 
-export async function getAndApplyHeaderRules() {
+export async function getAndApplyHeaderRules(
+  { forceActionUpdate = false }: { forceActionUpdate?: boolean } = {}
+) {
   try {
     // Get existing rules
     const oldRules = await browser.declarativeNetRequest.getDynamicRules();
@@ -42,8 +44,8 @@ export async function getAndApplyHeaderRules() {
       ? pages.find((page) => page.id === localSettings.meta.selectedPage)
       : undefined;
     await Promise.all([
-      setActionBadge(selectedPage),
-      setActionIcon(selectedPage?.paused ?? false),
+      setActionBadge(selectedPage, forceActionUpdate),
+      setActionIcon(selectedPage?.paused ?? false, forceActionUpdate),
     ]);
 
     // Clear apply errors once rules have been successfully updated
@@ -352,6 +354,15 @@ function schedulePushSoon(): void {
  * during the Node-based build step.
  */
 export function initBackground() {
+  // Chrome can recreate its toolbar while the extension worker (and its
+  // applied-value cache) remains alive, notably when the last browser window
+  // was closed without quitting Chrome. Force a refresh both for a full
+  // browser startup and for newly-created windows.
+  const restoreAction = () =>
+    getAndApplyHeaderRules({ forceActionUpdate: true });
+  browser.runtime.onStartup.addListener(restoreAction);
+  browser.windows.onCreated.addListener(restoreAction);
+
   browser.storage.local.onChanged.addListener(function (changes) {
     // Trigger update if any settings change (v3 meta or any page_* key)
     const settingsChanged = SETTINGS_V3_META_KEY in changes ||

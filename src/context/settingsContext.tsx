@@ -16,6 +16,7 @@ type SettingsStateContextValue = {
   selectedPage: number;
   currentPage: Page;
   darkModeEnabled: boolean;
+  slimModeEnabled: boolean;
   syncEnabled: boolean;
   lastSyncTime: number | null;
   localModifiedTime: number | null;
@@ -53,6 +54,7 @@ type SettingsActionsContextValue = {
 
   importSettings: (file: File) => Promise<{ warnings: string[] }>;
   toggleDarkMode: () => Promise<void>;
+  toggleSlimMode: () => Promise<void>;
   toggleSync: () => Promise<void>;
   clearErrors: (category?: AppError["category"]) => Promise<void>;
   injectError: (category?: ErrorCategory) => Promise<void>;
@@ -84,6 +86,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       selectedPage: settings.selectedPage,
       currentPage,
       darkModeEnabled: settings.darkModeEnabled,
+      slimModeEnabled: settings.slimModeEnabled,
       syncEnabled: settings.syncEnabled,
       lastSyncTime: settings.lastSyncTime,
       localModifiedTime: settings.localModifiedTime,
@@ -97,6 +100,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       settings.selectedPage,
       currentPage,
       settings.darkModeEnabled,
+      settings.slimModeEnabled,
       settings.syncEnabled,
       settings.lastSyncTime,
       settings.localModifiedTime,
@@ -124,6 +128,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       changePageIndex: settings.changePageIndex,
       importSettings: settings.importSettings,
       toggleDarkMode: settings.toggleDarkMode,
+      toggleSlimMode: settings.toggleSlimMode,
       toggleSync: settings.toggleSync,
       clearErrors: settings.clearErrors,
       injectError: settings.injectError,
@@ -147,6 +152,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       settings.changePageIndex,
       settings.importSettings,
       settings.toggleDarkMode,
+      settings.toggleSlimMode,
       settings.toggleSync,
       settings.clearErrors,
       settings.injectError,
