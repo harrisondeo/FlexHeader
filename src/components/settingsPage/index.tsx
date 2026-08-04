@@ -17,8 +17,22 @@ interface SettingsPageProps {
 }
 
 const SettingsPage = ({ hasReviewed, onOpenReview }: SettingsPageProps) => {
-  const { pages, syncEnabled, lastSyncTime, localModifiedTime, historyEnabled, slimModeEnabled } = useSettingsState();
-  const { importSettings, toggleSync, injectError, clearErrors, toggleHistoryEnabled, toggleSlimMode } = useSettingsActions();
+  const {
+    pages,
+    syncEnabled,
+    lastSyncTime,
+    localModifiedTime,
+    historyEnabled,
+    slimModeEnabled,
+  } = useSettingsState();
+  const {
+    importSettings,
+    toggleSync,
+    injectError,
+    clearErrors,
+    toggleHistoryEnabled,
+    toggleSlimMode,
+  } = useSettingsActions();
   const syncStatus = getSyncStatus(lastSyncTime, localModifiedTime);
   return (
     <div className="settings-page">

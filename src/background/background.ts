@@ -12,9 +12,31 @@ import { addStoredError, clearStoredErrors } from "../utils/storage/errors";
 import { buildRulesFromPages } from "./rules";
 import { setActionBadge, setActionIcon } from "./icon";
 
-export async function getAndApplyHeaderRules(
-  { forceActionUpdate = false }: { forceActionUpdate?: boolean } = {}
-) {
+type StoredPageSettings = Awaited<ReturnType<typeof readPageStorage>>;
+
+async function applyActionState(
+  settings: StoredPageSettings,
+  force = false
+): Promise<void> {
+  const selectedPage = settings?.pages.find(
+    (page) => page.id === settings.meta.selectedPage
+  );
+  await Promise.all([
+    setActionBadge(selectedPage, force),
+    setActionIcon(selectedPage?.paused ?? false, force),
+  ]);
+}
+
+async function restoreActionState(): Promise<void> {
+  try {
+    const settings = await readPageStorage(browser.storage.local);
+    await applyActionState(settings, true);
+  } catch (error) {
+    console.error("Error restoring extension action state", error);
+  }
+}
+
+export async function getAndApplyHeaderRules() {
   try {
     // Get existing rules
     const oldRules = await browser.declarativeNetRequest.getDynamicRules();
@@ -40,13 +62,7 @@ export async function getAndApplyHeaderRules(
       addRules: headers,
     });
 
-    const selectedPage = localSettings
-      ? pages.find((page) => page.id === localSettings.meta.selectedPage)
-      : undefined;
-    await Promise.all([
-      setActionBadge(selectedPage, forceActionUpdate),
-      setActionIcon(selectedPage?.paused ?? false, forceActionUpdate),
-    ]);
+    await applyActionState(localSettings);
 
     // Clear apply errors once rules have been successfully updated
     await clearStoredErrors("apply");
@@ -358,10 +374,8 @@ export function initBackground() {
   // applied-value cache) remains alive, notably when the last browser window
   // was closed without quitting Chrome. Force a refresh both for a full
   // browser startup and for newly-created windows.
-  const restoreAction = () =>
-    getAndApplyHeaderRules({ forceActionUpdate: true });
-  browser.runtime.onStartup.addListener(restoreAction);
-  browser.windows.onCreated.addListener(restoreAction);
+  browser.runtime.onStartup.addListener(restoreActionState);
+  browser.windows.onCreated.addListener(restoreActionState);
 
   browser.storage.local.onChanged.addListener(function (changes) {
     // Trigger update if any settings change (v3 meta or any page_* key)
