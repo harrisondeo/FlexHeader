@@ -97,6 +97,28 @@ const SettingsPage = ({ hasReviewed, onOpenReview }: SettingsPageProps) => {
       <Divider />
 
       <div className="settings-page__section">
+        <h2>Appearance</h2>
+        <label className="settings-page__toggle">
+          <input
+            type="checkbox"
+            className="settings-page__toggle-input"
+            checked={slimModeEnabled}
+            onChange={toggleSlimMode}
+            data-testid="slim-mode-toggle"
+          />
+          <span className="settings-page__toggle-content">
+            <span className="settings-page__toggle-title">Slim mode</span>
+            <span className="settings-page__toggle-description">
+              Compact navigation, controls, and secondary panels while keeping
+              header names and values easy to edit.
+            </span>
+          </span>
+        </label>
+      </div>
+
+      <Divider />
+
+      <div className="settings-page__section">
         <h2>Experimental Settings</h2>
         <p>Opt-in features still under evaluation.</p>
 
@@ -113,28 +135,6 @@ const SettingsPage = ({ hasReviewed, onOpenReview }: SettingsPageProps) => {
             <span className="settings-page__toggle-description">
               Track header, filter, and page edits so they can be undone with
               Ctrl+Z (Ctrl+Shift+Z to redo).
-            </span>
-          </span>
-        </label>
-      </div>
-
-      <Divider />
-
-      <div className="settings-page__section">
-        <h2>Appearance</h2>
-        <label className="settings-page__toggle">
-          <input
-            type="checkbox"
-            className="settings-page__toggle-input"
-            checked={slimModeEnabled}
-            onChange={toggleSlimMode}
-            data-testid="slim-mode-toggle"
-          />
-          <span className="settings-page__toggle-content">
-            <span className="settings-page__toggle-title">Slim mode</span>
-            <span className="settings-page__toggle-description">
-              Compact navigation, controls, and secondary panels while keeping
-              header names and values easy to edit.
             </span>
           </span>
         </label>
