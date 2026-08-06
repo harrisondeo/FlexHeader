@@ -22,6 +22,8 @@ const browserMock = vi.hoisted(() => ({
   },
   action: {
     setBadgeText: vi.fn().mockResolvedValue(undefined),
+    setBadgeBackgroundColor: vi.fn().mockResolvedValue(undefined),
+    setIcon: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -32,6 +34,7 @@ vi.mock('webextension-polyfill', () => ({
 
 import { renderHook, act, waitFor } from '@testing-library/react';
 import useFlexHeaderSettings from '../settings';
+import { SLIM_MODE_KEY } from '../../constants';
 
 const createStorageArea = () => {
   const store: Record<string, any> = {};
@@ -55,6 +58,7 @@ const createStorageArea = () => {
 describe('useHeaderOperations (setAllHeadersEnabled)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     const local = createStorageArea();
     const sync = createStorageArea();
 
@@ -65,6 +69,19 @@ describe('useHeaderOperations (setAllHeadersEnabled)', () => {
     browserMock.storage.sync.get.mockImplementation(sync.get);
     browserMock.storage.sync.set.mockImplementation(sync.set);
     browserMock.storage.sync.remove.mockImplementation(sync.remove);
+  });
+
+  it('uses the persisted slim preference on the first render', () => {
+    localStorage.setItem(SLIM_MODE_KEY, 'true');
+    const observedValues: boolean[] = [];
+
+    renderHook(() => {
+      const settings = useFlexHeaderSettings();
+      observedValues.push(settings.slimModeEnabled);
+      return settings;
+    });
+
+    expect(observedValues[0]).toBe(true);
   });
 
   const renderWithHeaders = async () => {

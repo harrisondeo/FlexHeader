@@ -139,9 +139,9 @@ const PageTitle = () => {
           content={
             <span className="page-title__toggle-button-content">
               {paused ? (
-                <Play className="page-title__toggle-icon" />
+                <Play className="page-title__toggle-icon page-title__toggle-icon--playback" />
               ) : (
-                <Pause className="page-title__toggle-icon" />
+                <Pause className="page-title__toggle-icon page-title__toggle-icon--playback" />
               )}
             </span>
           }
@@ -157,7 +157,7 @@ const PageTitle = () => {
           }
           content={
             <span className="page-title__toggle-button-content">
-              <CommentToggle className="page-title__toggle-icon" />
+              <CommentToggle className="page-title__toggle-icon page-title__toggle-icon--comments" />
             </span>
           }
           testId="toggle-header-comments"
@@ -171,7 +171,7 @@ const PageTitle = () => {
             }
             content={
               <span className="page-title__toggle-button-content">
-                <CircleSlash className="page-title__toggle-icon" />
+                <CircleSlash className="page-title__toggle-icon page-title__toggle-icon--status" />
               </span>
             }
             testId="toggle-all-headers"
@@ -189,7 +189,7 @@ const PageTitle = () => {
             title="Move page up"
             content={
               <span className="page-title__toggle-button-content">
-                <ArrowUp className="page-title__toggle-icon" />
+                <ArrowUp className="page-title__toggle-icon page-title__toggle-icon--reorder" />
               </span>
             }
             testId="page-move-up"
@@ -200,7 +200,7 @@ const PageTitle = () => {
             title="Move page down"
             content={
               <span className="page-title__toggle-button-content">
-                <ArrowDown className="page-title__toggle-icon" />
+                <ArrowDown className="page-title__toggle-icon page-title__toggle-icon--reorder" />
               </span>
             }
             testId="page-move-down"

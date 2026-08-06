@@ -6,11 +6,33 @@ import { getAllFromStorage, saveToStorage, getDataSizeInBytes, loadFromStorage }
 import { log } from "../utils/log";
 import { normalizePage } from "../utils/domain/headers";
 import { mergeSyncState, mergeTombstones, applyTombstones, synthesizeFallbackPage, pruneExpiredTombstones, type PageTombstone } from "../utils/domain/pageMerge";
-import { readPageStorage } from "../utils/storage/pageStorage";
+import { readPageStorage, type StoredPageSettings } from "../utils/storage/pageStorage";
 import { addStoredError, clearStoredErrors } from "../utils/storage/errors";
 
 import { buildRulesFromPages } from "./rules";
 import { setActionBadge, setActionIcon } from "./icon";
+
+async function applyActionState(
+  settings: StoredPageSettings | null,
+  force = false
+): Promise<void> {
+  const selectedPage = settings?.pages.find(
+    (page) => page.id === settings.meta.selectedPage
+  );
+  await Promise.all([
+    setActionBadge(selectedPage, force),
+    setActionIcon(selectedPage?.paused ?? false, force),
+  ]);
+}
+
+async function restoreActionState(): Promise<void> {
+  try {
+    const settings = await readPageStorage(browser.storage.local);
+    await applyActionState(settings, true);
+  } catch (error) {
+    console.error("Error restoring extension action state", error);
+  }
+}
 
 export async function getAndApplyHeaderRules() {
   try {
@@ -38,13 +60,7 @@ export async function getAndApplyHeaderRules() {
       addRules: headers,
     });
 
-    const selectedPage = localSettings
-      ? pages.find((page) => page.id === localSettings.meta.selectedPage)
-      : undefined;
-    await Promise.all([
-      setActionBadge(selectedPage),
-      setActionIcon(selectedPage?.paused ?? false),
-    ]);
+    await applyActionState(localSettings);
 
     // Clear apply errors once rules have been successfully updated
     await clearStoredErrors("apply");
@@ -352,6 +368,13 @@ function schedulePushSoon(): void {
  * during the Node-based build step.
  */
 export function initBackground() {
+  // Chrome can recreate its toolbar while the extension worker (and its
+  // applied-value cache) remains alive, notably when the last browser window
+  // was closed without quitting Chrome. Force a refresh both for a full
+  // browser startup and for newly-created windows.
+  browser.runtime.onStartup.addListener(restoreActionState);
+  browser.windows.onCreated.addListener(restoreActionState);
+
   browser.storage.local.onChanged.addListener(function (changes) {
     // Trigger update if any settings change (v3 meta or any page_* key)
     const settingsChanged = SETTINGS_V3_META_KEY in changes ||

@@ -57,7 +57,13 @@ const ExportPopup = ({ pages }: { pages: Page[] }) => {
       <Button
         content={
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <Export role="img" aria-label="Add Page" width={16} height={16} />
+            <Export
+              className="app-header__transfer-icon"
+              role="img"
+              aria-label="Add Page"
+              width={16}
+              height={16}
+            />
             <span>Export</span>
           </div>
         }

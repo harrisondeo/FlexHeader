@@ -12,13 +12,16 @@ export function resetActionCache(): void {
   lastIconPath = undefined;
 }
 
-export async function setActionBadge(selectedPage: Page | undefined): Promise<void> {
+export async function setActionBadge(
+  selectedPage: Page | undefined,
+  force = false
+): Promise<void> {
   const activeHeaderCount = selectedPage?.paused
     ? 0
     : selectedPage?.headers.filter((header) => header.headerEnabled).length ?? 0;
   const text = activeHeaderCount === 0 ? "" : activeHeaderCount.toString();
 
-  if (text === lastBadgeText) {
+  if (!force && text === lastBadgeText) {
     return;
   }
   lastBadgeText = text;
@@ -32,9 +35,9 @@ export async function setActionBadge(selectedPage: Page | undefined): Promise<vo
 const ICON_DEFAULT = "/logo128.png";
 const ICON_PAUSED = "/logo128-paused.png";
 
-export async function setActionIcon(paused: boolean): Promise<void> {
+export async function setActionIcon(paused: boolean, force = false): Promise<void> {
   const path = paused ? ICON_PAUSED : ICON_DEFAULT;
-  if (path === lastIconPath) {
+  if (!force && path === lastIconPath) {
     return;
   }
   lastIconPath = path;

@@ -64,6 +64,12 @@ const browserMock = vi.hoisted(() => ({
     setBadgeBackgroundColor: vi.fn().mockResolvedValue(undefined),
     setIcon: vi.fn().mockResolvedValue(undefined),
   },
+  runtime: {
+    onStartup: { addListener: vi.fn(), removeListener: vi.fn() },
+  },
+  windows: {
+    onCreated: { addListener: vi.fn(), removeListener: vi.fn() },
+  },
 }));
 
 vi.mock('webextension-polyfill', () => ({
@@ -523,6 +529,37 @@ describe('debounced push-on-local-change (initBackground)', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it('re-applies the selected page badge when the browser starts', async () => {
+    seedArea(localArea, [createPage(0, 'Only Page')], 0);
+
+    initBackground();
+    const onStartup = (browserMock.runtime.onStartup.addListener as any).mock.calls[0][0] as
+      () => Promise<void>;
+
+    await onStartup();
+
+    expect(browserMock.action.setBadgeText).toHaveBeenCalledWith({ text: '1' });
+  });
+
+  it('forces the cached badge to be restored when a browser window is created', async () => {
+    seedArea(localArea, [createPage(0, 'Only Page')], 0);
+    await getAndApplyHeaderRules();
+    vi.clearAllMocks();
+    browserMock.storage.local.get.mockImplementation(localArea.get);
+    browserMock.storage.local.set.mockImplementation(localArea.set);
+    browserMock.storage.local.remove.mockImplementation(localArea.remove);
+    browserMock.storage.sync.get.mockImplementation(syncArea.get);
+    browserMock.storage.sync.set.mockImplementation(syncArea.set);
+    browserMock.storage.sync.remove.mockImplementation(syncArea.remove);
+
+    initBackground();
+    const onWindowCreated = (browserMock.windows.onCreated.addListener as any).mock.calls[0][0] as
+      () => Promise<void>;
+    await onWindowCreated();
+
+    expect(browserMock.action.setBadgeText).toHaveBeenCalledWith({ text: '1' });
   });
 
   it('pushes shortly after a local page change instead of waiting for the next interval tick', async () => {

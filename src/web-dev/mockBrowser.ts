@@ -146,6 +146,8 @@ const mockBrowser = {
   },
   action: {
     setBadgeText: () => Promise.resolve(),
+    setBadgeBackgroundColor: () => Promise.resolve(),
+    setIcon: () => Promise.resolve(),
   },
   tabs: {
     create: ({ url }: { url?: string }) => {

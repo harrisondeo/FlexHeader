@@ -21,6 +21,12 @@
   padding-right: 6px;
 }
 
+.app__workspace {
+  width: 100%;
+  min-width: 0;
+  margin-top: 0.5rem;
+}
+
 .app:not(.darkmode) img[src$="import.svg"],
 .app:not(.darkmode) img[src$="export.svg"],
 .app:not(.darkmode) img[src$="settings.svg"],
@@ -91,7 +97,6 @@
   font-size: 0.8rem;
   font-weight: 500;
 }
-
 
 .app__body__contents {
   overflow-y: auto;

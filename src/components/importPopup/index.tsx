@@ -38,7 +38,13 @@ const ImportPopup = ({ importSettings }: ImportPopupProps) => {
       <Button
         content={
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <Import role="img" aria-label="Import Settings" width={16} height={16} />
+            <Import
+              className="app-header__transfer-icon"
+              role="img"
+              aria-label="Import Settings"
+              width={16}
+              height={16}
+            />
             <span>Import</span>
           </div>
         }

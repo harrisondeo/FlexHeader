@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import "./App.css";
+import "./App.slim.css";
 import FilterSection from "./components/filterSection";
 import AppHeader from "./components/appHeader";
 import AppFooter from "./components/appFooter";
@@ -15,7 +16,7 @@ import { useSettingsState, useSettingsActions } from "./context/settingsContext"
 import { cx } from "./utils/cx";
 
 function App() {
-  const { selectedPage, currentPage, darkModeEnabled } = useSettingsState();
+  const { selectedPage, currentPage, darkModeEnabled, slimModeEnabled } = useSettingsState();
   const { undo, redo } = useSettingsActions();
   const {
     shouldShow: shouldShowReviewPrompt,
@@ -53,12 +54,12 @@ function App() {
   }
 
   return (
-    <div className={cx("app", { darkmode: darkModeEnabled })}>
+    <div className={cx("app", { darkmode: darkModeEnabled, "app--slim": slimModeEnabled })}>
       <div className="app__container">
         <AppHeader />
         <div className="app__body">
           <PagesList />
-          <div style={{ width: "100%", marginTop: "0.5rem" }}>
+          <div className="app__workspace">
             <PageTitle />
             <div key={selectedPage} className="app__body__contents">
               <div className="headers-panel">
