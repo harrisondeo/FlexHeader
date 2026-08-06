@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import "./App.css";
+import "./App.slim.css";
 import FilterSection from "./components/filterSection";
 import AppHeader from "./components/appHeader";
 import AppFooter from "./components/appFooter";

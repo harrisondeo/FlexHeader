@@ -45,7 +45,6 @@ const AppHeader = () => {
           <p className="app-header__name">Flex Headers</p>
           <span className="app-header__meta">
             <a
-              className="app-header__version"
               href={`https://github.com/harrisondeo/FlexHeader/releases/tag/v${manifest?.version}`}
               target="_blank"
               rel="noreferrer"
@@ -54,7 +53,6 @@ const AppHeader = () => {
             </a>
             <span className="app-header__meta-separator"> · </span>
             <a
-              className="app-header__feature-requests"
               href={`https://github.com/harrisondeo/FlexHeader/issues`}
               target="_blank"
               rel="noreferrer"

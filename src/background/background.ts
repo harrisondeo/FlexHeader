@@ -6,16 +6,14 @@ import { getAllFromStorage, saveToStorage, getDataSizeInBytes, loadFromStorage }
 import { log } from "../utils/log";
 import { normalizePage } from "../utils/domain/headers";
 import { mergeSyncState, mergeTombstones, applyTombstones, synthesizeFallbackPage, pruneExpiredTombstones, type PageTombstone } from "../utils/domain/pageMerge";
-import { readPageStorage } from "../utils/storage/pageStorage";
+import { readPageStorage, type StoredPageSettings } from "../utils/storage/pageStorage";
 import { addStoredError, clearStoredErrors } from "../utils/storage/errors";
 
 import { buildRulesFromPages } from "./rules";
 import { setActionBadge, setActionIcon } from "./icon";
 
-type StoredPageSettings = Awaited<ReturnType<typeof readPageStorage>>;
-
 async function applyActionState(
-  settings: StoredPageSettings,
+  settings: StoredPageSettings | null,
   force = false
 ): Promise<void> {
   const selectedPage = settings?.pages.find(
