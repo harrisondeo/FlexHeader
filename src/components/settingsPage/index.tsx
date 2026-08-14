@@ -121,7 +121,6 @@ const SettingsPage = ({ hasReviewed, onOpenReview }: SettingsPageProps) => {
         </label>
 
         <label className="settings-page__field">
-          <span className="settings-page__toggle-title">Text size</span>
           <select
             className="settings-page__select"
             value={fontSize}
@@ -134,6 +133,7 @@ const SettingsPage = ({ hasReviewed, onOpenReview }: SettingsPageProps) => {
               </option>
             ))}
           </select>
+          <span className="settings-page__toggle-title">Text size</span>
         </label>
       </div>
 
