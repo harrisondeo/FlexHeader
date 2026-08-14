@@ -103,15 +103,31 @@
   gap: 0.4rem;
 }
 
-.settings-page__field-value {
-  font-weight: 400;
-  opacity: 0.8;
-  margin-left: 0.4rem;
+.settings-page__pill-group {
+  display: inline-flex;
+  align-self: flex-start;
+  border: 1px solid var(--border-color);
+  border-radius: var(--input-radius);
+  overflow: hidden;
 }
 
-.settings-page__slider {
-  width: 100%;
-  accent-color: var(--primary);
+.settings-page__pill {
+  border: none;
+  border-right: 1px solid var(--border-color);
+  background-color: var(--background-primary);
+  color: var(--text-color);
+  padding: 0.35rem 0.9rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.settings-page__pill:last-child {
+  border-right: none;
+}
+
+.settings-page__pill--active {
+  background-color: var(--primary);
+  color: var(--background-primary);
 }
 
 .settings-page__review-nudge {

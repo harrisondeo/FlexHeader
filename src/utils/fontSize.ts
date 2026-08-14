@@ -17,6 +17,15 @@ export const FONT_SIZE_LABELS: Record<FontSizePreference, string> = {
   xlarge: "Extra large",
 };
 
+// Short enough to sit inside a fixed-width pill without the pill group's
+// overall width changing as the selection changes.
+export const FONT_SIZE_SHORT_LABELS: Record<FontSizePreference, string> = {
+  small: "S",
+  medium: "M",
+  large: "L",
+  xlarge: "XL",
+};
+
 export const DEFAULT_FONT_SIZE: FontSizePreference = "medium";
 
 /** Applies the chosen font size to the document root so it affects every rem-sized element. */

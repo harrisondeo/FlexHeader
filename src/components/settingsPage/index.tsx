@@ -9,7 +9,7 @@ import {
 } from "../../context/settingsContext";
 import { getSyncStatus } from "../../utils/sync/syncStatus";
 import { cx } from "../../utils/cx";
-import { FONT_SIZE_LABELS, type FontSizePreference } from "../../utils/fontSize";
+import { FONT_SIZE_LABELS, FONT_SIZE_SHORT_LABELS, type FontSizePreference } from "../../utils/fontSize";
 import "./index.css";
 
 const FONT_SIZE_OPTION_ORDER: FontSizePreference[] = ["small", "medium", "large", "xlarge"];
@@ -120,22 +120,30 @@ const SettingsPage = ({ hasReviewed, onOpenReview }: SettingsPageProps) => {
           </span>
         </label>
 
-        <label className="settings-page__field settings-page__field--stacked">
-          <span className="settings-page__toggle-title">
-            Text size
-            <span className="settings-page__field-value">{FONT_SIZE_LABELS[fontSize]}</span>
-          </span>
-          <input
-            type="range"
-            className="settings-page__slider"
-            min={0}
-            max={FONT_SIZE_OPTION_ORDER.length - 1}
-            step={1}
-            value={FONT_SIZE_OPTION_ORDER.indexOf(fontSize)}
-            onChange={(e) => setFontSize(FONT_SIZE_OPTION_ORDER[Number(e.target.value)])}
+        <div className="settings-page__field settings-page__field--stacked">
+          <span className="settings-page__toggle-title">Text size</span>
+          <div
+            className="settings-page__pill-group"
+            role="radiogroup"
+            aria-label="Text size"
             data-testid="font-size-select"
-          />
-        </label>
+          >
+            {FONT_SIZE_OPTION_ORDER.map((option) => (
+              <button
+                key={option}
+                type="button"
+                role="radio"
+                aria-checked={fontSize === option}
+                title={FONT_SIZE_LABELS[option]}
+                className={cx("settings-page__pill", { "settings-page__pill--active": fontSize === option })}
+                onClick={() => setFontSize(option)}
+                data-testid={`font-size-option-${option}`}
+              >
+                {FONT_SIZE_SHORT_LABELS[option]}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <Divider />
