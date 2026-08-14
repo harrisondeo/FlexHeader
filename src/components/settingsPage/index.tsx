@@ -120,20 +120,21 @@ const SettingsPage = ({ hasReviewed, onOpenReview }: SettingsPageProps) => {
           </span>
         </label>
 
-        <label className="settings-page__field">
-          <select
-            className="settings-page__select"
-            value={fontSize}
-            onChange={(e) => setFontSize(e.target.value as FontSizePreference)}
+        <label className="settings-page__field settings-page__field--stacked">
+          <span className="settings-page__toggle-title">
+            Text size
+            <span className="settings-page__field-value">{FONT_SIZE_LABELS[fontSize]}</span>
+          </span>
+          <input
+            type="range"
+            className="settings-page__slider"
+            min={0}
+            max={FONT_SIZE_OPTION_ORDER.length - 1}
+            step={1}
+            value={FONT_SIZE_OPTION_ORDER.indexOf(fontSize)}
+            onChange={(e) => setFontSize(FONT_SIZE_OPTION_ORDER[Number(e.target.value)])}
             data-testid="font-size-select"
-          >
-            {FONT_SIZE_OPTION_ORDER.map((option) => (
-              <option key={option} value={option}>
-                {FONT_SIZE_LABELS[option]}
-              </option>
-            ))}
-          </select>
-          <span className="settings-page__toggle-title">Text size</span>
+          />
         </label>
       </div>
 
