@@ -90,6 +90,17 @@
   opacity: 0.9;
 }
 
+.settings-page__field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.settings-page__select {
+  width: auto;
+}
+
 .settings-page__review-nudge {
   padding: 0.5rem 0;
   text-align: center;

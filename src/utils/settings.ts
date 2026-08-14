@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useAlert } from "../context/alertContext";
 import browser from "webextension-polyfill";
-import { SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, LAST_MERGE_TIME_KEY, LOCAL_MODIFIED_TIME_KEY, HISTORY_ENABLED_KEY, DARK_MODE_KEY, SLIM_MODE_KEY } from "../constants";
+import { SETTINGS_V3_META_KEY, PAGE_KEY_PREFIX, PAGE_TOMBSTONES_KEY, SYNC_ENABLED_KEY, LAST_MERGE_TIME_KEY, LOCAL_MODIFIED_TIME_KEY, HISTORY_ENABLED_KEY, DARK_MODE_KEY, SLIM_MODE_KEY, FONT_SIZE_KEY } from "../constants";
 import { saveToStorage, loadFromStorage, clearStorage, getAllFromStorage, getDataSizeInBytes } from "./storage/storage";
 import { getUiPreference, setUiPreference } from "./storage/uiPreferences";
 import { migrateUiPreference } from "./migrations/uiPreferenceMigration";
+import { applyFontSize, DEFAULT_FONT_SIZE, type FontSizePreference } from "./fontSize";
 import { log } from "./log";
 import { normalizePage } from "./domain/headers";
 import { applyTombstones, pruneExpiredTombstones, type PageTombstone } from "./domain/pageMerge";
@@ -75,6 +76,14 @@ function useFlexHeaderSettings() {
   const [slimModeEnabled, setSlimModeEnabled] = useState(() =>
     getUiPreference(SLIM_MODE_KEY, false)
   );
+  // Same synchronous-initializer reasoning as slim mode above, plus applied
+  // eagerly here (rather than waiting for an effect) so the popup doesn't
+  // flash at the default size before resizing to the stored preference.
+  const [fontSize, setFontSizeState] = useState<FontSizePreference>(() => {
+    const stored = getUiPreference(FONT_SIZE_KEY, DEFAULT_FONT_SIZE);
+    applyFontSize(stored);
+    return stored;
+  });
   const [syncEnabled, setSyncEnabled] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [saveVersion, setSaveVersion] = useState(0);
@@ -308,6 +317,10 @@ function useFlexHeaderSettings() {
 
     setSlimModeEnabled(getUiPreference(SLIM_MODE_KEY, false));
 
+    const storedFontSize = getUiPreference(FONT_SIZE_KEY, DEFAULT_FONT_SIZE);
+    applyFontSize(storedFontSize);
+    setFontSizeState(storedFontSize);
+
     // Load sync preference
     try {
       const syncEnabledValue = await loadFromStorage(SYNC_ENABLED_KEY, false, ['local']);
@@ -488,6 +501,13 @@ function useFlexHeaderSettings() {
     setSlimModeEnabled(newSlimMode);
   };
 
+  /** Set the popup/options text size for this browser profile (per-device preference). */
+  const setFontSize = async (newFontSize: FontSizePreference) => {
+    setUiPreference(FONT_SIZE_KEY, newFontSize);
+    applyFontSize(newFontSize);
+    setFontSizeState(newFontSize);
+  };
+
   /**
    * Toggle the undo/redo history feature on or off (per-device preference).
    */
@@ -529,6 +549,7 @@ function useFlexHeaderSettings() {
     selectedPage: pagesData.selectedPage,
     darkModeEnabled,
     slimModeEnabled,
+    fontSize,
     syncEnabled,
     isSaving: isSavingRef.current,
     lastSyncTime,
@@ -553,6 +574,7 @@ function useFlexHeaderSettings() {
     importSettings,
     toggleDarkMode,
     toggleSlimMode,
+    setFontSize,
     toggleSync,
     historyEnabled,
     toggleHistoryEnabled,

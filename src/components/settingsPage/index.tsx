@@ -9,7 +9,10 @@ import {
 } from "../../context/settingsContext";
 import { getSyncStatus } from "../../utils/sync/syncStatus";
 import { cx } from "../../utils/cx";
+import { FONT_SIZE_LABELS, type FontSizePreference } from "../../utils/fontSize";
 import "./index.css";
+
+const FONT_SIZE_OPTION_ORDER: FontSizePreference[] = ["small", "medium", "large", "xlarge"];
 
 interface SettingsPageProps {
   hasReviewed?: boolean;
@@ -24,6 +27,7 @@ const SettingsPage = ({ hasReviewed, onOpenReview }: SettingsPageProps) => {
     localModifiedTime,
     historyEnabled,
     slimModeEnabled,
+    fontSize,
   } = useSettingsState();
   const {
     importSettings,
@@ -32,6 +36,7 @@ const SettingsPage = ({ hasReviewed, onOpenReview }: SettingsPageProps) => {
     clearErrors,
     toggleHistoryEnabled,
     toggleSlimMode,
+    setFontSize,
   } = useSettingsActions();
   const syncStatus = getSyncStatus(lastSyncTime, localModifiedTime);
   return (
@@ -113,6 +118,22 @@ const SettingsPage = ({ hasReviewed, onOpenReview }: SettingsPageProps) => {
               header names and values easy to edit.
             </span>
           </span>
+        </label>
+
+        <label className="settings-page__field">
+          <span className="settings-page__toggle-title">Text size</span>
+          <select
+            className="settings-page__select"
+            value={fontSize}
+            onChange={(e) => setFontSize(e.target.value as FontSizePreference)}
+            data-testid="font-size-select"
+          >
+            {FONT_SIZE_OPTION_ORDER.map((option) => (
+              <option key={option} value={option}>
+                {FONT_SIZE_LABELS[option]}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
 

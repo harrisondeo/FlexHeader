@@ -23,6 +23,7 @@ export const HISTORY_ENABLED_KEY = "history_enabled"; // Local only - per-device
 export const PAGES_LIST_COLLAPSED_KEY = "pages_list_collapsed"; // Local-only popup layout preference
 export const SLIM_MODE_KEY = "slim_mode"; // Local-only compact popup layout preference
 export const DARK_MODE_KEY = "darkMode"; // Local-only per-device preference (see CLAUDE.md on why this is never synced)
+export const FONT_SIZE_KEY = "font_size"; // Local-only per-device UI text size preference
 
 export const POPULAR_HEADER_NAMES = [
   "Accept",

@@ -1,4 +1,5 @@
-import { DARK_MODE_KEY, HISTORY_ENABLED_KEY, PAGES_LIST_COLLAPSED_KEY, SLIM_MODE_KEY } from "../../constants";
+import { DARK_MODE_KEY, FONT_SIZE_KEY, HISTORY_ENABLED_KEY, PAGES_LIST_COLLAPSED_KEY, SLIM_MODE_KEY } from "../../constants";
+import type { FontSizePreference } from "../fontSize";
 
 /**
  * Maps known UI preference keys to their persisted value types. This is the
@@ -11,6 +12,7 @@ export interface UiPreferenceTypes {
   [SLIM_MODE_KEY]: boolean;
   [DARK_MODE_KEY]: boolean;
   [HISTORY_ENABLED_KEY]: boolean;
+  [FONT_SIZE_KEY]: FontSizePreference;
 }
 
 export type UiPreferenceKey = keyof UiPreferenceTypes;
