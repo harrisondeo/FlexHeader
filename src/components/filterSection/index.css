@@ -8,10 +8,35 @@
 }
 
 .filter-section__header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-color);
   margin-bottom: 0.5rem;
+}
+
+.filter-section__help-link {
+  display: inline-flex;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.filter-section__help-link:hover {
+  opacity: 1;
+}
+
+.filter-section__help-link svg path {
+  fill: currentColor;
+}
+
+/* This icon sits near the popup's left edge - a centred tooltip (the
+   [data-tooltip] default in index.css) would run off the side. */
+.filter-section__help-link[data-tooltip]::after {
+  left: 0;
+  transform: none;
+  text-align: left;
 }
 
 .filter-section__container {
