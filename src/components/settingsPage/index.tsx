@@ -9,7 +9,15 @@ import {
 } from "../../context/settingsContext";
 import { getSyncStatus } from "../../utils/sync/syncStatus";
 import { cx } from "../../utils/cx";
+import { DEFAULT_FONT_SIZE, FONT_SIZE_LABELS, FONT_SIZE_OPTIONS, FONT_SIZE_SHORT_LABELS, type FontSizePreference } from "../../utils/fontSize";
 import "./index.css";
+
+const FONT_SIZE_OPTION_ORDER: FontSizePreference[] = ["small", "medium", "large", "xlarge"];
+
+const FONT_SIZE_DESCRIPTION = FONT_SIZE_OPTION_ORDER.map((option) => {
+  const label = `${FONT_SIZE_LABELS[option].replace(" (default)", "")} (${FONT_SIZE_OPTIONS[option]})`;
+  return option === DEFAULT_FONT_SIZE ? `${label}, default` : label;
+}).join(" · ");
 
 interface SettingsPageProps {
   hasReviewed?: boolean;
@@ -24,6 +32,7 @@ const SettingsPage = ({ hasReviewed, onOpenReview }: SettingsPageProps) => {
     localModifiedTime,
     historyEnabled,
     slimModeEnabled,
+    fontSize,
   } = useSettingsState();
   const {
     importSettings,
@@ -32,6 +41,7 @@ const SettingsPage = ({ hasReviewed, onOpenReview }: SettingsPageProps) => {
     clearErrors,
     toggleHistoryEnabled,
     toggleSlimMode,
+    setFontSize,
   } = useSettingsActions();
   const syncStatus = getSyncStatus(lastSyncTime, localModifiedTime);
   return (
@@ -114,6 +124,32 @@ const SettingsPage = ({ hasReviewed, onOpenReview }: SettingsPageProps) => {
             </span>
           </span>
         </label>
+
+        <div className="settings-page__field settings-page__field--stacked">
+          <span className="settings-page__toggle-title">Text size</span>
+          <span className="settings-page__toggle-description">{FONT_SIZE_DESCRIPTION}</span>
+          <div
+            className="settings-page__pill-group"
+            role="radiogroup"
+            aria-label="Text size"
+            data-testid="font-size-select"
+          >
+            {FONT_SIZE_OPTION_ORDER.map((option) => (
+              <button
+                key={option}
+                type="button"
+                role="radio"
+                aria-checked={fontSize === option}
+                title={FONT_SIZE_LABELS[option]}
+                className={cx("settings-page__pill", { "settings-page__pill--active": fontSize === option })}
+                onClick={() => setFontSize(option)}
+                data-testid={`font-size-option-${option}`}
+              >
+                {FONT_SIZE_SHORT_LABELS[option]}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <Divider />

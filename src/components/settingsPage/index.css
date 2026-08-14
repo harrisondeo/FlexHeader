@@ -90,6 +90,46 @@
   opacity: 0.9;
 }
 
+.settings-page__field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.settings-page__field--stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+}
+
+.settings-page__pill-group {
+  display: inline-flex;
+  align-self: flex-start;
+  border: 1px solid var(--border-color);
+  border-radius: var(--input-radius);
+  overflow: hidden;
+}
+
+.settings-page__pill {
+  border: none;
+  border-right: 1px solid var(--border-color);
+  background-color: var(--background-primary);
+  color: var(--text-color);
+  padding: 0.35rem 0.9rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.settings-page__pill:last-child {
+  border-right: none;
+}
+
+.settings-page__pill--active {
+  background-color: var(--primary);
+  color: var(--background-primary);
+}
+
 .settings-page__review-nudge {
   padding: 0.5rem 0;
   text-align: center;

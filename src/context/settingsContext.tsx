@@ -10,6 +10,7 @@ import useFlexHeaderSettings, {
   Page,
 } from "../utils/settings";
 import { AppError, ErrorCategory } from "../utils/storage/errors";
+import type { FontSizePreference } from "../utils/fontSize";
 
 type SettingsStateContextValue = {
   pages: Page[];
@@ -17,6 +18,7 @@ type SettingsStateContextValue = {
   currentPage: Page;
   darkModeEnabled: boolean;
   slimModeEnabled: boolean;
+  fontSize: FontSizePreference;
   syncEnabled: boolean;
   lastSyncTime: number | null;
   localModifiedTime: number | null;
@@ -55,6 +57,7 @@ type SettingsActionsContextValue = {
   importSettings: (file: File) => Promise<{ warnings: string[] }>;
   toggleDarkMode: () => Promise<void>;
   toggleSlimMode: () => Promise<void>;
+  setFontSize: (fontSize: FontSizePreference) => Promise<void>;
   toggleSync: () => Promise<void>;
   clearErrors: (category?: AppError["category"]) => Promise<void>;
   injectError: (category?: ErrorCategory) => Promise<void>;
@@ -87,6 +90,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       currentPage,
       darkModeEnabled: settings.darkModeEnabled,
       slimModeEnabled: settings.slimModeEnabled,
+      fontSize: settings.fontSize,
       syncEnabled: settings.syncEnabled,
       lastSyncTime: settings.lastSyncTime,
       localModifiedTime: settings.localModifiedTime,
@@ -101,6 +105,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       currentPage,
       settings.darkModeEnabled,
       settings.slimModeEnabled,
+      settings.fontSize,
       settings.syncEnabled,
       settings.lastSyncTime,
       settings.localModifiedTime,
@@ -129,6 +134,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       importSettings: settings.importSettings,
       toggleDarkMode: settings.toggleDarkMode,
       toggleSlimMode: settings.toggleSlimMode,
+      setFontSize: settings.setFontSize,
       toggleSync: settings.toggleSync,
       clearErrors: settings.clearErrors,
       injectError: settings.injectError,
@@ -153,6 +159,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       settings.importSettings,
       settings.toggleDarkMode,
       settings.toggleSlimMode,
+      settings.setFontSize,
       settings.toggleSync,
       settings.clearErrors,
       settings.injectError,
