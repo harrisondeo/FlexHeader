@@ -9,10 +9,15 @@ import {
 } from "../../context/settingsContext";
 import { getSyncStatus } from "../../utils/sync/syncStatus";
 import { cx } from "../../utils/cx";
-import { FONT_SIZE_LABELS, FONT_SIZE_SHORT_LABELS, type FontSizePreference } from "../../utils/fontSize";
+import { DEFAULT_FONT_SIZE, FONT_SIZE_LABELS, FONT_SIZE_OPTIONS, FONT_SIZE_SHORT_LABELS, type FontSizePreference } from "../../utils/fontSize";
 import "./index.css";
 
 const FONT_SIZE_OPTION_ORDER: FontSizePreference[] = ["small", "medium", "large", "xlarge"];
+
+const FONT_SIZE_DESCRIPTION = FONT_SIZE_OPTION_ORDER.map((option) => {
+  const label = `${FONT_SIZE_LABELS[option].replace(" (default)", "")} (${FONT_SIZE_OPTIONS[option]})`;
+  return option === DEFAULT_FONT_SIZE ? `${label}, default` : label;
+}).join(" · ");
 
 interface SettingsPageProps {
   hasReviewed?: boolean;
@@ -122,6 +127,7 @@ const SettingsPage = ({ hasReviewed, onOpenReview }: SettingsPageProps) => {
 
         <div className="settings-page__field settings-page__field--stacked">
           <span className="settings-page__toggle-title">Text size</span>
+          <span className="settings-page__toggle-description">{FONT_SIZE_DESCRIPTION}</span>
           <div
             className="settings-page__pill-group"
             role="radiogroup"
