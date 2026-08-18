@@ -7,12 +7,15 @@ import {
   useSettingsActions,
 } from "../../context/settingsContext";
 import { useAlert } from "../../context/alertContext";
+import { useSearch } from "../../context/searchContext";
 import ArrowDown from "../icons/ArrowDown";
 import ArrowUp from "../icons/ArrowUp";
 import CircleSlash from "../icons/CircleSlash";
+import Close from "../icons/Close";
 import CommentToggle from "../icons/CommentToggle";
 import Pause from "../icons/Pause";
 import Play from "../icons/Play";
+import Search from "../icons/Search";
 import SortHeadersDropdown from "../sortHeadersDropdown";
 import { HeaderSetting } from "../../utils/settings";
 
@@ -75,11 +78,24 @@ const PageTitle = () => {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(name);
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const {
+    isOpen: searchOpen,
+    query: searchQuery,
+    openSearch,
+    closeSearch,
+    setQuery: setSearchQuery,
+  } = useSearch();
 
   useEffect(() => {
     setEditing(false);
     setValue(name);
   }, [name]);
+
+  const currentPageId = currentPage.id;
+  useEffect(() => {
+    closeSearch();
+  }, [currentPageId]);
 
   useEffect(() => {
     if (editing) {
@@ -87,6 +103,12 @@ const PageTitle = () => {
       inputRef.current?.select();
     }
   }, [editing]);
+
+  useEffect(() => {
+    if (searchOpen) {
+      searchInputRef.current?.focus();
+    }
+  }, [searchOpen]);
 
   const commit = () => {
     setEditing(false);
@@ -108,9 +130,37 @@ const PageTitle = () => {
     }
   };
 
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape" || e.key === "Enter") {
+      e.preventDefault();
+      closeSearch();
+    }
+  };
+
+  const onToggleSearch = () => {
+    if (searchOpen) {
+      closeSearch();
+    } else {
+      setEditing(false);
+      openSearch();
+    }
+  };
+
   return (
     <div className="page-title">
-      {editing ? (
+      {searchOpen ? (
+        <input
+          ref={searchInputRef}
+          type="text"
+          className="app__page-title app__page-title--input"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={handleSearchKeyDown}
+          placeholder="Search headers"
+          aria-label="Search headers"
+          data-testid="page-title-search-input"
+        />
+      ) : editing ? (
         <input
           ref={inputRef}
           type="text"
@@ -132,6 +182,21 @@ const PageTitle = () => {
         </h2>
       )}
       <div className="page-title__actions">
+        <Button
+          onClick={onToggleSearch}
+          color={searchOpen ? "primary" : "secondary"}
+          title={searchOpen ? "Close search" : "Search headers"}
+          content={
+            <span className="page-title__toggle-button-content">
+              {searchOpen ? (
+                <Close className="page-title__toggle-icon" />
+              ) : (
+                <Search className="page-title__toggle-icon" />
+              )}
+            </span>
+          }
+          testId="toggle-search-textfield"
+        />
         <Button
           onClick={onTogglePause}
           color={paused ? "warning" : "secondary"}

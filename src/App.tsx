@@ -13,6 +13,7 @@ import { isRunningInActionPopup } from "./utils/browserContext";
 import HeadersList from "./components/headersList";
 import PageTitle from "./components/pageTitle";
 import { useSettingsState, useSettingsActions } from "./context/settingsContext";
+import SearchProvider from "./context/searchContext";
 import { cx } from "./utils/cx";
 
 function App() {
@@ -55,38 +56,40 @@ function App() {
 
   return (
     <div className={cx("app", { darkmode: darkModeEnabled, "app--slim": slimModeEnabled })}>
-      <div className="app__container">
-        <AppHeader />
-        <div className="app__body">
-          <PagesList />
-          <div className="app__workspace">
-            <PageTitle />
-            <div key={selectedPage} className="app__body__contents">
-              <div className="headers-panel">
-                {currentPage?.headers?.length === 0 && (
-                  <p className="app__body__headers__empty">
-                    <i>No headers found. Add a new header.</i>
-                  </p>
-                )}
-                <HeadersList />
+      <SearchProvider>
+        <div className="app__container">
+          <AppHeader />
+          <div className="app__body">
+            <PagesList />
+            <div className="app__workspace">
+              <PageTitle />
+              <div key={selectedPage} className="app__body__contents">
+                <div className="headers-panel">
+                  {currentPage?.headers?.length === 0 && (
+                    <p className="app__body__headers__empty">
+                      <i>No headers found. Add a new header.</i>
+                    </p>
+                  )}
+                  <HeadersList />
+                </div>
+                <FilterSection />
               </div>
-              <FilterSection />
             </div>
           </div>
-        </div>
-        <AppFooter
-          onPositiveAction={notifyPositiveAction}
-          hasReviewed={userReviewed}
-          onOpenReview={openReviewPage}
-        />
-        <Alert />
-        {!reviewPromptLoading && shouldShowReviewPrompt && (
-          <ReviewPrompt
-            onDismiss={hidePrompt}
-            onReview={hidePrompt}
+          <AppFooter
+            onPositiveAction={notifyPositiveAction}
+            hasReviewed={userReviewed}
+            onOpenReview={openReviewPage}
           />
-        )}
-      </div>
+          <Alert />
+          {!reviewPromptLoading && shouldShowReviewPrompt && (
+            <ReviewPrompt
+              onDismiss={hidePrompt}
+              onReview={hidePrompt}
+            />
+          )}
+        </div>
+      </SearchProvider>
     </div>
   );
 }
