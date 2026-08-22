@@ -6,6 +6,7 @@ import {
   useSettingsState,
   useSettingsActions,
 } from "../../context/settingsContext";
+import { useSearch } from "../../context/searchContext";
 
 const reorder = (
   headers: HeaderSetting[],
@@ -22,10 +23,20 @@ const reorder = (
 const HeadersList = () => {
   const { currentPage } = useSettingsState();
   const { removeHeader, updateHeader, saveHeaders } = useSettingsActions();
+  const { query } = useSearch();
 
   const currentPageId = currentPage.id;
   const headers = currentPage.headers;
   const showComments = currentPage.showHeaderComments;
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleHeaders = normalizedQuery
+    ? headers.filter(
+        (header) =>
+          header.headerName.toLowerCase().includes(normalizedQuery) ||
+          header.headerValue.toLowerCase().includes(normalizedQuery)
+      )
+    : headers;
 
   const handleRemoveHeader = (id: string) => {
     removeHeader(currentPageId, id);
@@ -56,7 +67,15 @@ const HeadersList = () => {
             ref={provided.innerRef}
             className="app__body__headers"
           >
-            {headers.map(
+            {headers.length > 0 && visibleHeaders.length === 0 && (
+              <p
+                className="app__body__headers__empty"
+                data-testid="headers-no-search-match"
+              >
+                <i>No headers match your search.</i>
+              </p>
+            )}
+            {visibleHeaders.map(
               (
                 {
                   id,
@@ -68,7 +87,12 @@ const HeadersList = () => {
                 },
                 index
               ) => (
-                <Draggable key={id} draggableId={id} index={index}>
+                <Draggable
+                  key={id}
+                  draggableId={id}
+                  index={index}
+                  isDragDisabled={!!normalizedQuery}
+                >
                   {(provided, snapshot) => (
                     <div ref={provided.innerRef} {...provided.draggableProps}>
                       <HeaderRow

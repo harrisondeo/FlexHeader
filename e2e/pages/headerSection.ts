@@ -4,6 +4,7 @@ export class HeaderSection {
   readonly page: Page;
   readonly addButton: Locator;
   readonly toggleCommentsButton: Locator;
+  readonly searchButton: Locator;
   readonly sortButton: Locator;
   readonly sortDropdown: Locator;
   readonly sortFieldSelect: Locator;
@@ -14,6 +15,7 @@ export class HeaderSection {
     this.page = page;
     this.addButton = page.getByTestId("add-header");
     this.toggleCommentsButton = page.getByTestId("toggle-header-comments");
+    this.searchButton = page.getByTestId("toggle-search-textfield");
     this.sortButton = page.getByTestId("sort-headers-button");
     this.sortDropdown = page.getByTestId("sort-headers-dropdown");
     this.sortFieldSelect = page.getByTestId("sort-headers-field");
@@ -23,6 +25,23 @@ export class HeaderSection {
 
   get rows(): Locator {
     return this.page.getByTestId("header-row");
+  }
+
+  get searchInput(): Locator {
+    return this.page.getByTestId("page-title-search-input");
+  }
+
+  async openSearch(): Promise<void> {
+    await this.searchButton.click();
+    await this.searchInput.waitFor();
+  }
+
+  async searchFor(query: string): Promise<void> {
+    await this.searchInput.fill(query);
+  }
+
+  async closeSearchWithEscape(): Promise<void> {
+    await this.searchInput.press("Escape");
   }
 
   row(index: number): Locator {
