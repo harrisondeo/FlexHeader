@@ -65,4 +65,32 @@ test.describe("Header search", () => {
     await expect(popupPage.headers.rows).toHaveCount(0);
     await expect(popupPage.page.getByTestId("headers-no-search-match")).toBeVisible();
   });
+
+  test("filters headers by comment", async ({ popupPage }) => {
+    await popupPage.pages.addEmptyPage();
+    await popupPage.headers.showComments();
+    await popupPage.headers.addHeader("X-Alpha", "one");
+    await popupPage.headers.addHeader("X-Beta", "two");
+    await popupPage.headers.setHeaderComment(0, "Use for checkout API");
+    await popupPage.headers.setHeaderComment(1, "Use for catalog API");
+
+    await popupPage.headers.openSearch();
+    await popupPage.headers.searchFor("checkout");
+
+    await expect(popupPage.headers.rows).toHaveCount(1);
+    await expect(popupPage.headers.getHeaderName(0)).resolves.toBe("X-Alpha");
+  });
+
+  test("matches regardless of query or header case", async ({ popupPage }) => {
+    await popupPage.pages.addEmptyPage();
+    await popupPage.headers.addHeader("X-Status", "active");
+
+    await popupPage.headers.openSearch();
+
+    for (const query of ["at", "At", "AT", "aT"]) {
+      await popupPage.headers.searchFor(query);
+      await expect(popupPage.headers.rows).toHaveCount(1);
+      await expect(popupPage.headers.getHeaderName(0)).resolves.toBe("X-Status");
+    }
+  });
 });

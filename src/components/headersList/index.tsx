@@ -34,7 +34,8 @@ const HeadersList = () => {
     ? headers.filter(
         (header) =>
           header.headerName.toLowerCase().includes(normalizedQuery) ||
-          header.headerValue.toLowerCase().includes(normalizedQuery)
+          header.headerValue.toLowerCase().includes(normalizedQuery) ||
+          header.headerComment.toLowerCase().includes(normalizedQuery)
       )
     : headers;
 
