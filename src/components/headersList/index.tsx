@@ -49,12 +49,35 @@ const HeadersList = () => {
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
-    const reorderedHeaders = reorder(
-      headers,
-      result.source.index,
-      result.destination.index
-    );
+    if (!normalizedQuery) {
+      const reorderedHeaders = reorder(
+        headers,
+        result.source.index,
+        result.destination.index
+      );
+      saveHeaders(reorderedHeaders, currentPageId);
+      return;
+    }
 
+    // While filtered, source/destination indices are positions within
+    // visibleHeaders, not headers - splicing them into the full array
+    // directly would drop/duplicate headers or land on the wrong row. Move
+    // the dragged header to sit next to its new neighbor in the filtered
+    // view instead, leaving hidden headers' relative order untouched.
+    const movedHeader = visibleHeaders[result.source.index];
+    if (!movedHeader) return;
+
+    const withoutMoved = headers.filter((header) => header.id !== movedHeader.id);
+    const visibleWithoutMoved = visibleHeaders.filter(
+      (header) => header.id !== movedHeader.id
+    );
+    const neighbor = visibleWithoutMoved[result.destination.index];
+    const insertAt = neighbor
+      ? withoutMoved.findIndex((header) => header.id === neighbor.id)
+      : withoutMoved.length;
+
+    const reorderedHeaders = [...withoutMoved];
+    reorderedHeaders.splice(insertAt, 0, movedHeader);
     saveHeaders(reorderedHeaders, currentPageId);
   };
 
@@ -87,12 +110,7 @@ const HeadersList = () => {
                 },
                 index
               ) => (
-                <Draggable
-                  key={id}
-                  draggableId={id}
-                  index={index}
-                  isDragDisabled={!!normalizedQuery}
-                >
+                <Draggable key={id} draggableId={id} index={index}>
                   {(provided, snapshot) => (
                     <div ref={provided.innerRef} {...provided.draggableProps}>
                       <HeaderRow
