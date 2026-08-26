@@ -243,3 +243,12 @@ Two non-obvious requirements when touching this:
   animation. Reordering never changes the id set or count, so leaving ids
   alone is safe; `_reIndexHeaders` is still needed (and still used) by
   add/removeHeader, which do change the count.
+- `@hello-pangea/dnd`'s `source`/`destination` indices in `handleDragEnd`
+  are positions within whatever list is actually rendered - once the header
+  search filter (`searchContext.tsx`) is active, that's `visibleHeaders`,
+  not `headers`. Splicing those indices straight into `headers` (the
+  no-filter fast path) would drop or duplicate rows once a search query
+  hides some of them. The filtered branch instead moves the dragged header
+  next to its new neighbor's id and re-finds that neighbor's position in
+  the full `headers` array, so hidden headers keep their relative order
+  untouched by a filtered drag.

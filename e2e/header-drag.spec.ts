@@ -91,4 +91,30 @@ test.describe("Header Drag and Drop", () => {
       .poll(getStoredHeaderNames)
       .toEqual(["Bravo", "Charlie", "Alpha"]);
   });
+
+  test("reorders correctly while the list is filtered by search", async ({ popupPage }) => {
+    await popupPage.pages.addEmptyPage();
+    await popupPage.headers.addHeader("X-Alpha", "a-value");
+    await popupPage.headers.addHeader("Hidden", "h-value");
+    await popupPage.headers.addHeader("X-Bravo", "b-value");
+    await popupPage.headers.addHeader("X-Charlie", "c-value");
+
+    await popupPage.headers.openSearch();
+    await popupPage.headers.searchFor("x-");
+    await expect(popupPage.headers.rows).toHaveCount(3);
+
+    // Drag the first visible row (X-Alpha) past the other two visible rows.
+    // The filtered-out "Hidden" header must stay untouched by the move.
+    await popupPage.headers.dragHeaderTo(0, 2);
+
+    await expect
+      .poll(() => popupPage.headers.getAllHeaderNames())
+      .toEqual(["X-Bravo", "X-Charlie", "X-Alpha"]);
+
+    await popupPage.headers.closeSearchWithEscape();
+
+    await expect
+      .poll(() => popupPage.headers.getAllHeaderNames())
+      .toEqual(["Hidden", "X-Bravo", "X-Charlie", "X-Alpha"]);
+  });
 });
