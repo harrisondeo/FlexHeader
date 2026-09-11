@@ -8,6 +8,14 @@ import ErrorBoundaryFallback from "../../components/errorBoundary";
 import { clearStoredSettings } from "../../utils/settings";
 import AlertProvider from "../../context/alertContext";
 import { SettingsProvider } from "../../context/settingsContext";
+import { isRunningInActionPopup } from "../../utils/browserContext";
+import { suppressSpuriousPopupResizeEvents } from "../../utils/suppressSpuriousPopupResize";
+
+// Must run before ReactDOM mounts - see suppressSpuriousPopupResize.ts for
+// why registration order matters here.
+if (isRunningInActionPopup()) {
+  suppressSpuriousPopupResizeEvents();
+}
 
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement

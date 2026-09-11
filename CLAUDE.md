@@ -252,3 +252,19 @@ Two non-obvious requirements when touching this:
   next to its new neighbor's id and re-finds that neighbor's position in
   the full `headers` array, so hidden headers keep their relative order
   untouched by a filtered drag.
+- The Chrome extension popup can dispatch a genuine `window resize` event
+  with no actual change in size (confirmed by comparing inner/outerWidth,
+  scrollHeight, and `.app`'s `getBoundingClientRect()` immediately before
+  and after - identical every time). `@hello-pangea/dnd`'s mouse sensor
+  cancels any in-progress drag unconditionally on resize, with no check for
+  whether anything changed, so this silently broke drag-and-drop with no
+  error - inconsistently, since it depends on whether the spurious event
+  happens to land mid-gesture on a given machine. `suppressSpuriousPopupResize.ts`
+  intercepts it (registered before React mounts, so it always runs before
+  the library's own per-drag listener) and suppresses only the no-op case.
+  This behavior has been latent since drag-and-drop first shipped in 2024
+  on `react-beautiful-dnd` (same mouse-sensor code); it was briefly absent
+  during the 2026 redesign's native-HTML5 DnD implementation (PR #42) and
+  came back when PR #60 migrated to `@hello-pangea/dnd` (v1.9.3) to restore
+  the lift/reorder-preview animation - so any regression here should assume
+  it can resurface with any future dnd-library change, not just this one.
